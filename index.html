@@ -1,14 +1,127 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AquaRun | AquaRun</title>
+  <title>AquaRun | Water refill &amp; delivery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/pages/public/landing.css">
 </head>
 <body>
-  <main id="content"></main>
+  <div class="wrap hero-panel" id="home">
+  <header class="nav">
+    <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
+    <nav class="nav-links" aria-label="Main">
+      <a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="btn btn-light" href="login.html" data-login>Log in</a>
+      <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+    </div>
+  </header>
+
+    <section class="hero">
+      <p class="hero-kicker">WATER REFILL &amp; DELIVERY PORTAL</p>
+      <h1 class="hero-title">water, delivered <span>on time.</span></h1>
+      <p class="hero-text">Order refills, pick a delivery slot, and follow every gallon from the station to your door.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary btn-lg" href="signup.html">Order a refill</a>
+        <a class="btn btn-white btn-lg" href="login.html">Track order</a>
+      </div>
+    </section>
+  </div>
+
+  <main>
+    <section class="wrap highlights" aria-label="Highlights">
+      <div class="highlight"><span class="icon-wrap"></span><div><strong>Refill orders</strong><small>Gallons and bottles, your way</small></div></div>
+      <div class="highlight"><span class="icon-wrap"></span><div><strong>Daily delivery</strong><small>Pick a date and time slot</small></div></div>
+      <div class="highlight"><span class="icon-wrap"></span><div><strong>Live order status</strong><small>From refill to doorstep</small></div></div>
+      <div class="highlight"><span class="icon-wrap"></span><div><strong>Bottle ledger</strong><small>Empties and refills, counted</small></div></div>
+    </section>
+
+    <section class="wrap section" id="services">
+      <h2 class="section-title">Refill options</h2>
+      <p class="section-sub">Choose what you need, we handle the rest.</p>
+      <div class="products">
+        <article>
+          <img class="product-img" src="assets/images/round-gallon-refill.png" alt="Round gallon refill">
+          <div class="product-meta"><div><strong>Round Gallon Refill</strong><small>Refilled at the station</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
+        </article>
+        <article>
+          <img class="product-img" src="assets/images/slim-gallon-refill.png" alt="Slim gallon refill">
+          <div class="product-meta"><div><strong>Slim Gallon Refill</strong><small>Refilled at the station</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
+        </article>
+        <article>
+          <img class="product-img" src="assets/images/bottle-delivery.png" alt="Bottle delivery">
+          <div class="product-meta"><div><strong>Bottle Delivery</strong><small>Delivered to your door</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="wrap section section-center" id="how">
+      <h2 class="section-title">Refills made simple</h2>
+      <p class="section-sub">From the first tap to the last empty bottle, every step is tracked.</p>
+      <div class="steps">
+        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">01</span></div><h3>Place your order</h3><p>Choose your product, number of bottles or gallons, delivery address, and a preferred date and time slot.</p></article>
+        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">02</span></div><h3>Station refills</h3><p>Staff confirm the order, refill the bottles, and update the status as it moves along.</p></article>
+        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">03</span></div><h3>Rider delivers &amp; logs bottles</h3><p>An assigned rider delivers your order, then records the bottles delivered and empties collected.</p></article>
+      </div>
+    </section>
+
+    <section class="tracking">
+      <div class="wrap tracking-row">
+        <div class="tracking-copy">
+          <p class="eyebrow">Order tracking</p>
+          <h2>Know exactly where your water is.</h2>
+          <p>Every order moves through clear stages, updated by station staff and riders. You always see the latest status, and the station keeps an accurate record of every bottle.</p>
+          <form class="track-form" action="login.html">
+            <label class="visually-hidden" for="order-number">Order number</label>
+            <input class="input" id="order-number" name="order" type="text" placeholder="Order number">
+            <button class="btn btn-primary btn-lg" type="submit">Track order →</button>
+          </form>
+          <p class="note">Updates come straight from the station and your assigned rider.</p>
+        </div>
+        <div class="status-card" aria-label="Sample order">
+          <div class="status-head"><strong>Order #AR-1042</strong><span class="badge">Out for delivery</span></div>
+          <ol class="timeline">
+            <li><span class="dot">✓</span><div><strong>Order received</strong><small>8:05 AM · Confirmed by station</small></div></li>
+            <li><span class="dot">✓</span><div><strong>Refilled &amp; ready</strong><small>9:20 AM · 3 round gallons</small></div></li>
+            <li class="current"><span class="dot">3</span><div><strong>Out for delivery</strong><small>Rider assigned · Slot 2:00 – 3:00 PM</small></div></li>
+            <li class="pending"><span class="dot">4</span><div><strong>Delivered</strong><small>Pending</small></div></li>
+          </ol>
+          <div class="ledger">
+            <div><b>3</b><span>Empty bottles received</span></div>
+            <div><b>3</b><span>Bottles refilled</span></div>
+            <div><b>3</b><span>Bottles delivered</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <section class="wrap closing" id="contact">
+      <div>
+        <img class="station-photo" src="assets/images/station-photo.png" alt="Water refilling station">
+        <div class="hours"><b>Mon–Sat</b><span>7:00 AM – 6:00 PM<br>Sample hours</span></div>
+      </div>
+      <div class="closing-copy">
+        <div>
+          <h2>Never miss a refill with AquaRun</h2>
+          <p>Order in under a minute, pick a time slot that suits you, and let the station and riders take it from there.</p>
+        </div>
+        <a class="cta-big" href="signup.html">Request a refill now <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap footer-row">
+      <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
+      <nav class="footer-links" aria-label="Footer"><a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a></nav>
+      <small>Computer Studies · University of Caloocan City</small>
+    </div>
+  </footer>
   <script type="module" src="js/pages/public/index.js"></script>
 </body>
 </html>

@@ -1,1 +1,10 @@
-/* Primary, secondary, link buttons */
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid transparent; border-radius: var(--radius-pill); padding: 11px 22px; font-size: 14px; font-weight: 600; transition: transform .15s, box-shadow .15s, background .15s; }
+.btn:hover { transform: translateY(-1px); }
+.btn:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+.btn-primary { background: var(--blue); color: #fff; }
+.btn-primary:hover { background: var(--blue-dark); }
+.btn-light { background: var(--surface); border-color: var(--line); color: var(--ink); font-weight: 500; }
+.btn-white { background: #fff; color: var(--ink); }
+.btn-gradient { width: 100%; padding: 14px 26px; background: var(--gradient-button); color: #fff; font-weight: 700; box-shadow: var(--shadow-button); }
+.btn-lg { padding: 17px 30px; font-size: 15px; }
+.btn-sm { padding: 9px 18px; font-size: 13px; }

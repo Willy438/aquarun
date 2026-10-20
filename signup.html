@@ -1,14 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Sign up | AquaRun</title>
+  <title>Create account | AquaRun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/pages/public/auth.css">
 </head>
 <body>
-  <main id="content"></main>
+  <div class="auth">
+    <section class="auth-hero">
+      <span class="decor decor-1"></span><span class="decor decor-2"></span><span class="decor decor-3"></span>
+      <a class="auth-logo" href="index.html"><span class="auth-logo-mark"><img src="assets/icons/drop.svg" alt=""></span>AquaRun</a>
+      <div class="auth-copy">
+        <p class="auth-kicker">Create your customer account</p>
+        <h2 class="auth-title">water,<br>delivered<br>on time.</h2>
+      </div>
+      <div class="chips"><span class="chip">Refill orders</span><span class="chip">Daily delivery</span><span class="chip">Live status</span></div>
+    </section>
+    <main class="auth-main">
+      <div class="auth-card auth-card-wide">
+        <div>
+          <h1>Create your account</h1>
+          <p class="auth-sub">Join AquaRun to order refills and track your deliveries.</p>
+        </div>
+        <form class="auth-form" id="signup-form" novalidate>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="fullName">Full name</label>
+              <input class="input" id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Juan Dela Cruz" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="phone">Mobile number</label>
+              <input class="input" id="phone" name="phone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX" required>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="email">Email address (optional)</label>
+            <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="you@email.com">
+          </div>
+          <div class="field">
+            <label class="field-label" for="address">Delivery address</label>
+            <input class="input" id="address" name="address" type="text" autocomplete="street-address" placeholder="House no., street, barangay, city" required>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="password">Password</label>
+              <input class="input" id="password" name="password" type="password" autocomplete="new-password" placeholder="Create a password" required>
+            </div>
+            <div class="field">
+              <label class="field-label" for="confirm">Confirm password</label>
+              <input class="input" id="confirm" name="confirm" type="password" autocomplete="new-password" placeholder="Re-enter your password" required>
+            </div>
+          </div>
+          <label class="check"><input type="checkbox" name="terms"> Send me order updates by SMS and accept the terms.</label>
+          <p class="form-error" id="form-error" role="alert"></p>
+          <button class="btn btn-gradient" type="submit">Create account</button>
+        </form>
+        <p class="auth-foot">Already have an account? <a class="link" href="login.html">Log in</a></p>
+      </div>
+    </main>
+  </div>
   <script type="module" src="js/pages/public/signup.js"></script>
 </body>
 </html>

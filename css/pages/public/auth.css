@@ -1,1 +1,34 @@
-/* Login and sign up page styles. Only styles used by this page. */
+.auth { display: grid; grid-template-columns: 760px 1fr; min-height: 100vh; }
+.auth-hero { position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; padding: 64px; background: var(--gradient-blue); color: #fff; }
+.auth-logo { display: flex; align-items: center; gap: 10px; font-size: 22px; font-weight: 700; position: relative; }
+.auth-logo-mark { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 13px; background: #fff; }
+.auth-logo-mark img { width: 21px; height: 21px; }
+.auth-copy { position: relative; display: flex; flex-direction: column; gap: 16px; }
+.auth-kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.13em; text-transform: uppercase; }
+.auth-title { font-size: clamp(56px, 7vw, 104px); line-height: 0.96; letter-spacing: -0.05em; font-weight: 700; }
+.chips { position: relative; display: flex; flex-wrap: wrap; gap: 10px; }
+.chip { padding: 12px 18px; border-radius: var(--radius-pill); background: rgba(255, 255, 255, 0.16); border: 1px solid rgba(255, 255, 255, 0.28); font-size: 13px; font-weight: 600; }
+.decor { position: absolute; border-radius: 50%; background: rgba(255, 255, 255, 0.1); pointer-events: none; }
+.decor-1 { width: 520px; height: 520px; left: 380px; top: 380px; }
+.decor-2 { width: 300px; height: 300px; left: -100px; top: 600px; }
+.decor-3 { width: 240px; height: 240px; left: 520px; top: -80px; background: rgba(255, 255, 255, 0.14); }
+.auth-main { display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+.auth-card { width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 20px; padding: 40px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); box-shadow: var(--shadow-card); }
+.auth-card-wide { max-width: 560px; }
+.auth-card h1 { font-size: 34px; letter-spacing: -0.03em; line-height: 1.1; }
+.auth-card .auth-sub { font-size: 14px; color: var(--muted); margin-top: 4px; }
+.auth-form { display: flex; flex-direction: column; gap: 20px; }
+.auth-foot { text-align: center; font-size: 14px; color: var(--muted); }
+
+@media (max-width: 1100px) {
+  .auth { grid-template-columns: 1fr; }
+  .auth-hero { padding: 32px; gap: 32px; }
+  .auth-title { font-size: 56px; }
+  .decor-1 { left: 60%; top: 40%; }
+  .decor-3 { left: 70%; }
+}
+@media (max-width: 600px) {
+  .auth-hero .chips, .auth-hero .auth-copy { display: none; }
+  .auth-card { padding: 28px 22px; }
+  .field-row { flex-direction: column; }
+}

@@ -1,1 +1,9 @@
-/* Fields, selects, checkboxes, radio options */
+.field { display: flex; flex-direction: column; gap: 8px; min-width: 0; flex: 1; }
+.field-label { font-size: 12px; font-weight: 600; color: var(--muted); }
+.input { width: 100%; background: var(--surface); border: 1px solid var(--line-input); border-radius: var(--radius-sm); padding: 14px 18px; font-size: 14px; outline: none; transition: border-color .15s, box-shadow .15s; }
+.input::placeholder { color: var(--subtle); }
+.input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 128, 255, 0.15); }
+.field-row { display: flex; gap: 16px; }
+.check { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+.check input { width: 18px; height: 18px; accent-color: var(--blue); flex-shrink: 0; }
+.form-error { min-height: 18px; font-size: 13px; color: var(--danger); }

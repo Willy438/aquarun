@@ -1,14 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Log in | AquaRun</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/pages/public/auth.css">
 </head>
 <body>
-  <main id="content"></main>
+  <div class="auth">
+    <section class="auth-hero">
+      <span class="decor decor-1"></span><span class="decor decor-2"></span><span class="decor decor-3"></span>
+      <a class="auth-logo" href="index.html"><span class="auth-logo-mark"><img src="assets/icons/drop.svg" alt=""></span>AquaRun</a>
+      <div class="auth-copy">
+        <p class="auth-kicker">Water refill &amp; delivery portal</p>
+        <h2 class="auth-title">water,<br>delivered<br>on time.</h2>
+      </div>
+      <div class="chips"><span class="chip">Refill orders</span><span class="chip">Daily delivery</span><span class="chip">Live status</span></div>
+    </section>
+    <main class="auth-main">
+      <div class="auth-card">
+        <div>
+          <h1>Welcome back</h1>
+          <p class="auth-sub">Customers, staff, riders and the owner log in here.</p>
+        </div>
+        <form class="auth-form" id="login-form" novalidate>
+          <div class="field">
+            <label class="field-label" for="identifier">Mobile number or email</label>
+            <input class="input" id="identifier" name="identifier" type="text" autocomplete="username" placeholder="Enter your mobile number or email" required>
+          </div>
+          <div class="field">
+            <label class="field-label" for="password">Password</label>
+            <input class="input" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
+          </div>
+          <p class="form-error" id="form-error" role="alert"></p>
+          <button class="btn btn-gradient" type="submit">Log in</button>
+        </form>
+        <p class="auth-foot">New customer? <a class="link" href="signup.html">Create account</a></p>
+      </div>
+    </main>
+  </div>
   <script type="module" src="js/pages/public/login.js"></script>
 </body>
 </html>

@@ -1,36 +1,30 @@
 :root {
-  /* Colors (taken from the AquaRun designs) */
-  --color-navy-900: #0A2F78;
-  --color-navy-800: #0F2349;
-  --color-primary: #1D5FD8;
-  --color-primary-600: #2459D2;
-  --color-primary-100: #E6EFFC;
-  --color-bg: #EEF4FC;
-  --color-surface: #FFFFFF;
-  --color-border: #E3ECF8;
-  --color-text: #0F2349;
-  --color-muted: #6B7FA3;
-  --color-success-bg: #DDF5E7;
-  --color-success: #17763F;
-  --color-warning-bg: #FFF1D6;
-  --color-warning: #9A6200;
-  --color-danger-bg: #FDE3E3;
-  --color-danger: #B42318;
+  --blue: #2f80ff;
+  --blue-dark: #1558d6;
+  --ink: #0b1220;
+  --muted: #6b7280;
+  --subtle: #9aa0aa;
+  --bg: #f8f7f3;
+  --surface: #ffffff;
+  --line: #e9e6de;
+  --line-input: #dce3ee;
+  --tint: #e8f2fc;
+  --tint-line: #c5d9f2;
+  --danger: #d92d20;
+  --success: #12805c;
 
-  /* Fonts */
-  --font-family: 'DM Sans', Arial, sans-serif;
-  --font-size-sm: 12px;
-  --font-size-md: 14px;
-  --font-size-lg: 18px;
-  --font-size-xl: 26px;
+  --font: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  /* Spacing, radius, shadow */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 20px;
-  --space-5: 32px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --shadow-card: 0 1px 3px rgba(15, 35, 73, 0.06);
+  --radius-sm: 16px;
+  --radius-md: 24px;
+  --radius-lg: 28px;
+  --radius-xl: 36px;
+  --radius-pill: 999px;
+
+  --shadow-card: 0 16px 20px rgba(21, 88, 214, 0.08);
+  --shadow-button: 0 10px 12px rgba(47, 128, 255, 0.35);
+  --gradient-blue: linear-gradient(130deg, #2f80ff 15%, #1558d6 85%);
+  --gradient-button: linear-gradient(173deg, #2f80ff 15%, #1558d6 85%);
+
+  --page-width: 1600px;
 }

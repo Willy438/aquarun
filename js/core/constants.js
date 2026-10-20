@@ -25,3 +25,15 @@ export const CUSTOMER_STEP_OF = {
   delivered: 'delivery',
   completed: 'completed',
 };
+
+// Where each role lands after logging in.
+export const ROLE_HOME = {
+  customer: 'customer/home.html',
+  staff: 'staff/dashboard.html',
+  rider: 'rider/my-deliveries.html',
+  admin: 'admin/dashboard.html',
+};
+
+// Mobile numbers are turned into an email-style login so Supabase Auth
+// (email + password) can be used. Customers never see this address.
+export const LOGIN_EMAIL_DOMAIN = 'aquarun.app';

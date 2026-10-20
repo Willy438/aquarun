@@ -1,1 +1,6 @@
-/* Headings, text, links */
+.text-muted { color: var(--muted); }
+.text-blue { color: var(--blue); }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--blue); }
+.link { color: var(--blue); font-weight: 700; }
+.link:hover { text-decoration: underline; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
