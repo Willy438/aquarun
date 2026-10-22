@@ -13,8 +13,28 @@ export const ORDER_STATUS = {
   CANCELLED: 'cancelled',
 };
 
-// The 8 internal statuses mapped to the 6 steps the customer sees.
-export const CUSTOMER_STEPS = ['submitted', 'confirmed', 'refilling', 'ready', 'delivery', 'completed'];
+// All 8 internal statuses for Staff & Rider progress bar (Section 4.1).
+export const STAFF_STEPS = [
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'refilling', label: 'Refilling' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'rider_assigned', label: 'Rider assigned' },
+  { key: 'out_for_delivery', label: 'Out for delivery' },
+  { key: 'delivered', label: 'Delivered' },
+  { key: 'completed', label: 'Completed' },
+];
+
+// The 8 internal statuses mapped to the 6 steps the customer sees (Section 4.2).
+export const CUSTOMER_STEPS = [
+  { key: 'submitted', label: 'Submitted' },
+  { key: 'confirmed', label: 'Confirmed' },
+  { key: 'refilling', label: 'Refilling' },
+  { key: 'ready', label: 'Ready' },
+  { key: 'delivery', label: 'Out for delivery' },
+  { key: 'completed', label: 'Completed' },
+];
+
 export const CUSTOMER_STEP_OF = {
   submitted: 'submitted',
   confirmed: 'confirmed',
@@ -26,6 +46,30 @@ export const CUSTOMER_STEP_OF = {
   completed: 'completed',
 };
 
+export const STATUS_LABELS = {
+  submitted: 'Submitted',
+  confirmed: 'Confirmed',
+  refilling: 'Refilling',
+  ready: 'Ready',
+  rider_assigned: 'Rider assigned',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+};
+
+export const CUSTOMER_STATUS_HEADINGS = {
+  submitted: 'Order submitted',
+  confirmed: 'Order confirmed',
+  refilling: 'Being refilled',
+  ready: 'Ready for delivery',
+  rider_assigned: 'Rider assigned',
+  out_for_delivery: 'Out for delivery',
+  delivered: 'Delivered',
+  completed: 'Completed',
+  cancelled: 'Order cancelled',
+};
+
 // Where each role lands after logging in.
 export const ROLE_HOME = {
   customer: 'customer/home.html',
@@ -33,7 +77,3 @@ export const ROLE_HOME = {
   rider: 'rider/my-deliveries.html',
   admin: 'admin/dashboard.html',
 };
-
-// Mobile numbers are turned into an email-style login so Supabase Auth
-// (email + password) can be used. Customers never see this address.
-export const LOGIN_EMAIL_DOMAIN = 'aquarun.app';

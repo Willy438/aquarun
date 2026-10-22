@@ -10,14 +10,27 @@
 </head>
 <body>
   <div class="wrap hero-panel" id="home">
-  <header class="nav">
+  <header class="nav" id="public-nav">
     <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-    <nav class="nav-links" aria-label="Main">
-      <a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a>
-    </nav>
-    <div class="nav-actions">
-      <a class="btn btn-light" href="login.html" data-login>Log in</a>
-      <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+    <button type="button" class="nav-hamburger" id="public-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="public-nav-menu">
+      <svg class="hamburger-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+      <svg class="hamburger-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+    </button>
+    <div class="nav-backdrop" id="public-nav-backdrop" aria-hidden="true"></div>
+    <div class="nav-collapsible" id="public-nav-menu" role="dialog" aria-label="Navigation menu">
+      <div class="nav-drawer-head">
+        <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
+        <button type="button" class="nav-drawer-close" id="public-nav-close" aria-label="Close navigation menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        </button>
+      </div>
+      <nav class="nav-links" aria-label="Main">
+        <a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn btn-light" href="login.html" data-login>Log in</a>
+        <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+      </div>
     </div>
   </header>
 

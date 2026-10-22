@@ -1,1 +1,108 @@
-/* Tables and search or filter bars */
+/* Tables and search or filter bars (Mobile-first with 480px / 768px / 1024px breakpoints) */
+.filter-bar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-bar-single {
+  max-width: 480px;
+  margin-bottom: 16px;
+}
+
+.card-count-sub {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-blue);
+  margin-left: 6px;
+}
+
+.table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #8b9bb4;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-app);
+  white-space: nowrap;
+}
+
+.table th:first-child,
+.table td:first-child {
+  padding-left: 4px;
+}
+
+.table th:last-child,
+.table td:last-child {
+  padding-right: 4px;
+}
+
+.table td {
+  font-size: 13.5px;
+  color: #334155;
+  padding: 14px 12px;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.table tbody tr.is-clickable {
+  cursor: pointer;
+  transition: background 0.12s;
+}
+
+.table tbody tr.is-clickable:hover td {
+  background: #f8fbff;
+}
+
+.table-order-id {
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.table-strong {
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.table-action-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--blue-app);
+}
+
+.table-action-link:hover {
+  text-decoration: underline;
+}
+
+@media (min-width: 768px) {
+  .filter-bar {
+    grid-template-columns: minmax(0, 1fr) 240px;
+    gap: 14px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .table-action-link {
+    min-height: 0;
+  }
+}

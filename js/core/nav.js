@@ -1,4 +1,874 @@
-// Builds the sidebar from one role list, so the menu is not copied into every HTML file.
-export function renderNav(role, activePage) {
-  // TODO
+import { getCachedProfile, getCurrentProfile, logOut } from './auth.js';
+import { requireRole } from './guard.js';
+import { getInitials, escapeHtml } from './ui.js';
+import { supabase } from '../config/supabaseClient.js';
+
+const BADGE_CACHE_KEY = 'aquarun_active_badge';
+const STAFF_BADGE_CACHE_KEY = 'aquarun_staff_orders_badge';
+const RIDER_BADGE_CACHE_KEY = 'aquarun_rider_current_badge';
+
+const ICONS = {
+  home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4.5v-6h3v6H18a1 1 0 0 0 1-1V9.5"/></svg>`,
+  plus: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
+  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
+  clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+  drop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.7 6 11a6 6 0 1 1-12 0c0-4.3 6-11 6-11Z"/></svg>`,
+  bookmark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>`,
+  user: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>`,
+  cart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L21 7H6"/></svg>`,
+  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  truck: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  cube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>`,
+  chart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
+  list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
+  tag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+  logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
+  menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`,
+  close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>`,
+  logoDrop: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C12 2.5 5.5 9.8 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 9.8 12 2.5 12 2.5Zm-1.5 14.2a2.8 2.8 0 0 1-2.2-2.7c0-.4.3-.7.7-.7s.7.3.7.7c0 .7.4 1.2 1 1.4.4.1.6.5.5.9-.1.3-.4.5-.7.4Z"/></svg>`,
+};
+
+const NAV_SECTIONS = {
+  customer: [
+    {
+      heading: null,
+      items: [{ key: 'home', label: 'Home', icon: 'home' }],
+    },
+    {
+      heading: 'Orders',
+      items: [
+        { key: 'new-order', label: 'New order', icon: 'plus' },
+        { key: 'track-order', label: 'Track order', icon: 'pin', badgeId: 'nav-track-badge' },
+        { key: 'order-history', label: 'Order history', icon: 'clock' },
+      ],
+    },
+    {
+      heading: 'Account',
+      items: [
+        { key: 'bottle-balance', label: 'Bottle balance', icon: 'drop' },
+        { key: 'addresses', label: 'Saved addresses', icon: 'bookmark' },
+        { key: 'profile', label: 'Profile', icon: 'user' },
+      ],
+    },
+  ],
+  staff: [
+    {
+      heading: 'Operations',
+      items: [
+        { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { key: 'orders', label: 'Orders', icon: 'cart', badgeId: 'nav-staff-orders-badge' },
+        { key: 'order-processing', label: 'Order processing', icon: 'check' },
+        { key: 'bottle-ledger', label: 'Bottle ledger', icon: 'bookmark' },
+        { key: 'customers', label: 'Customers', icon: 'user' },
+      ],
+    },
+    {
+      heading: 'Account',
+      items: [{ key: 'profile', label: 'Profile', icon: 'user' }],
+    },
+  ],
+  rider: [
+    {
+      heading: 'Deliveries',
+      items: [
+        { key: 'my-deliveries', label: 'My deliveries', icon: 'truck' },
+        { key: 'delivery-details', label: 'Current delivery', icon: 'cube', badgeId: 'nav-rider-current-badge' },
+        { key: 'delivery-history', label: 'Delivery history', icon: 'clock' },
+      ],
+    },
+    {
+      heading: 'Account',
+      items: [{ key: 'profile', label: 'Profile', icon: 'user' }],
+    },
+  ],
+  admin: [
+    {
+      heading: 'Overview',
+      items: [
+        { key: 'dashboard', label: 'Dashboard', icon: 'home' },
+        { key: 'reports', label: 'Reports', icon: 'chart' },
+      ],
+    },
+    {
+      heading: 'Monitor',
+      items: [{ key: 'all-orders', label: 'All orders', icon: 'list' }],
+    },
+    {
+      heading: 'Manage',
+      items: [
+        { key: 'users', label: 'Users', icon: 'user' },
+        { key: 'products', label: 'Products & prices', icon: 'tag' },
+        { key: 'time-slots', label: 'Time slots', icon: 'clock' },
+      ],
+    },
+  ],
+};
+
+const CUSTOMER_PAGE_META = {
+  home: { title: 'Home', docTitle: 'Home | AquaRun', sub: '' },
+  'new-order': {
+    title: 'Place a refill order',
+    docTitle: 'New order | AquaRun',
+    sub: 'Add one or more refills, then pick a delivery slot.',
+  },
+  'track-order': {
+    title: 'Track order',
+    docTitle: 'Track order | AquaRun',
+    sub: 'Status updates come from the station and rider, not live GPS.',
+  },
+  'order-history': {
+    title: 'Order history',
+    docTitle: 'Order history | AquaRun',
+    sub: 'All your refill orders.',
+  },
+  'bottle-balance': {
+    title: 'Bottle balance',
+    docTitle: 'Bottle balance | AquaRun',
+    sub: 'Gallons delivered to you and empties returned.',
+  },
+  addresses: {
+    title: 'Saved addresses',
+    docTitle: 'Saved addresses | AquaRun',
+    sub: 'Add and manage your delivery addresses.',
+  },
+  profile: {
+    title: 'Profile',
+    docTitle: 'Profile | AquaRun',
+    sub: 'Update your details and password.',
+  },
+};
+
+const STAFF_PAGE_META = {
+  dashboard: {
+    title: 'Station dashboard',
+    docTitle: 'Station dashboard | AquaRun',
+    sub: 'Start with the oldest order that needs action.',
+  },
+  orders: {
+    title: 'Orders',
+    docTitle: 'Orders | AquaRun',
+    sub: 'Filter the queue and open an order for its next required action.',
+  },
+  'order-processing': {
+    title: 'Order processing',
+    docTitle: 'Order processing | AquaRun',
+    sub: 'One main action per status keeps each order moving.',
+  },
+  'bottle-ledger': {
+    title: 'Bottle ledger',
+    docTitle: 'Bottle ledger | AquaRun',
+    sub: 'Bottle movements recorded per delivered order and customer.',
+  },
+  customers: {
+    title: 'Customers',
+    docTitle: 'Customers | AquaRun',
+    sub: 'Customer records and current bottle balances.',
+  },
+  profile: {
+    title: 'Profile',
+    docTitle: 'Profile | AquaRun',
+    sub: 'Update your details and password.',
+  },
+};
+
+const RIDER_PAGE_META = {
+  'my-deliveries': {
+    title: 'My deliveries',
+    docTitle: 'My deliveries | AquaRun',
+    sub: '',
+  },
+  'delivery-details': {
+    title: 'Delivery details',
+    docTitle: 'Delivery details | AquaRun',
+    sub: '',
+  },
+  'complete-delivery': {
+    title: 'Complete delivery',
+    docTitle: 'Complete delivery | AquaRun',
+    sub: '',
+  },
+  'delivery-history': {
+    title: 'Delivery history',
+    docTitle: 'Delivery history | AquaRun',
+    sub: 'Your past deliveries with counts and payment',
+  },
+  profile: {
+    title: 'Profile',
+    docTitle: 'Profile | AquaRun',
+    sub: 'Update your details and availability',
+  },
+};
+
+const ADMIN_PAGE_META = {
+  dashboard: {
+    title: 'Dashboard',
+    docTitle: 'Dashboard | AquaRun',
+    sub: '',
+  },
+  reports: {
+    title: 'Reports',
+    docTitle: 'Reports | AquaRun',
+    sub: '',
+  },
+  'all-orders': {
+    title: 'All orders',
+    docTitle: 'All orders | AquaRun',
+    sub: 'Monitoring only. Staff process orders.',
+  },
+  users: {
+    title: 'Manage users',
+    docTitle: 'Manage users | AquaRun',
+    sub: 'Add, edit or deactivate staff and rider accounts',
+  },
+  products: {
+    title: 'Products & prices',
+    docTitle: 'Products & prices | AquaRun',
+    sub: 'Refill types, photos, per-gallon prices and service charge',
+  },
+  'time-slots': {
+    title: 'Time slots',
+    docTitle: 'Time slots | AquaRun',
+    sub: 'Set slot times and capacity per slot',
+  },
+};
+
+const ROLE_LABELS = {
+  customer: 'Customer',
+  staff: 'Station staff',
+  rider: 'Delivery rider',
+  admin: 'Owner · Admin',
+};
+
+const BRAND_SUBTITLES = {
+  customer: 'Refill and delivery',
+  staff: 'Station staff',
+  rider: 'Rider workspace',
+  admin: 'Owner workspace',
+};
+
+let activeCleanup = null;
+let currentProfile = null;
+let spaListenersAttached = false;
+let currentSpaRole = null;
+let currentActivePageKey = null;
+
+const MODULE_CACHE = new Map();
+const PAGE_SNAPSHOT_CACHE = new Map();
+
+function normalizeNavKey(rawKey) {
+  const clean = String(rawKey || '').replace(/\.html$/i, '');
+  return clean === 'complete-delivery' ? 'delivery-details' : clean;
+}
+
+function captureCurrentPageSnapshot(role, pageKey) {
+  if (!role || !pageKey) return;
+  const content = document.querySelector('#content');
+  if (!content || !content.innerHTML.trim()) return;
+  const titleEl = document.querySelector('#page-title');
+  const subEl = document.querySelector('#page-sub');
+  const rightEl = document.querySelector('#topbar-right');
+  const key = `${role}:${pageKey}:${window.location.search || ''}`;
+  PAGE_SNAPSHOT_CACHE.set(key, {
+    contentHtml: content.innerHTML,
+    titleText: titleEl ? titleEl.textContent : '',
+    subText: subEl ? subEl.textContent : '',
+    rightHtml: rightEl ? rightEl.innerHTML : '',
+  });
+}
+
+function preloadRoleModules(role, me = null) {
+  const metaMap = getPageMetaMap(role);
+  const keys = Object.keys(metaMap || {});
+  setTimeout(() => {
+    keys.forEach((k) => {
+      const cacheKey = `${role}/${k}`;
+      if (!MODULE_CACHE.has(cacheKey)) {
+        import(`../pages/${role}/${k}.js`)
+          .then((m) => MODULE_CACHE.set(cacheKey, m))
+          .catch(() => {});
+      }
+    });
+
+    // Pre-warm service caches so first click on any tab renders in <2ms
+    Promise.resolve()
+      .then(async () => {
+        const { getTodayManila } = await import('./ui.js');
+        const today = getTodayManila();
+        if (role === 'admin') {
+          const [ordersMod, reportsMod, productsMod, slotsMod, usersMod] = await Promise.all([
+            import('../services/ordersService.js'),
+            import('../services/reportsService.js'),
+            import('../services/productsService.js'),
+            import('../services/slotsService.js'),
+            import('../services/usersService.js'),
+          ]);
+          ordersMod.getAllOrdersForStaff({ limit: 300 }).catch(() => {});
+          reportsMod.getDailyReports({ limit: 14 }).catch(() => {});
+          reportsMod.getMonthlyReports({ limit: 12 }).catch(() => {});
+          reportsMod.getOrderActivityByHour({ days: 1 }).catch(() => {});
+          productsMod.getAllProductsForAdmin().catch(() => {});
+          productsMod.getServiceCharge().catch(() => {});
+          productsMod.getStationOpenStatus().catch(() => {});
+          slotsMod.getAllTimeSlotsForAdmin(today).catch(() => {});
+          usersMod.getStaffAndRidersForAdmin().catch(() => {});
+        } else if (role === 'customer' && me?.id) {
+          const [ordersMod, ledgerMod, addrMod, prodMod, slotsMod] = await Promise.all([
+            import('../services/ordersService.js'),
+            import('../services/ledgerService.js'),
+            import('../services/addressesService.js'),
+            import('../services/productsService.js'),
+            import('../services/slotsService.js'),
+          ]);
+          ordersMod.getCustomerActiveOrder(me.id).catch(() => {});
+          ordersMod.getCustomerOrders(me.id, { limit: 100 }).catch(() => {});
+          ledgerMod.getCustomerBottleBalance(me.id).catch(() => {});
+          ledgerMod.getCustomerLedgerActivity(me.id).catch(() => {});
+          addrMod.getCustomerAddresses(me.id).catch(() => {});
+          prodMod.getActiveProducts().catch(() => {});
+          prodMod.getServiceCharge().catch(() => {});
+          slotsMod.getSlotAvailability(today).catch(() => {});
+        } else if (role === 'staff') {
+          const [ordersMod, ledgerMod, slotsMod, usersMod] = await Promise.all([
+            import('../services/ordersService.js'),
+            import('../services/ledgerService.js'),
+            import('../services/slotsService.js'),
+            import('../services/usersService.js'),
+          ]);
+          ordersMod.getAllOrdersForStaff({ limit: 200 }).catch(() => {});
+          ordersMod.getNextOrderForProcessing().catch(() => {});
+          ledgerMod.getStaffLedgerEntries().catch(() => {});
+          ledgerMod.getAllCustomerBalances().catch(() => {});
+          slotsMod.getSlotAvailability(today).catch(() => {});
+          usersMod.getAvailableRiders().catch(() => {});
+        } else if (role === 'rider' && me?.id) {
+          const delivMod = await import('../services/deliveryService.js');
+          delivMod.getRiderDeliveries(me.id).catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, 30);
+}
+
+export async function updateCustomerActiveOrderBadge(customerId) {
+  const badge = document.querySelector('#nav-track-badge');
+  if (!badge || !customerId) return;
+  const { count } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('customer_id', customerId)
+    .not('status', 'in', '("completed","cancelled")');
+  const num = Number(count || 0);
+  try {
+    sessionStorage.setItem(BADGE_CACHE_KEY, String(num));
+  } catch {}
+  if (num > 0) {
+    badge.textContent = String(num);
+    badge.hidden = false;
+  } else {
+    badge.textContent = '';
+    badge.hidden = true;
+  }
+}
+
+export async function updateStaffOrdersBadge() {
+  const badge = document.querySelector('#nav-staff-orders-badge');
+  if (!badge) return;
+  const { count } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .in('status', ['submitted', 'confirmed', 'refilling', 'ready']);
+  const num = Number(count || 0);
+  try {
+    sessionStorage.setItem(STAFF_BADGE_CACHE_KEY, String(num));
+  } catch {}
+  if (num > 0) {
+    badge.textContent = String(num);
+    badge.hidden = false;
+  } else {
+    badge.textContent = '';
+    badge.hidden = true;
+  }
+}
+
+export async function updateRiderCurrentBadge(riderId) {
+  const badge = document.querySelector('#nav-rider-current-badge');
+  if (!badge || !riderId) return;
+  const { count } = await supabase
+    .from('orders')
+    .select('id', { count: 'exact', head: true })
+    .eq('rider_id', riderId)
+    .in('status', ['rider_assigned', 'out_for_delivery']);
+  const num = Number(count || 0);
+  try {
+    sessionStorage.setItem(RIDER_BADGE_CACHE_KEY, String(num));
+  } catch {}
+  if (num > 0) {
+    badge.textContent = String(num);
+    badge.hidden = false;
+  } else {
+    badge.textContent = '';
+    badge.hidden = true;
+  }
+}
+
+export function closeMobileSidebarMenu() {
+  const container = document.querySelector('#sidebar') || document.querySelector('#app-nav');
+  document.body.classList.remove('is-drawer-open');
+  if (!container) return;
+  container.classList.remove('is-menu-open');
+  const toggleBtn = container.querySelector('#sidebar-menu-toggle');
+  if (toggleBtn) {
+    toggleBtn.setAttribute('aria-expanded', 'false');
+    toggleBtn.innerHTML = ICONS.menu;
+  }
+}
+
+export function openMobileSidebarMenu() {
+  const container = document.querySelector('#sidebar') || document.querySelector('#app-nav');
+  if (!container) return;
+  container.classList.add('is-menu-open');
+  document.body.classList.add('is-drawer-open');
+  const toggleBtn = container.querySelector('#sidebar-menu-toggle');
+  if (toggleBtn) {
+    toggleBtn.setAttribute('aria-expanded', 'true');
+    toggleBtn.innerHTML = ICONS.close;
+  }
+}
+
+export function setActiveNavKey(activeKey) {
+  const container = document.querySelector('#sidebar') || document.querySelector('#app-nav');
+  if (!container) return;
+  const normalizedKey = normalizeNavKey(activeKey);
+  container.querySelectorAll('.sidebar-link').forEach((link) => {
+    const key = link.dataset.navKey;
+    link.classList.toggle('is-active', key === normalizedKey);
+  });
+  closeMobileSidebarMenu();
+}
+
+// Renders the sidebar into #sidebar (or #app-nav). If already rendered for the same user, just updates the active state.
+export async function renderNav(profileOrRole, activeKey) {
+  const container = document.querySelector('#sidebar') || document.querySelector('#app-nav');
+  if (!container) return;
+
+  let profile = typeof profileOrRole === 'object' && profileOrRole !== null ? profileOrRole : getCachedProfile();
+  if (!profile) {
+    try {
+      profile = await getCurrentProfile();
+    } catch {
+      profile = { role: typeof profileOrRole === 'string' ? profileOrRole : 'customer', full_name: 'User' };
+    }
+  }
+  currentProfile = profile;
+
+  const role = profile?.role || 'customer';
+  const fullName = profile?.full_name || 'User';
+
+  if (container.dataset.renderedRole === role) {
+    const nameEl = container.querySelector('.sidebar-user-name');
+    const avatarEl = container.querySelector('.sidebar-avatar');
+    if (nameEl) nameEl.textContent = fullName;
+    if (avatarEl) avatarEl.textContent = getInitials(fullName);
+    setActiveNavKey(activeKey);
+    if (role === 'customer' && profile?.id) {
+      updateCustomerActiveOrderBadge(profile.id).catch(() => {});
+    } else if (role === 'staff') {
+      updateStaffOrdersBadge().catch(() => {});
+    } else if (role === 'rider' && profile?.id) {
+      updateRiderCurrentBadge(profile.id).catch(() => {});
+    }
+    return;
+  }
+
+  const sections = NAV_SECTIONS[role] ?? NAV_SECTIONS.customer;
+  const cachedCustomerBadge = Number(sessionStorage.getItem(BADGE_CACHE_KEY) || 0);
+  const cachedStaffBadge = Number(sessionStorage.getItem(STAFF_BADGE_CACHE_KEY) || 0);
+  const cachedRiderBadge = Number(sessionStorage.getItem(RIDER_BADGE_CACHE_KEY) || 0);
+  const normalizedKey = normalizeNavKey(activeKey);
+
+  const sectionsHtml = sections
+    .map((section) => {
+      const headingHtml = section.heading
+        ? `<p class="sidebar-group-label">${escapeHtml(section.heading)}</p>`
+        : '';
+      const linksHtml = section.items
+        .map((item) => {
+          const isActive = item.key === normalizedKey;
+          let badgeVal = 0;
+          if (item.badgeId === 'nav-track-badge') badgeVal = cachedCustomerBadge;
+          if (item.badgeId === 'nav-staff-orders-badge') badgeVal = cachedStaffBadge;
+          if (item.badgeId === 'nav-rider-current-badge') badgeVal = cachedRiderBadge;
+          const badgeHtml = item.badgeId
+            ? `<span class="sidebar-badge" id="${item.badgeId}" ${badgeVal > 0 ? '' : 'hidden'}>${badgeVal > 0 ? badgeVal : ''}</span>`
+            : '';
+          return `
+            <a class="sidebar-link${isActive ? ' is-active' : ''}" href="${item.key}.html" data-nav-key="${escapeHtml(item.key)}">
+              <span class="sidebar-icon">${ICONS[item.icon] || ''}</span>
+              <span class="sidebar-label">${escapeHtml(item.label)}</span>
+              ${badgeHtml}
+            </a>
+          `;
+        })
+        .join('');
+      return `<div class="sidebar-group">${headingHtml}${linksHtml}</div>`;
+    })
+    .join('');
+
+  container.dataset.renderedRole = role;
+  container.innerHTML = `
+    <div class="sidebar-top">
+      <div class="sidebar-brand-row">
+        <a class="sidebar-brand" href="${sections[0]?.items[0]?.key || 'home'}.html">
+          <span class="sidebar-brand-mark">${ICONS.logoDrop}</span>
+          <span class="sidebar-brand-text">
+            <span class="sidebar-brand-title">Aqua<span>Run</span></span>
+            <span class="sidebar-brand-sub">${escapeHtml(BRAND_SUBTITLES[role] || 'Refill and delivery')}</span>
+          </span>
+        </a>
+        <button
+          type="button"
+          class="sidebar-hamburger"
+          id="sidebar-menu-toggle"
+          aria-label="Toggle navigation menu"
+          aria-expanded="false"
+          aria-controls="sidebar-collapsible"
+        >
+          ${ICONS.menu}
+        </button>
+      </div>
+      <div class="sidebar-backdrop" id="sidebar-backdrop" aria-hidden="true"></div>
+      <div class="sidebar-collapsible" id="sidebar-collapsible" role="dialog" aria-label="Navigation menu">
+        <div class="sidebar-drawer-head">
+          <a class="sidebar-brand" href="${sections[0]?.items[0]?.key || 'home'}.html">
+            <span class="sidebar-brand-mark">${ICONS.logoDrop}</span>
+            <span class="sidebar-brand-text">
+              <span class="sidebar-brand-title">Aqua<span>Run</span></span>
+              <span class="sidebar-brand-sub">${escapeHtml(BRAND_SUBTITLES[role] || 'Refill and delivery')}</span>
+            </span>
+          </a>
+          <button
+            type="button"
+            class="sidebar-drawer-close"
+            id="sidebar-drawer-close"
+            aria-label="Close navigation menu"
+          >
+            ${ICONS.close}
+          </button>
+        </div>
+        <nav class="sidebar-nav" aria-label="Main navigation">
+          ${sectionsHtml}
+        </nav>
+        <div class="sidebar-footer">
+          <div class="sidebar-user">
+            <span class="sidebar-avatar">${escapeHtml(getInitials(fullName))}</span>
+            <div class="sidebar-user-meta">
+              <p class="sidebar-user-name">${escapeHtml(fullName)}</p>
+              <p class="sidebar-user-role">${escapeHtml(ROLE_LABELS[role] || 'Customer')}</p>
+            </div>
+          </div>
+          <button type="button" class="sidebar-logout" id="sidebar-logout-btn" title="Log out" aria-label="Log out">
+            ${ICONS.logout}
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.querySelector('#sidebar-logout-btn')?.addEventListener('click', logOut);
+  const toggleBtn = container.querySelector('#sidebar-menu-toggle');
+  const closeDrawerBtn = container.querySelector('#sidebar-drawer-close');
+  const backdropEl = container.querySelector('#sidebar-backdrop');
+
+  toggleBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (container.classList.contains('is-menu-open')) {
+      closeMobileSidebarMenu();
+    } else {
+      openMobileSidebarMenu();
+    }
+  });
+
+  closeDrawerBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeMobileSidebarMenu();
+  });
+
+  backdropEl?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeMobileSidebarMenu();
+  });
+
+  container.querySelectorAll('.sidebar-link, .sidebar-brand').forEach((link) => {
+    link.addEventListener('click', () => {
+      closeMobileSidebarMenu();
+    });
+  });
+
+  if (role === 'customer' && profile?.id) {
+    updateCustomerActiveOrderBadge(profile.id).catch(() => {});
+  } else if (role === 'staff') {
+    updateStaffOrdersBadge().catch(() => {});
+  } else if (role === 'rider' && profile?.id) {
+    updateRiderCurrentBadge(profile.id).catch(() => {});
+  }
+}
+
+function getPageMetaMap(role) {
+  if (role === 'staff') return STAFF_PAGE_META;
+  if (role === 'rider') return RIDER_PAGE_META;
+  if (role === 'admin') return ADMIN_PAGE_META;
+  return CUSTOMER_PAGE_META;
+}
+
+function getRolePageKeyFromUrl(urlObj, role) {
+  const metaMap = getPageMetaMap(role);
+  const folder = role;
+  const folderRegex = new RegExp(`\\/${folder}\\/([a-z0-9-]+)(?:\\.html)?$`, 'i');
+  const match = urlObj.pathname.match(folderRegex);
+  if (match && metaMap[match[1]]) return match[1];
+  const fileMatch = urlObj.pathname.match(/\/?([a-z0-9-]+)(?:\.html)?$/i);
+  if (fileMatch && metaMap[fileMatch[1]]) return fileMatch[1];
+  return null;
+}
+
+function updateTopbarForRolePage(role, pageKey, snapshot = null) {
+  const meta = getPageMetaMap(role)[pageKey];
+  if (!meta) return;
+  document.title = meta.docTitle;
+  const topbar = document.querySelector('.topbar');
+  if (!topbar) return;
+
+  let titleEl = topbar.querySelector('#page-title');
+  let subEl = topbar.querySelector('#page-sub');
+  let rightEl = topbar.querySelector('#topbar-right');
+
+  if (!titleEl || !subEl || !rightEl) {
+    topbar.innerHTML = `
+      <div class="topbar-left">
+        <h1 id="page-title">${escapeHtml(snapshot?.titleText || meta.title)}</h1>
+        <p class="topbar-sub text-muted" id="page-sub">${escapeHtml(snapshot?.subText ?? meta.sub)}</p>
+      </div>
+      <div class="topbar-right" id="topbar-right">${snapshot?.rightHtml || ''}</div>
+    `;
+  } else {
+    titleEl.textContent = snapshot?.titleText || meta.title;
+    subEl.textContent = snapshot?.subText ?? meta.sub;
+    rightEl.innerHTML = snapshot?.rightHtml || '';
+  }
+}
+
+function triggerSmoothContentEnter() {
+  const content = document.querySelector('#content');
+  if (!content) return;
+  content.classList.remove('spa-view-enter');
+  void content.offsetWidth;
+  content.classList.add('spa-view-enter');
+}
+
+export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
+  const resolved = new URL(targetUrl, window.location.href);
+  const pageKey = getRolePageKeyFromUrl(resolved, role);
+  if (!pageKey) {
+    window.location.href = resolved.href;
+    return;
+  }
+
+  // Save snapshot of current page before switching
+  if (currentActivePageKey) {
+    captureCurrentPageSnapshot(role, currentActivePageKey);
+  }
+
+  if (push && resolved.href !== window.location.href) {
+    window.history.pushState({ role, pageKey }, '', resolved.href);
+  }
+
+  if (typeof activeCleanup === 'function') {
+    try {
+      activeCleanup();
+    } catch {}
+    activeCleanup = null;
+  }
+
+  currentActivePageKey = pageKey;
+  const profile = currentProfile || getCachedProfile() || (await requireRole(role));
+  currentProfile = profile;
+
+  setActiveNavKey(pageKey);
+
+  const snapshotKey = `${role}:${pageKey}:${resolved.search || ''}`;
+  const snapshot = PAGE_SNAPSHOT_CACHE.get(snapshotKey) || null;
+  updateTopbarForRolePage(role, pageKey, snapshot);
+
+  const content = document.querySelector('#content');
+  if (snapshot && content) {
+    content.innerHTML = snapshot.contentHtml;
+  }
+  triggerSmoothContentEnter();
+
+  const moduleKey = `${role}/${pageKey}`;
+  let mod = MODULE_CACHE.get(moduleKey);
+  if (!mod) {
+    mod = await import(`../pages/${role}/${pageKey}.js`);
+    MODULE_CACHE.set(moduleKey, mod);
+  }
+
+  if (typeof mod.mount === 'function') {
+    activeCleanup = await mod.mount(profile);
+    captureCurrentPageSnapshot(role, pageKey);
+  }
+  if (role === 'customer' && profile?.id) {
+    updateCustomerActiveOrderBadge(profile.id).catch(() => {});
+  } else if (role === 'staff') {
+    updateStaffOrdersBadge().catch(() => {});
+  } else if (role === 'rider' && profile?.id) {
+    updateRiderCurrentBadge(profile.id).catch(() => {});
+  }
+}
+
+export async function navigateCustomerSpa(targetUrl, options) {
+  return navigateRoleSpa('customer', targetUrl, options);
+}
+
+export async function navigateStaffSpa(targetUrl, options) {
+  return navigateRoleSpa('staff', targetUrl, options);
+}
+
+export async function navigateRiderSpa(targetUrl, options) {
+  return navigateRoleSpa('rider', targetUrl, options);
+}
+
+export async function navigateAdminSpa(targetUrl, options) {
+  return navigateRoleSpa('admin', targetUrl, options);
+}
+
+function attachRoleSpaListeners(role) {
+  if (spaListenersAttached && currentSpaRole === role) return;
+  spaListenersAttached = true;
+  currentSpaRole = role;
+
+  document.addEventListener('click', (e) => {
+    const sidebarEl = document.querySelector('#sidebar');
+    if (sidebarEl && sidebarEl.classList.contains('is-menu-open') && !sidebarEl.contains(e.target)) {
+      closeMobileSidebarMenu();
+    }
+
+    if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+    const link = e.target.closest('a[href]');
+    if (!link || link.target || link.hasAttribute('download')) return;
+
+    const resolved = new URL(link.getAttribute('href'), window.location.href);
+    if (resolved.origin !== window.location.origin) return;
+
+    const pageKey = getRolePageKeyFromUrl(resolved, currentSpaRole);
+    if (!pageKey) return;
+
+    e.preventDefault();
+    closeMobileSidebarMenu();
+    navigateRoleSpa(currentSpaRole, resolved.href, { push: true });
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeMobileSidebarMenu();
+    }
+  });
+
+  window.addEventListener('popstate', () => {
+    closeMobileSidebarMenu();
+    navigateRoleSpa(currentSpaRole, window.location.href, { push: false });
+  });
+
+  window.addEventListener('resize', () => {
+    if (window.innerWidth >= 1024) {
+      closeMobileSidebarMenu();
+    }
+  });
+}
+
+export async function bootCustomerPage(pageKey, mountFn) {
+  if (window.__AQUARUN_SPA_BOOTED__) return;
+  window.__AQUARUN_SPA_BOOTED__ = true;
+
+  const cleanKey = normalizeNavKey(pageKey);
+  currentActivePageKey = cleanKey;
+  attachRoleSpaListeners('customer');
+  preloadRoleModules('customer');
+
+  const cached = getCachedProfile();
+  if (cached && cached.role === 'customer') {
+    renderNav(cached, cleanKey);
+  }
+
+  const me = await requireRole('customer');
+  currentProfile = me;
+  preloadRoleModules('customer', me);
+  await renderNav(me, cleanKey);
+  activeCleanup = await mountFn(me);
+  captureCurrentPageSnapshot('customer', cleanKey);
+}
+
+export async function bootStaffPage(pageKey, mountFn) {
+  if (window.__AQUARUN_SPA_BOOTED__) return;
+  window.__AQUARUN_SPA_BOOTED__ = true;
+
+  const cleanKey = normalizeNavKey(pageKey);
+  currentActivePageKey = cleanKey;
+  attachRoleSpaListeners('staff');
+  preloadRoleModules('staff');
+
+  const cached = getCachedProfile();
+  if (cached && cached.role === 'staff') {
+    renderNav(cached, cleanKey);
+  }
+
+  const me = await requireRole('staff');
+  currentProfile = me;
+  preloadRoleModules('staff', me);
+  await renderNav(me, cleanKey);
+  activeCleanup = await mountFn(me);
+  captureCurrentPageSnapshot('staff', cleanKey);
+}
+
+export async function bootRiderPage(pageKey, mountFn) {
+  if (window.__AQUARUN_SPA_BOOTED__) return;
+  window.__AQUARUN_SPA_BOOTED__ = true;
+
+  const cleanKey = normalizeNavKey(pageKey);
+  currentActivePageKey = cleanKey;
+  attachRoleSpaListeners('rider');
+  preloadRoleModules('rider');
+
+  const cached = getCachedProfile();
+  if (cached && cached.role === 'rider') {
+    renderNav(cached, cleanKey);
+  }
+
+  const me = await requireRole('rider');
+  currentProfile = me;
+  preloadRoleModules('rider', me);
+  await renderNav(me, cleanKey);
+  activeCleanup = await mountFn(me);
+  captureCurrentPageSnapshot('rider', cleanKey);
+}
+
+export async function bootAdminPage(pageKey, mountFn) {
+  if (window.__AQUARUN_SPA_BOOTED__) return;
+  window.__AQUARUN_SPA_BOOTED__ = true;
+
+  const cleanKey = normalizeNavKey(pageKey);
+  currentActivePageKey = cleanKey;
+  attachRoleSpaListeners('admin');
+  preloadRoleModules('admin');
+
+  const cached = getCachedProfile();
+  if (cached && cached.role === 'admin') {
+    renderNav(cached, cleanKey);
+  }
+
+  const me = await requireRole('admin');
+  currentProfile = me;
+  preloadRoleModules('admin', me);
+  await renderNav(me, cleanKey);
+  activeCleanup = await mountFn(me);
+  captureCurrentPageSnapshot('admin', cleanKey);
 }

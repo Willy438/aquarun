@@ -1,1 +1,55 @@
-/* Columns, stat rows, two-column pages */
+/* Responsive grid system supporting 320px minimum width, 624px layout, and desktop */
+.grid-2,
+.grid-3,
+.grid-split {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: clamp(12px, 2vw, 20px);
+  min-width: 0;
+}
+
+/* Stat cards grid: auto-fit with 140px minimum column width */
+.grid-4,
+.grid-3:has(> .stat-card),
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: clamp(12px, 2vw, 20px);
+  min-width: 0;
+}
+
+.grid-2 > *,
+.grid-3 > *,
+.grid-4 > *,
+.grid-split > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(12px, 2vw, 20px);
+  min-width: 0;
+}
+
+@media (min-width: 624px) {
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-3:not(:has(> .stat-card)) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .grid-3:not(:has(> .stat-card)) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .grid-split {
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr);
+    align-items: start;
+  }
+}

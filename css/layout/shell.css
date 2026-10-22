@@ -1,1 +1,62 @@
-/* Page frame: sidebar plus main area */
+/* Page frame: mobile-first single column, fixed desktop sidebar + fluid main at 1024px */
+@view-transition {
+  navigation: auto;
+}
+
+.shell {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  background: var(--app-bg);
+  color: var(--ink-navy);
+  width: 100%;
+  max-width: 100%;
+}
+
+.sidebar {
+  view-transition-name: app-sidebar;
+}
+
+.main {
+  min-width: 0;
+  padding: clamp(14px, 2.5vw, 28px) clamp(12px, 3vw, 34px) clamp(28px, 4vw, 48px);
+  max-width: 1480px;
+  width: 100%;
+  view-transition-name: app-main;
+}
+
+#content {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(14px, 2vw, 20px);
+  min-width: 0;
+  width: 100%;
+}
+
+#content > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@keyframes spaViewEnter {
+  from {
+    opacity: 0.72;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+#content.spa-view-enter {
+  animation: spaViewEnter 0.14s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    padding-left: 248px;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

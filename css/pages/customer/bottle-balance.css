@@ -1,1 +1,9 @@
-/* Bottle Balance page styles. Only styles used by this page. */
+/* Customer Bottle balance page (Mobile-first with 480px, 768px, 1024px breakpoints & fluid clamp()) */
+.balance-how-notice {
+  margin-bottom: 14px;
+}
+
+.balance-change-pos {
+  font-weight: 700;
+  color: var(--ink-navy);
+}

@@ -1,1 +1,101 @@
-/* Order progress tracker (6 and 8 steps) */
+/* Order progress tracker (Mobile-first with 480px, 768px, 1024px breakpoints) */
+.tracker {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  position: relative;
+  margin: 22px 0 20px;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 6px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.tracker-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  flex: 1 0 92px;
+  min-width: 92px;
+}
+
+.tracker-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 22px);
+  width: calc(100% - 44px);
+  height: 2px;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.tracker-step.is-done:not(:last-child)::after {
+  background: rgba(255, 255, 255, 0.88);
+}
+
+.tracker-dot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1.5px solid rgba(255, 255, 255, 0.38);
+  color: rgba(255, 255, 255, 0.78);
+  margin-bottom: 9px;
+  position: relative;
+  z-index: 1;
+}
+
+.tracker-step.is-done .tracker-dot,
+.tracker-step.is-active .tracker-dot {
+  background: #ffffff;
+  border-color: #ffffff;
+  color: var(--blue-app);
+}
+
+.tracker-step.is-active .tracker-dot {
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.24);
+}
+
+.tracker-dot svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tracker-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  white-space: nowrap;
+}
+
+.tracker-step.is-done .tracker-label,
+.tracker-step.is-active .tracker-label {
+  color: #ffffff;
+}
+
+.tracker-time {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-top: 3px;
+  min-height: 14px;
+}
+
+@media (min-width: 768px) {
+  .tracker {
+    justify-content: space-between;
+    overflow-x: visible;
+    padding-bottom: 0;
+  }
+
+  .tracker-step {
+    flex: 1;
+    min-width: 0;
+  }
+}

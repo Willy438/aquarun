@@ -1,18 +1,29 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>All orders | AquaRun</title>
-  <link rel="stylesheet" href="../css/main.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AquaRun · All Orders</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
 </head>
 <body>
   <div class="shell">
     <aside class="sidebar" id="sidebar"></aside>
-    <main class="main">
-      <header class="topbar"><h1>All orders</h1></header>
-      <section id="content"></section>
-    </main>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 id="page-title">All orders</h1>
+          <p id="page-sub" class="text-muted">Station-wide order log</p>
+        </div>
+        <div class="topbar-right" id="topbar-right">
+          <span class="pill pill-neutral">Read-only</span>
+        </div>
+      </header>
+      <main id="content" class="content"></main>
+    </div>
   </div>
   <script type="module" src="../js/pages/admin/all-orders.js"></script>
 </body>

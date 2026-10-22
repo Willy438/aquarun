@@ -1,1 +1,301 @@
-/* My Deliveries page styles. Only styles used by this page. */
+/* Rider workspace styles: Mobile-first (breakpoints: 480px, 768px, 1024px) */
+.avail-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 44px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.avail-pill::before {
+  content: '';
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.avail-pill.is-on {
+  background: #dff6e8;
+  color: #13794b;
+}
+
+.avail-pill.is-off {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.stat-card-between {
+  justify-content: space-between;
+}
+
+.stat-label-top {
+  font-size: 12px;
+  color: var(--muted-blue);
+  margin-bottom: 6px;
+}
+
+.stat-value-slot {
+  font-size: clamp(19px, 2vw, 22px);
+  font-weight: 800;
+  color: var(--ink-navy);
+  line-height: 1.15;
+}
+
+.stat-value-slot small {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-blue);
+}
+
+.hero-pill-tag {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.hero-strip-4 {
+  grid-template-columns: 1fr;
+  margin-top: 20px;
+}
+
+.checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 44px;
+  padding: 6px 0;
+  font-size: 13.5px;
+  color: var(--ink-navy);
+  cursor: pointer;
+  user-select: none;
+}
+
+.checklist-circle {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  color: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.checklist-item.is-checked .checklist-circle {
+  background: var(--blue-app);
+  border-color: var(--blue-app);
+  color: #ffffff;
+}
+
+.checklist-circle svg {
+  width: 12px;
+  height: 12px;
+}
+
+.notice-tint {
+  background: #eaf2ff;
+  color: var(--blue-app);
+  font-weight: 500;
+}
+
+.table-sub {
+  font-size: 11.5px;
+  color: var(--muted-blue);
+  margin-top: 2px;
+}
+
+/* Delivery details (mobile-first single column) */
+.rider-cust-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+
+.rider-field-caption {
+  font-size: 11.5px;
+  color: var(--muted-blue);
+  margin-bottom: 3px;
+}
+
+.rider-field-value {
+  font-size: clamp(14px, 1.4vw, 15px);
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.rider-landmark {
+  font-size: 12.5px;
+  color: var(--muted-blue);
+  margin-top: 4px;
+}
+
+.rider-window-big {
+  font-size: clamp(20px, 2.2vw, 24px);
+  font-weight: 800;
+  color: var(--ink-navy);
+  margin-bottom: 12px;
+}
+
+.rider-progress-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.rider-progress-step {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: #475569;
+}
+
+.rider-progress-step.is-active,
+.rider-progress-step.is-done {
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.rider-cash-total {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--blue-app);
+}
+
+/* Delivery history filter pills (>=44px tap targets on mobile) */
+.filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.filter-pill {
+  min-height: 44px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line-input);
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 600;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.filter-pill.is-active {
+  background: var(--blue-app);
+  border-color: var(--blue-app);
+  color: #ffffff;
+}
+
+/* Rider Profile availability switch */
+.avail-switch-box {
+  background: #f4f8ff;
+  border: 1px solid #dce8ff;
+  border-radius: 13px;
+  padding: 15px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 14px;
+  margin-bottom: 12px;
+  min-width: 0;
+}
+
+.avail-switch-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.avail-switch-sub {
+  font-size: 12px;
+  color: var(--muted-blue);
+  margin-top: 2px;
+}
+
+.toggle-switch {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  cursor: pointer;
+  background: #cbd5e1;
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  left: 3px;
+  top: 3px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.18);
+  transition: transform 0.2s;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+  background: var(--blue-app);
+}
+
+.toggle-switch input:checked + .toggle-slider::before {
+  transform: translateX(20px);
+}
+
+@media (min-width: 480px) {
+  .hero-strip-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rider-cust-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-strip-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .avail-pill,
+  .filter-pill {
+    min-height: 36px;
+  }
+}

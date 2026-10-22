@@ -1,1 +1,15 @@
-/* Dashboard page styles. Only styles used by this page. */
+/* Staff dashboard page styles (Mobile-first with 480px, 768px, 1024px breakpoints & fluid clamp()) */
+.queue-workflow-notice {
+  margin-top: 14px;
+}
+
+.completed-total-row .kv-label {
+  font-weight: 700;
+  color: var(--ink-navy);
+  font-size: clamp(13px, 1.4vw, 14px);
+}
+
+.completed-total-row .kv-value {
+  font-size: clamp(15px, 1.8vw, 17px);
+  font-weight: 800;
+}

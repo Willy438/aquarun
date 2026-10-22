@@ -18,4 +18,15 @@
 @import url('components/queue.css');
 @import url('components/toast.css');
 @import url('components/modal.css');
-
+@import url('pages/customer/home.css');
+@import url('pages/customer/new-order.css');
+@import url('pages/customer/track-order.css');
+@import url('pages/customer/bottle-balance.css');
+@import url('pages/customer/addresses.css');
+@import url('pages/staff/dashboard.css');
+@import url('pages/staff/order-processing.css');
+@import url('pages/rider/my-deliveries.css');
+@import url('pages/rider/complete-delivery.css');
+@import url('pages/admin/dashboard.css');
+@import url('pages/admin/reports.css');
+@import url('pages/admin/time-slots.css');

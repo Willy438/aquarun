@@ -1,1 +1,55 @@
-/* Home page styles. Only styles used by this page. */
+/* Customer home page styles (Mobile-first with 480px, 768px, 1024px breakpoints & fluid clamp()) */
+.balance-hero {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.balance-hero-num {
+  font-size: clamp(28px, 4vw, 36px);
+  font-weight: 800;
+  color: var(--ink-navy);
+  line-height: 1;
+}
+
+.balance-hero-label {
+  font-size: clamp(12.5px, 1.3vw, 13px);
+  color: var(--muted-blue);
+}
+
+.balance-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.balance-box {
+  background: #f4f7fc;
+  border-radius: 12px;
+  padding: clamp(10px, 1.5vw, 12px) clamp(12px, 1.8vw, 15px);
+}
+
+.balance-box-val {
+  font-size: clamp(16px, 2vw, 18px);
+  font-weight: 700;
+  color: var(--ink-navy);
+}
+
+.balance-box-sub {
+  font-size: 11.5px;
+  color: var(--muted-blue);
+  margin-top: 2px;
+}
+
+.quick-order-cta {
+  margin-top: 16px;
+}
+
+@media (min-width: 480px) {
+  .balance-split {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}

@@ -1,1 +1,119 @@
-/* Order and delivery summary banner */
+/* Order and delivery summary banner (Mobile-first with 480px / 768px / 1024px breakpoints) */
+.hero-banner {
+  background: var(--gradient-hero);
+  color: #ffffff;
+  border-radius: clamp(16px, 2vw, 20px);
+  padding: clamp(18px, 2.4vw, 24px) clamp(16px, 2.8vw, 28px) clamp(16px, 2.2vw, 22px);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 14px 28px rgba(24, 77, 196, 0.22);
+  min-width: 0;
+}
+
+.hero-banner::before {
+  content: '';
+  position: absolute;
+  right: -48px;
+  bottom: -64px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.hero-banner::after {
+  content: '';
+  position: absolute;
+  right: 220px;
+  top: 24px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50% 50% 50% 6px;
+  transform: rotate(-45deg);
+  background: rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+}
+
+.hero-top {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-meta-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12.5px;
+  color: rgba(255, 255, 255, 0.82);
+  margin-bottom: 6px;
+}
+
+.hero-status-title {
+  font-size: clamp(20px, 2.4vw, 26px);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.hero-status-sub {
+  font-size: clamp(12.5px, 1.2vw, 13.5px);
+  color: rgba(255, 255, 255, 0.78);
+  margin-top: 4px;
+}
+
+.hero-strip {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.16);
+  position: relative;
+  z-index: 1;
+}
+
+.hero-strip-item {
+  min-width: 0;
+}
+
+.hero-strip-label {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.65);
+  margin-bottom: 3px;
+}
+
+.hero-strip-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+@media (min-width: 480px) {
+  .hero-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  .hero-top {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .hero-strip {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+  }
+}

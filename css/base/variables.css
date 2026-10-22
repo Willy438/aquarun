@@ -1,20 +1,49 @@
 :root {
   --blue: #2f80ff;
   --blue-dark: #1558d6;
+  --blue-app: #1d5bd6;
+  --blue-app-hover: #1546b3;
+  --navy-top: #0f3a8d;
+  --navy-bottom: #082359;
   --ink: #0b1220;
+  --ink-navy: #122444;
   --muted: #6b7280;
+  --muted-blue: #64748b;
   --subtle: #9aa0aa;
   --bg: #f8f7f3;
+  --app-bg: #f2f6fc;
   --surface: #ffffff;
+  --surface-soft: #f5f8fd;
   --line: #e9e6de;
+  --line-app: #e6edf7;
   --line-input: #dce3ee;
   --tint: #e8f2fc;
+  --tint-blue: #ebf2ff;
   --tint-line: #c5d9f2;
   --danger: #d92d20;
+  --danger-bg: #fef2f2;
+  --danger-border: #fecdca;
+  --warning: #b45309;
+  --warning-bg: #fef3c7;
+  --warning-border: #fde68a;
+  --warning-text: #a15c07;
   --success: #12805c;
+  --success-bg: #e3f7ec;
+  --success-text: #13794b;
+
+  /* Semantic aliases */
+  --brand: #1d5bd6;
+  --brand-soft: #ebf2ff;
+  --text: #122444;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border: #e6edf7;
+  --border-subtle: #eef2f8;
+  --shadow-xs: 0 4px 18px rgba(15, 36, 84, 0.04);
 
   --font: 'DM Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
 
+  --radius-xs: 10px;
   --radius-sm: 16px;
   --radius-md: 24px;
   --radius-lg: 28px;
@@ -22,8 +51,10 @@
   --radius-pill: 999px;
 
   --shadow-card: 0 16px 20px rgba(21, 88, 214, 0.08);
+  --shadow-panel: 0 4px 18px rgba(15, 36, 84, 0.04);
   --shadow-button: 0 10px 12px rgba(47, 128, 255, 0.35);
   --gradient-blue: linear-gradient(130deg, #2f80ff 15%, #1558d6 85%);
+  --gradient-hero: linear-gradient(135deg, #215ee2 0%, #184dc4 100%);
   --gradient-button: linear-gradient(173deg, #2f80ff 15%, #1558d6 85%);
 
   --page-width: 1600px;

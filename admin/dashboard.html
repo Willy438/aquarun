@@ -1,19 +1,33 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Dashboard | AquaRun</title>
-  <link rel="stylesheet" href="../css/main.css">
-  <link rel="stylesheet" href="../css/pages/admin/dashboard.css">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>AquaRun · Admin Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400..800;1,9..40,400..800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="../css/main.css" />
 </head>
 <body>
   <div class="shell">
     <aside class="sidebar" id="sidebar"></aside>
-    <main class="main">
-      <header class="topbar"><h1>Dashboard</h1></header>
-      <section id="content"></section>
-    </main>
+    <div class="main">
+      <header class="topbar">
+        <div class="topbar-left">
+          <h1 id="page-title">Dashboard</h1>
+          <p id="page-sub" class="text-muted">Station overview</p>
+        </div>
+        <div class="topbar-right" id="topbar-right">
+          <div class="admin-station-control is-open" id="station-open-control" title="Click to toggle station open or closed">
+            <span class="admin-station-pill" id="station-open-label">Station open</span>
+            <button type="button" class="admin-switch is-on" id="station-open-switch" role="switch" aria-checked="true" aria-label="Toggle station open or closed"></button>
+          </div>
+          <a class="btn btn-primary" href="reports.html">Open reports</a>
+        </div>
+      </header>
+      <main id="content" class="content"></main>
+    </div>
   </div>
   <script type="module" src="../js/pages/admin/dashboard.js"></script>
 </body>
