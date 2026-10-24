@@ -462,7 +462,15 @@ export async function renderNav(profileOrRole, activeKey) {
   currentProfile = profile;
 
   const role = profile?.role || 'customer';
-  const fullName = profile?.full_name || 'User';
+  const defaultRoleName =
+    role === 'rider'
+      ? 'Rider'
+      : role === 'staff'
+        ? 'Staff'
+        : role === 'admin'
+          ? 'Admin'
+          : 'Customer';
+  const fullName = (profile?.full_name || '').trim() || defaultRoleName;
 
   if (container.dataset.renderedRole === role) {
     const nameEl = container.querySelector('.sidebar-user-name');

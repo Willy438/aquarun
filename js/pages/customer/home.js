@@ -30,7 +30,7 @@ export async function mount(me) {
   const pageSub = document.querySelector('#page-sub') || document.querySelector('.topbar-sub');
   const content = document.querySelector('#content');
 
-  if (pageTitle) pageTitle.textContent = getGreeting(me.full_name);
+  if (pageTitle) pageTitle.textContent = getGreeting(me.full_name, me.role || 'customer');
   if (pageSub) pageSub.textContent = formatDateHeading();
 
   let selectedActiveOrderId = null;

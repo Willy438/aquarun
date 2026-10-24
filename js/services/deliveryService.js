@@ -28,7 +28,7 @@ const RIDER_ORDER_SELECT = `
   address:addresses!address_id(id, label, street, barangay, city, landmark),
   preferred_slot:time_slots!preferred_slot_id(id, label, start_time, end_time),
   scheduled_slot:time_slots!scheduled_slot_id(id, label, start_time, end_time),
-  items:order_items(id, product_id, quantity, unit_price, product:products(id, name, unit)),
+  items:order_items(id, product_id, quantity, unit_price, product:products(id, name, unit, price, is_returnable)),
   ledger:bottle_ledger(id, bottles_refilled, bottles_delivered, empties_collected, note)
 `;
 

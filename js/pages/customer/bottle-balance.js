@@ -86,11 +86,7 @@ export async function mount(me) {
           </div>
 
           <div class="notice balance-how-notice">
-            This is the number of gallons you hold. Hand empties to the rider on your next delivery.
-          </div>
-
-          <div class="notice balance-how-notice">
-            <strong>How it works:</strong> Balance is bottles delivered minus empties collected. Please bring empties on your next order.
+            <strong>1-to-1 Swap:</strong> Swap up to <strong>${escapeHtml(summary.balance)}</strong> ${Number(summary.balance) === 1 ? 'gallon' : 'gallons'} at the refill price. Extra gallons include a new container and add to your balance on delivery.
           </div>
 
           <div class="table-wrap">

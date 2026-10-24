@@ -1,9 +1,18 @@
 import { bootCustomerPage, navigateCustomerSpa } from '../../core/nav.js';
 import { escapeHtml, formatPeso, getTodayManila, setBusy, showToast } from '../../core/ui.js';
-import { getActiveProducts, getServiceCharge } from '../../services/productsService.js';
+import {
+  getActiveProducts,
+  getServiceCharge,
+  getStationOpenStatus,
+} from '../../services/productsService.js';
 import { getCustomerAddresses } from '../../services/addressesService.js';
 import { getSlotAvailability } from '../../services/slotsService.js';
-import { createOrder, formatAddressFull, getCustomerOrders } from '../../services/ordersService.js';
+import {
+  createOrder,
+  formatAddressFull,
+  getCustomerOrders,
+  isOrderItemNewContainer,
+} from '../../services/ordersService.js';
 import { getCustomerBottleBalance } from '../../services/ledgerService.js';
 
 const ICONS = {
@@ -19,9 +28,11 @@ function getProductIcon(name = '') {
 }
 
 function getProductSubtitle(product) {
-  if (/slim/i.test(product.name)) return `5-${product.unit || 'gallon'} slim · per refill`;
-  if (/round/i.test(product.name)) return `5-${product.unit || 'gallon'} round · per refill`;
-  return `per ${product.unit || 'gallon'} · refill`;
+  if (product.is_returnable === false) {
+    return `per ${product.unit || 'item'} · sold outright`;
+  }
+  const newPrice = Number(product.new_container_price ?? Number(product.price || 25) + 125);
+  return `${formatPeso(product.price)} swap · ${formatPeso(newPrice)} w/ new gallon`;
 }
 
 export async function mount(me) {
@@ -32,6 +43,7 @@ export async function mount(me) {
   let serviceCharge = 20;
   let bottleBalanceInfo = null;
   let customerOrders = null;
+  let isStationOpen = true;
   const cart = new Map();
 
   let selectedAddressId = '';
@@ -39,6 +51,70 @@ export async function mount(me) {
   let selectedSlotId = '';
   let deliveryNote = '';
 
+  function getSwapAllowance() {
+    if (!bottleBalanceInfo || !Array.isArray(customerOrders)) {
+      return { loaded: false, isFirstOrder: false, availableSwaps: 0 };
+    }
+    const nonCancelledOrders = customerOrders.filter((o) => o.status !== 'cancelled');
+    const isFirstOrder = nonCancelledOrders.length === 0;
+    const ledgerBalance = Math.max(0, Number(bottleBalanceInfo.balance ?? 0));
+
+    const hasDeliveredOrder = nonCancelledOrders.some((o) =>
+      ['delivered', 'completed'].includes(o.status)
+    );
+    const oldestOrder = [...nonCancelledOrders].sort((a, b) =>
+      String(a.created_at || '').localeCompare(String(b.created_at || ''))
+    )[0];
+
+    const activeStatuses = [
+      'submitted',
+      'confirmed',
+      'refilling',
+      'ready',
+      'rider_assigned',
+      'out_for_delivery',
+    ];
+
+    // Count new containers purchased in active orders (plus legacy 1st order if no delivered orders yet),
+    // without letting subsequent swap-only orders inflate the customer's swap limit.
+    const activeNewContainers = nonCancelledOrders
+      .filter((o) => activeStatuses.includes(o.status))
+      .reduce((sum, o) => {
+        const isLegacyInitialOrder =
+          !hasDeliveredOrder && ledgerBalance === 0 && oldestOrder && o.id === oldestOrder.id;
+        const orderNewGallons = (o.items || []).reduce((s, it) => {
+          if (it.product?.is_returnable === false) return s;
+          if (isOrderItemNewContainer(it) || isLegacyInitialOrder) {
+            return s + Number(it.quantity || 0);
+          }
+          return s;
+        }, 0);
+        return sum + orderNewGallons;
+      }, 0);
+
+    const availableSwaps = Math.max(0, ledgerBalance + activeNewContainers);
+    return {
+      loaded: true,
+      isFirstOrder,
+      availableSwaps,
+    };
+  }
+
+  function renderPolicyBanner() {
+    const pillEl = document.querySelector('#swap-limit-pill');
+    if (!pillEl) return;
+    const { loaded, isFirstOrder, availableSwaps } = getSwapAllowance();
+    if (!loaded) {
+      pillEl.hidden = true;
+      return;
+    }
+    pillEl.hidden = false;
+    if (isFirstOrder && availableSwaps === 0) {
+      pillEl.textContent = '1st order · Includes new gallon';
+    } else {
+      pillEl.textContent = `Swap limit: ${availableSwaps} ${availableSwaps === 1 ? 'gallon' : 'gallons'}`;
+    }
+  }
   async function refreshSlotsForDate(dateStr) {
     slots = await getSlotAvailability(dateStr);
     const stillAvailable = slots.find(
@@ -130,29 +206,88 @@ export async function mount(me) {
     const cartItemsEl = document.querySelector('#cart-items');
     const cartCountEl = document.querySelector('#cart-count');
     const subtotalEl = document.querySelector('#cart-subtotal');
+    const swapRowEl = document.querySelector('#cart-swap-row');
+    const swapSubtotalEl = document.querySelector('#cart-swap-subtotal');
+    const newGallonRowEl = document.querySelector('#cart-new-gallon-row');
+    const newGallonLabelEl = document.querySelector('#cart-new-gallon-label');
+    const newGallonSubtotalEl = document.querySelector('#cart-new-gallon-subtotal');
     const chargeEl = document.querySelector('#cart-charge');
     const totalEl = document.querySelector('#cart-total');
     const submitBtn = document.querySelector('#place-order-btn');
 
-    let totalGallons = 0;
-    let subtotal = 0;
-    const activeEntries = [];
+    const { loaded: balanceLoaded, availableSwaps } = getSwapAllowance();
+    let remainingSwaps = balanceLoaded ? availableSwaps : 0;
 
+    let totalGallons = 0;
+    let totalSwapGallons = 0;
+    let totalNewGallons = 0;
+    let swapSubtotal = 0;
+    let newGallonSubtotal = 0;
+    let subtotal = 0;
+
+    // Collect cart items and sort by price desc, id asc to match create_order SQL allocation
+    const rawEntries = [];
     for (const [productId, qty] of cart.entries()) {
       if (qty <= 0) continue;
       const product = products.find((p) => p.id === productId);
       if (!product) continue;
-      const lineTotal = Number(product.price) * qty;
-      totalGallons += qty;
-      subtotal += lineTotal;
-      activeEntries.push({ product, qty, lineTotal });
+      rawEntries.push({ product, qty });
     }
+
+    rawEntries.sort((a, b) => {
+      const priceDiff = Number(b.product.price || 0) - Number(a.product.price || 0);
+      if (priceDiff !== 0) return priceDiff;
+      return String(a.product.id).localeCompare(String(b.product.id));
+    });
+
+    const activeEntries = rawEntries.map(({ product, qty }) => {
+      const swapPrice = Number(product.price || 0);
+      const isReturnable = product.is_returnable !== false;
+      const newContainerPrice = Math.max(
+        swapPrice,
+        Number(product.new_container_price ?? (isReturnable ? swapPrice + 125 : swapPrice))
+      );
+
+      let swapQty = 0;
+      let newGallonQty = 0;
+      if (isReturnable) {
+        swapQty = balanceLoaded ? Math.min(qty, remainingSwaps) : qty;
+        newGallonQty = qty - swapQty;
+        remainingSwaps = Math.max(0, remainingSwaps - swapQty);
+      } else {
+        swapQty = qty;
+      }
+
+      const itemSwapTotal = swapQty * swapPrice;
+      const itemNewTotal = newGallonQty * newContainerPrice;
+      const lineTotal = itemSwapTotal + itemNewTotal;
+
+      totalGallons += qty;
+      if (isReturnable) {
+        totalSwapGallons += swapQty;
+        totalNewGallons += newGallonQty;
+      }
+      swapSubtotal += itemSwapTotal;
+      newGallonSubtotal += itemNewTotal;
+      subtotal += lineTotal;
+
+      return {
+        product,
+        qty,
+        isReturnable,
+        swapQty,
+        newGallonQty,
+        swapPrice,
+        newContainerPrice,
+        lineTotal,
+      };
+    });
 
     const effectiveCharge = totalGallons > 0 ? serviceCharge : 0;
     const grandTotal = subtotal + effectiveCharge;
 
     if (cartCountEl) {
-      cartCountEl.textContent = `${totalGallons} ${totalGallons === 1 ? 'gallon' : 'gallons'}`;
+      cartCountEl.textContent = `${totalGallons} ${totalGallons === 1 ? 'item' : 'items'}`;
     }
 
     if (cartItemsEl) {
@@ -165,13 +300,34 @@ export async function mount(me) {
       } else {
         cartItemsEl.innerHTML = activeEntries
           .map(
-            ({ product, qty, lineTotal }) => `
+            ({
+              product,
+              qty,
+              isReturnable,
+              swapQty,
+              newGallonQty,
+              swapPrice,
+              newContainerPrice,
+              lineTotal,
+            }) => {
+              let subText = '';
+              if (!isReturnable) {
+                subText = `${formatPeso(swapPrice)} each · Sold outright`;
+              } else if (swapQty > 0 && newGallonQty === 0) {
+                subText = `${formatPeso(swapPrice)} each · Swap refill`;
+              } else if (swapQty === 0 && newGallonQty > 0) {
+                subText = `${formatPeso(newContainerPrice)} each · New gallon + water`;
+              } else {
+                subText = `${swapQty} swap (${formatPeso(swapPrice)}) + ${newGallonQty} w/ new gallon (${formatPeso(newContainerPrice)} ea)`;
+              }
+
+              return `
             <div class="cart-item">
               <div class="cart-item-left">
                 <span class="cart-item-icon">${getProductIcon(product.name)}</span>
                 <div>
                   <p class="cart-item-title">${escapeHtml(product.name)}</p>
-                  <p class="cart-item-sub">${escapeHtml(formatPeso(product.price))} each</p>
+                  <p class="cart-item-sub">${escapeHtml(subText)}</p>
                 </div>
               </div>
               <div class="cart-item-right">
@@ -183,7 +339,8 @@ export async function mount(me) {
                 <span class="cart-item-total">${escapeHtml(formatPeso(lineTotal))}</span>
               </div>
             </div>
-          `
+          `;
+            }
           )
           .join('');
 
@@ -204,6 +361,23 @@ export async function mount(me) {
       }
     }
 
+    if (swapRowEl && swapSubtotalEl && newGallonRowEl && newGallonSubtotalEl) {
+      if (totalNewGallons > 0) {
+        swapRowEl.hidden = totalSwapGallons === 0 && swapSubtotal === 0;
+        swapSubtotalEl.textContent = formatPeso(swapSubtotal);
+        newGallonRowEl.hidden = false;
+        if (newGallonLabelEl) {
+          newGallonLabelEl.textContent = `New gallon + water (${totalNewGallons} ${
+            totalNewGallons === 1 ? 'gallon' : 'gallons'
+          })`;
+        }
+        newGallonSubtotalEl.textContent = formatPeso(newGallonSubtotal);
+      } else {
+        swapRowEl.hidden = true;
+        newGallonRowEl.hidden = true;
+      }
+    }
+
     if (subtotalEl) subtotalEl.textContent = formatPeso(subtotal);
     if (chargeEl) chargeEl.textContent = formatPeso(effectiveCharge);
     if (totalEl) totalEl.textContent = formatPeso(grandTotal);
@@ -215,40 +389,40 @@ export async function mount(me) {
 
     const swapNoticeEl = document.querySelector('#bottle-swap-notice');
     if (swapNoticeEl) {
-      const hasReturnableInCart = activeEntries.some(
-        ({ product, qty }) => qty > 0 && product.is_returnable !== false
-      );
-      if (!hasReturnableInCart || !bottleBalanceInfo || !Array.isArray(customerOrders)) {
+      const hasReturnableInCart = activeEntries.some(({ isReturnable, qty }) => qty > 0 && isReturnable);
+      if (!hasReturnableInCart || !balanceLoaded) {
         swapNoticeEl.hidden = true;
         swapNoticeEl.textContent = '';
+      } else if (totalSwapGallons > 0 && totalNewGallons > 0) {
+        swapNoticeEl.textContent = `Prepare ${totalSwapGallons} empty ${
+          totalSwapGallons === 1 ? 'gallon' : 'gallons'
+        } to swap (${totalNewGallons} ${totalNewGallons === 1 ? 'includes' : 'include'} a new gallon).`;
+        swapNoticeEl.hidden = false;
+      } else if (totalSwapGallons > 0) {
+        swapNoticeEl.textContent = `Prepare ${totalSwapGallons} empty ${
+          totalSwapGallons === 1 ? 'gallon' : 'gallons'
+        } for the rider to swap.`;
+        swapNoticeEl.hidden = false;
+      } else if (totalNewGallons > 0) {
+        swapNoticeEl.textContent = 'First order: includes new gallon(s) + water. No empties needed.';
+        swapNoticeEl.hidden = false;
       } else {
-        const currentBalance = Number(bottleBalanceInfo.balance ?? 0);
-        const hasEarlierDeliveredOrder = customerOrders.some(
-          (o) => o.status === 'delivered' || o.status === 'completed' || Boolean(o.delivered_at)
-        );
-        if (currentBalance > 0) {
-          swapNoticeEl.textContent =
-            'Please have your empty gallons ready. The rider will swap them when your order arrives.';
-          swapNoticeEl.hidden = false;
-        } else if (!hasEarlierDeliveredOrder) {
-          swapNoticeEl.textContent = 'First order: no empty gallons needed.';
-          swapNoticeEl.hidden = false;
-        } else {
-          swapNoticeEl.hidden = true;
-          swapNoticeEl.textContent = '';
-        }
+        swapNoticeEl.hidden = true;
+        swapNoticeEl.textContent = '';
       }
     }
   }
 
   try {
-    [products, addresses, serviceCharge, bottleBalanceInfo, customerOrders] = await Promise.all([
-      getActiveProducts(),
-      getCustomerAddresses(me.id),
-      getServiceCharge(),
-      getCustomerBottleBalance(me.id).catch(() => null),
-      getCustomerOrders(me.id, { limit: 50 }).catch(() => null),
-    ]);
+    [products, addresses, serviceCharge, bottleBalanceInfo, customerOrders, isStationOpen] =
+      await Promise.all([
+        getActiveProducts(),
+        getCustomerAddresses(me.id),
+        getServiceCharge(),
+        getCustomerBottleBalance(me.id).catch(() => null),
+        getCustomerOrders(me.id, { limit: 50 }).catch(() => null),
+        getStationOpenStatus().catch(() => true),
+      ]);
 
     const defaultAddr = addresses.find((a) => a.is_default) || addresses[0];
     selectedAddressId = defaultAddr ? defaultAddr.id : '';
@@ -277,6 +451,7 @@ export async function mount(me) {
                 <span class="card-icon">${ICONS.drop}</span>
                 <h2 class="card-title">1. Choose your refills</h2>
               </div>
+              <span class="pill pill-info" id="swap-limit-pill" hidden></span>
             </div>
             <div class="product-grid" id="product-grid"></div>
           </div>
@@ -333,8 +508,16 @@ export async function mount(me) {
           <div class="cart-items" id="cart-items"></div>
 
           <div class="cart-summary">
+            <div class="cart-summary-row" id="cart-swap-row" hidden>
+              <span>Swap refills (water only)</span>
+              <strong id="cart-swap-subtotal">₱0</strong>
+            </div>
+            <div class="cart-summary-row" id="cart-new-gallon-row" hidden>
+              <span id="cart-new-gallon-label">New gallon + water</span>
+              <strong id="cart-new-gallon-subtotal">₱0</strong>
+            </div>
             <div class="cart-summary-row">
-              <span>Refill subtotal</span>
+              <span>Items subtotal</span>
               <strong id="cart-subtotal">₱0</strong>
             </div>
             <div class="cart-summary-row">
@@ -353,17 +536,31 @@ export async function mount(me) {
 
           <div class="notice cart-notice" id="bottle-swap-notice" hidden></div>
 
+          ${
+            !isStationOpen
+              ? `<div class="notice cart-notice" style="border-color: #fca5a5; background: #fef2f2; color: #991b1b;">
+                   <strong>Station Closed:</strong> We are currently closed for new orders. Please check back later.
+                 </div>`
+              : ''
+          }
+
           <div class="notice cart-notice">
             <strong>Preferred slot:</strong> The station may adjust your delivery window based on current orders. You can cancel only while the order is Submitted.
           </div>
 
-          <button type="button" class="btn btn-primary btn-block" id="place-order-btn">
-            Place order
+          <button
+            type="button"
+            class="btn btn-primary btn-block"
+            id="place-order-btn"
+            ${!isStationOpen ? 'disabled title="Station is currently closed"' : ''}
+          >
+            ${!isStationOpen ? 'Station closed' : 'Place order'}
           </button>
         </div>
       </div>
     `;
 
+    renderPolicyBanner();
     renderProductsSection();
     renderSlotsSelect();
     renderCartSection();
@@ -395,6 +592,10 @@ export async function mount(me) {
 
     document.querySelector('#place-order-btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
+      if (!isStationOpen) {
+        showToast('The station is currently closed for new orders.', 'error');
+        return;
+      }
       const itemsPayload = [];
       for (const [product_id, quantity] of cart.entries()) {
         if (quantity > 0) itemsPayload.push({ product_id, quantity });

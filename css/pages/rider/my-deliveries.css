@@ -1,10 +1,21 @@
 /* Rider workspace styles: Mobile-first (breakpoints: 480px, 768px, 1024px) */
+.avail-topbar-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line-app);
+  padding: 5px 10px 5px 12px;
+  border-radius: 999px;
+  min-height: 44px;
+}
+
 .avail-pill {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 44px;
-  padding: 6px 14px;
+  min-height: 32px;
+  padding: 4px 12px;
   border-radius: 999px;
   font-size: 12px;
   font-weight: 700;

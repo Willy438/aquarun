@@ -50,7 +50,7 @@ export function getTodayManila() {
   return `${y}-${m}-${d}`;
 }
 
-export function getGreeting(fullName = '') {
+export function getGreeting(fullName = '', role = 'customer') {
   const hour = Number(
     new Intl.DateTimeFormat('en-US', {
       hour: 'numeric',
@@ -58,7 +58,16 @@ export function getGreeting(fullName = '') {
       timeZone: 'Asia/Manila',
     }).format(new Date())
   );
-  const firstName = (fullName || 'Customer').trim().split(/\s+/)[0];
+  const roleDefault =
+    role === 'rider'
+      ? 'Rider'
+      : role === 'staff'
+        ? 'Staff'
+        : role === 'admin'
+          ? 'Admin'
+          : 'Customer';
+  const clean = String(fullName || '').trim();
+  const firstName = clean ? clean.split(/\s+/)[0] : roleDefault;
   if (hour < 12) return `Good morning, ${firstName}`;
   if (hour < 18) return `Good afternoon, ${firstName}`;
   return `Good evening, ${firstName}`;

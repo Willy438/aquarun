@@ -13,6 +13,7 @@ import {
   formatAddressFull,
   formatSlotWindow,
   getEffectiveSlot,
+  getOrderItemPricingTag,
   isSlotAdjusted,
 } from '../../services/ordersService.js';
 import { getRiderCurrentOrder, riderStartDelivery } from '../../services/deliveryService.js';
@@ -78,9 +79,10 @@ export async function mount(me) {
             .replace(/Mineral Water Refill\s*\((.+)\)/i, 'Mineral $1 Refill');
           const qty = Number(item.quantity || 0);
           const unitPrice = Number(item.unit_price || 0);
+          const pricingTag = getOrderItemPricingTag(item);
           return `
             <tr>
-              <td>${escapeHtml(name)} · ${escapeHtml(formatPeso(unitPrice))} each</td>
+              <td>${escapeHtml(name)} (${escapeHtml(pricingTag)}) · ${escapeHtml(formatPeso(unitPrice))} each</td>
               <td>${escapeHtml(qty)}</td>
               <td class="table-strong" style="text-align:right;">${escapeHtml(formatPeso(qty * unitPrice))}</td>
             </tr>

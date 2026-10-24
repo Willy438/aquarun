@@ -1,7 +1,7 @@
 import { bootRiderPage, navigateRiderSpa, renderNav } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
-import { summarizeOrderItems } from '../../services/ordersService.js';
+import { isOrderItemNewContainer, summarizeOrderItems } from '../../services/ordersService.js';
 import {
   getCustomerBalanceForOrder,
   getOrderReturnableQty,
@@ -48,7 +48,12 @@ export async function mount(me) {
     ]);
     const returnableQty = Math.max(0, Number(returnableInfo?.returnable_qty ?? 0));
     const balanceBefore = Math.max(0, Number(customerBalance ?? 0));
-    const expectedEmpties = Math.min(returnableQty, balanceBefore);
+    const newGallonsInOrder = (order.items || []).reduce(
+      (sum, it) => (isOrderItemNewContainer(it) ? sum + Number(it.quantity || 0) : sum),
+      0
+    );
+    const swapGallonsInOrder = Math.max(0, returnableQty - newGallonsInOrder);
+    const expectedEmpties = Math.min(swapGallonsInOrder, balanceBefore);
     const hasNoReturnableItems = returnableQty === 0;
 
     if (pageTitle) pageTitle.textContent = 'Complete delivery';
@@ -59,39 +64,20 @@ export async function mount(me) {
       topbarRight.innerHTML = `<span class="pill pill-blue">${escapeHtml(STATUS_LABELS[order.status] || order.status)}</span>`;
     }
 
-    let bottlesDelivered = hasNoReturnableItems ? 0 : returnableQty;
-    let emptiesCollected = 0;
+    // Strict 1-to-1 swap rule: both delivered and empties collected are automatic from the order & swap count
+    const bottlesDelivered = hasNoReturnableItems ? 0 : returnableQty;
+    const emptiesCollected = hasNoReturnableItems ? 0 : expectedEmpties;
     let paymentReceived = true;
     let noteText = '';
 
     function renderFormState() {
       const delivEl = document.querySelector('#val-delivered');
       const empEl = document.querySelector('#val-empties');
-      const warnEl = document.querySelector('#diff-warning');
       const payBox = document.querySelector('#payment-box');
       const payCircle = document.querySelector('#payment-circle');
 
       if (delivEl) delivEl.textContent = String(bottlesDelivered);
       if (empEl) empEl.textContent = String(emptiesCollected);
-
-      if (warnEl) {
-        if (hasNoReturnableItems || emptiesCollected >= expectedEmpties) {
-          warnEl.hidden = true;
-          warnEl.textContent = '';
-        } else {
-          warnEl.hidden = false;
-          const shortBy = expectedEmpties - emptiesCollected;
-          const bottleWord = shortBy === 1 ? '1 bottle' : `${shortBy} bottles`;
-          const diff = bottlesDelivered - emptiesCollected;
-          const balanceEffect =
-            diff > 0
-              ? `The customer balance will increase by ${diff}.`
-              : diff < 0
-                ? `The customer balance will decrease by ${Math.abs(diff)}.`
-                : 'The customer balance will stay the same.';
-          warnEl.textContent = `Empties collected is ${bottleWord} below expected (${expectedEmpties}). ${balanceEffect} Add a note if needed.`;
-        }
-      }
 
       if (payBox && payCircle) {
         payBox.classList.toggle('is-checked', paymentReceived);
@@ -106,41 +92,50 @@ export async function mount(me) {
         <div class="card">
           <div class="card-header">
             <h2 class="card-title">Bottle count</h2>
+            <span class="pill pill-neutral">Automatic · 1-to-1 swap</span>
           </div>
 
           ${
             hasNoReturnableItems
               ? `<div class="notice" id="no-returnable-notice">No returnable items in this order</div>`
-              : ''
+              : newGallonsInOrder > 0
+                ? `<div class="notice">Deliver <strong>${returnableQty}</strong> filled ${
+                    returnableQty === 1 ? 'gallon' : 'gallons'
+                  } (${swapGallonsInOrder} swap + ${newGallonsInOrder} w/ new gallon). Collect <strong>${expectedEmpties}</strong> empty ${
+                    expectedEmpties === 1 ? 'gallon' : 'gallons'
+                  }.</div>`
+                : ''
           }
 
           <div class="big-counter-grid">
             <div class="big-counter-col">
               <p class="big-counter-label">Bottles delivered</p>
               <div class="big-counter-controls">
-                <button type="button" class="big-counter-btn" data-counter="delivered" data-delta="-1" aria-label="Decrease delivered" ${hasNoReturnableItems ? 'disabled' : ''}>−</button>
                 <span class="big-counter-val" id="val-delivered">${bottlesDelivered}</span>
-                <button type="button" class="big-counter-btn" data-counter="delivered" data-delta="1" aria-label="Increase delivered" ${hasNoReturnableItems ? 'disabled' : ''}>+</button>
               </div>
-              <p class="big-counter-hint">Prefilled from returnable items</p>
+              <p class="big-counter-hint">${
+                newGallonsInOrder > 0
+                  ? `${swapGallonsInOrder} swap + ${newGallonsInOrder} new gallon`
+                  : 'From order quantity'
+              }</p>
             </div>
 
             <div class="big-counter-col">
               <p class="big-counter-label">Empties collected</p>
               <div class="big-counter-controls">
-                <button type="button" class="big-counter-btn" data-counter="empties" data-delta="-1" aria-label="Decrease empties" ${hasNoReturnableItems ? 'disabled' : ''}>−</button>
                 <span class="big-counter-val" id="val-empties">${emptiesCollected}</span>
-                <button type="button" class="big-counter-btn" data-counter="empties" data-delta="1" aria-label="Increase empties" ${hasNoReturnableItems ? 'disabled' : ''}>+</button>
               </div>
-              <p class="big-counter-hint" id="expected-empties-hint">Expected empties: ${expectedEmpties}</p>
+              <p class="big-counter-hint" id="expected-empties-hint">${
+                expectedEmpties === 0
+                  ? 'No empty return needed (new gallon)'
+                  : `1-to-1 swap (${expectedEmpties} ${expectedEmpties === 1 ? 'empty' : 'empties'} required)`
+              }</p>
             </div>
           </div>
 
-          <div class="notice notice-warning" id="diff-warning" hidden></div>
-
           <div class="field">
             <label class="field-label" for="delivery-ledger-note">Note (optional)</label>
-            <textarea class="input textarea" id="delivery-ledger-note" placeholder="e.g. Customer will return 1 empty tomorrow."></textarea>
+            <textarea class="input textarea" id="delivery-ledger-note" placeholder="Optional delivery note"></textarea>
           </div>
         </div>
 
@@ -181,20 +176,6 @@ export async function mount(me) {
     `;
 
     renderFormState();
-
-    content.querySelectorAll('[data-counter]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        if (hasNoReturnableItems) return;
-        const type = btn.dataset.counter;
-        const delta = Number(btn.dataset.delta);
-        if (type === 'delivered') {
-          bottlesDelivered = Math.max(0, bottlesDelivered + delta);
-        } else {
-          emptiesCollected = Math.max(0, emptiesCollected + delta);
-        }
-        renderFormState();
-      });
-    });
 
     content.querySelector('#payment-box')?.addEventListener('click', () => {
       paymentReceived = !paymentReceived;

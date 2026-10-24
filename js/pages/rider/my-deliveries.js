@@ -1,4 +1,5 @@
 import { bootRiderPage, navigateRiderSpa, renderNav } from '../../core/nav.js';
+import { setCachedProfile } from '../../core/auth.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeRiderWorkspace } from '../../core/realtime.js';
 import {
@@ -15,7 +16,7 @@ import {
   formatAddressLine,
   formatSlotWindow,
   getEffectiveSlot,
-  getOrderTotalGallons,
+  isOrderItemNewContainer,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
 import {
@@ -23,6 +24,8 @@ import {
   riderStartDelivery,
   sortDeliveriesByScheduledSlot,
 } from '../../services/deliveryService.js';
+import { getCustomerBalanceForOrder } from '../../services/ledgerService.js';
+import { setRiderAvailability } from '../../services/usersService.js';
 
 const ICONS = {
   truck: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
@@ -39,21 +42,60 @@ const CHECKLIST_ITEMS = [
   'Collect cash, then tick Payment received',
 ];
 
-export async function mount(me) {
+export async function mount(initialMe) {
+  let me = initialMe;
   const pageTitle = document.querySelector('#page-title') || document.querySelector('.topbar h1');
   const pageSub = document.querySelector('#page-sub') || document.querySelector('.topbar-sub');
   const topbarRight = document.querySelector('#topbar-right');
   const content = document.querySelector('#content');
 
-  if (pageTitle) pageTitle.textContent = getGreeting(me.full_name);
+  if (pageTitle) pageTitle.textContent = getGreeting(me.full_name, me.role || 'rider');
   if (pageSub) pageSub.textContent = formatDateHeading();
-  if (topbarRight) {
+
+  function renderTopbarShiftToggle() {
+    if (!topbarRight) return;
     topbarRight.innerHTML = `
-      <a href="profile.html" class="avail-pill ${me.is_available ? 'is-on' : 'is-off'}">
-        ${me.is_available ? 'Available for assignment' : 'Unavailable'}
-      </a>
+      <div class="avail-topbar-wrap">
+        <span class="avail-pill ${me.is_available ? 'is-on' : 'is-off'}" id="topbar-avail-pill">
+          ${me.is_available ? 'On shift · Available' : 'Off shift'}
+        </span>
+        <label class="toggle-switch" title="Toggle shift availability" aria-label="Toggle shift availability">
+          <input type="checkbox" id="topbar-avail-toggle" ${me.is_available ? 'checked' : ''}>
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
     `;
+    topbarRight.querySelector('#topbar-avail-toggle')?.addEventListener('change', async (e) => {
+      const input = e.currentTarget;
+      await handleAvailabilityChange(input.checked, input);
+    });
   }
+
+  async function handleAvailabilityChange(nextState, sourceInput = null) {
+    if (sourceInput) sourceInput.disabled = true;
+    try {
+      const updated = await setRiderAvailability(me.id, nextState);
+      me = { ...me, is_available: updated.is_available };
+      setCachedProfile(me);
+      renderTopbarShiftToggle();
+      await renderNav(me, 'my-deliveries');
+      const heroToggleBtn = content.querySelector('#hero-shift-toggle-btn');
+      if (heroToggleBtn) {
+        heroToggleBtn.textContent = me.is_available ? 'Go off shift' : 'Go on shift';
+      }
+      showToast(
+        me.is_available ? 'Shift is ON — available for assignment.' : 'Shift is OFF — marked unavailable.',
+        'success'
+      );
+    } catch (err) {
+      if (sourceInput) sourceInput.checked = !nextState;
+      showToast(err.message || 'Could not update shift status.', 'error');
+    } finally {
+      if (sourceInput) sourceInput.disabled = false;
+    }
+  }
+
+  renderTopbarShiftToggle();
 
   const checkedSet = new Set([0]);
 
@@ -77,8 +119,25 @@ export async function mount(me) {
       const nextDelivery = activeDeliveries[0] || null;
       const upNextList = activeDeliveries.slice(1);
 
+      // Compute expected empties per active order using swap items & customer balance
+      const expectedEmptiesByOrder = new Map();
+      await Promise.all(
+        activeDeliveries.map(async (o) => {
+          const swapQty = (o.items || []).reduce((s, it) => {
+            if (it.product?.is_returnable === false || isOrderItemNewContainer(it)) return s;
+            return s + Number(it.quantity || 0);
+          }, 0);
+          if (swapQty === 0) {
+            expectedEmptiesByOrder.set(o.id, 0);
+            return;
+          }
+          const bal = await getCustomerBalanceForOrder(o.id).catch(() => 0);
+          expectedEmptiesByOrder.set(o.id, Math.min(swapQty, Math.max(0, Number(bal || 0))));
+        })
+      );
+
       const bottlesToCollect = activeDeliveries.reduce(
-        (sum, o) => sum + getOrderTotalGallons(o.items),
+        (sum, o) => sum + (expectedEmptiesByOrder.get(o.id) ?? 0),
         0
       );
 
@@ -103,7 +162,7 @@ export async function mount(me) {
         const slotWindow = formatSlotWindow(getEffectiveSlot(nextDelivery));
         const isToday = nextDelivery.delivery_date === today;
         const deliveryWindowLabel = `${isToday ? 'Today' : formatDateShort(nextDelivery.delivery_date)}, ${slotWindow}`;
-        const bottlesQty = getOrderTotalGallons(nextDelivery.items);
+        const bottlesQty = expectedEmptiesByOrder.get(nextDelivery.id) ?? 0;
         const isOut = nextDelivery.status === 'out_for_delivery';
 
         heroHtml = `
@@ -157,7 +216,9 @@ export async function mount(me) {
                 <h2 class="hero-status-title">No assigned deliveries right now</h2>
                 <p class="hero-status-sub">Make sure you are marked Available for assignment so station staff can assign orders to you.</p>
               </div>
-              <a class="btn btn-white btn-sm" href="profile.html">Availability settings</a>
+              <button type="button" class="btn btn-white btn-sm" id="hero-shift-toggle-btn">
+                ${me.is_available ? 'Go off shift' : 'Go on shift'}
+              </button>
             </div>
           </div>
         `;
@@ -299,6 +360,13 @@ export async function mount(me) {
         row.addEventListener('click', () => {
           navigateRiderSpa(`delivery-details.html?id=${encodeURIComponent(row.dataset.orderId)}`);
         });
+      });
+
+      content.querySelector('#hero-shift-toggle-btn')?.addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        await handleAvailabilityChange(!me.is_available);
+        btn.disabled = false;
       });
 
       content.querySelector('#hero-start-delivery-btn')?.addEventListener('click', async (e) => {

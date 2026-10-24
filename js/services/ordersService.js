@@ -43,12 +43,25 @@ const ORDER_SELECT = `
   preferred_slot:time_slots!preferred_slot_id(id, label, start_time, end_time),
   scheduled_slot:time_slots!scheduled_slot_id(id, label, start_time, end_time),
   rider:profiles!rider_id(id, full_name, phone),
-  items:order_items(id, product_id, quantity, unit_price, product:products(id, name, unit, is_returnable)),
+  items:order_items(id, product_id, quantity, unit_price, product:products(id, name, unit, price, is_returnable)),
   status_log:order_status_log(status, changed_at)
 `;
 
+export function isOrderItemNewContainer(item) {
+  if (!item || item.product?.is_returnable === false) return false;
+  const unitPrice = Number(item.unit_price ?? 0);
+  const baseSwapPrice = Number(item.product?.price ?? unitPrice);
+  return unitPrice > baseSwapPrice + 0.005;
+}
+
+export function getOrderItemPricingTag(item) {
+  if (item?.product?.is_returnable === false) return 'Sold outright';
+  return isOrderItemNewContainer(item) ? 'New gallon + water' : 'Swap refill';
+}
+
 export function summarizeOrderItems(items = []) {
   if (!items || items.length === 0) return 'Water refill';
+  const hasAnyNewContainer = items.some((it) => isOrderItemNewContainer(it));
   return items
     .map((item) => {
       const name = item.product?.name || 'Gallon Refill';
@@ -58,7 +71,13 @@ export function summarizeOrderItems(items = []) {
         .replace(/refill/i, '')
         .trim();
       const qty = Number(item.quantity || 0);
-      return `${qty} ${shortName}${qty > 1 && !/s$/i.test(shortName) ? 's' : ''}`;
+      const baseText = `${qty} ${shortName}${qty > 1 && !/s$/i.test(shortName) ? 's' : ''}`;
+      if (!hasAnyNewContainer || item.product?.is_returnable === false) {
+        return baseText;
+      }
+      return isOrderItemNewContainer(item)
+        ? `${baseText} (new gallon + water)`
+        : `${baseText} (swap)`;
     })
     .join(', ');
 }

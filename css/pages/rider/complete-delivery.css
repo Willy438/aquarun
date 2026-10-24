@@ -47,6 +47,11 @@
   background: #d5e5ff;
 }
 
+.big-counter-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .big-counter-val {
   min-width: 34px;
   font-size: clamp(28px, 3vw, 34px);

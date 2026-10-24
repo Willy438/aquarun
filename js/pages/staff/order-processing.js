@@ -5,6 +5,7 @@ import {
   formatSlotWindow,
   getEffectiveSlot,
   getNextOrderForProcessing,
+  getOrderItemPricingTag,
   getStaffOrderById,
   renderStaffOrderHero,
   staffAdjustDeliverySlot,
@@ -142,10 +143,12 @@ export async function mount(me) {
             .replace(/Purified Water Refill\s*\((.+)\)/i, '$1 refill')
             .replace(/Mineral Water Refill\s*\((.+)\)/i, 'Mineral $1 refill');
           const qty = Number(item.quantity || 0);
-          const lineTotal = qty * Number(item.unit_price || 0);
+          const unitPrice = Number(item.unit_price || 0);
+          const lineTotal = qty * unitPrice;
+          const pricingTag = getOrderItemPricingTag(item);
           return `
             <div class="kv-row">
-              <span class="kv-label">${escapeHtml(`${qty} ${name}${qty > 1 && !/s$/i.test(name) ? 's' : ''}`)}</span>
+              <span class="kv-label">${escapeHtml(`${qty} ${name}${qty > 1 && !/s$/i.test(name) ? 's' : ''} · ${pricingTag} (${formatPeso(unitPrice)} ea)`)}</span>
               <span class="kv-value">${escapeHtml(formatPeso(lineTotal))}</span>
             </div>
           `;

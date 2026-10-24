@@ -100,12 +100,34 @@ export async function mount() {
 
             <div class="form-row">
               <div class="field">
-                <label class="label" for="prod-price">Price per gallon (₱)</label>
-                <input class="input" id="prod-price" name="price" type="number" step="0.01" min="0" value="${escapeHtml(product?.price ?? 30)}" required />
+                <label class="label" for="prod-price">Swap refill price — water only (₱)</label>
+                <input class="input" id="prod-price" name="price" type="number" step="0.01" min="0" value="${escapeHtml(product?.price ?? 25)}" required />
               </div>
+              <div class="field">
+                <label class="label" for="prod-new-container-price">New gallon + water price (₱)</label>
+                <input
+                  class="input"
+                  id="prod-new-container-price"
+                  name="newContainerPrice"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value="${escapeHtml(product?.new_container_price ?? (Number(product?.price ?? 25) + 125))}"
+                  ${product?.is_returnable === false ? 'disabled' : ''}
+                  required
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
               <div class="field">
                 <label class="label" for="prod-unit">Unit label</label>
                 <input class="input" id="prod-unit" name="unit" type="text" value="${escapeHtml(product?.unit || 'gallon')}" required />
+              </div>
+              <div class="field">
+                <span class="field-hint">
+                  <strong>How pricing works:</strong> Customers pay the <strong>Swap refill price</strong> up to the number of station gallons they currently hold. Ordering extra gallons (or a 1st order) charges the <strong>New gallon + water price</strong>.
+                </span>
               </div>
             </div>
 
@@ -540,22 +562,40 @@ export async function mount() {
       return currentPhotoData || String(fd.get('photoUrl') || '').trim() || null;
     }
 
+    const returnableCheckbox = backdrop.querySelector('#prod-returnable');
+    const newContainerPriceInput = backdrop.querySelector('#prod-new-container-price');
+    const swapPriceInput = backdrop.querySelector('#prod-price');
+    returnableCheckbox?.addEventListener('change', () => {
+      if (!newContainerPriceInput) return;
+      const checked = returnableCheckbox.checked;
+      newContainerPriceInput.disabled = !checked;
+      if (!checked && swapPriceInput) {
+        newContainerPriceInput.value = swapPriceInput.value;
+      } else if (checked && Number(newContainerPriceInput.value) <= Number(swapPriceInput?.value || 0)) {
+        newContainerPriceInput.value = String(Number(swapPriceInput?.value || 25) + 125);
+      }
+    });
+
     const form = backdrop.querySelector('#prod-modal-form');
     const submitBtn = backdrop.querySelector('#btn-save-prod');
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
       const finalPhoto = exportFinalPhotoString(fd);
+      const isReturnableVal = Boolean(form.querySelector('#prod-returnable')?.checked);
       setBusy(submitBtn, true, 'Saving...');
       try {
         await saveProduct({
           id: product?.id || null,
           name: fd.get('name'),
           price: fd.get('price'),
+          newContainerPrice: isReturnableVal
+            ? fd.get('newContainerPrice') ?? newContainerPriceInput?.value
+            : fd.get('price'),
           unit: fd.get('unit'),
           photoUrl: finalPhoto,
           isActive: fd.get('isActive') === 'true',
-          isReturnable: Boolean(form.querySelector('#prod-returnable')?.checked),
+          isReturnable: isReturnableVal,
         });
         showToast(isEdit ? 'Product updated.' : 'Product added.', 'success');
         close();
@@ -581,9 +621,12 @@ export async function mount() {
               const returnablePill = isReturnable
                 ? `<span class="pill pill-info">Returnable</span>`
                 : `<span class="pill pill-neutral">Sold outright</span>`;
-              const subtitle = isActive
-                ? 'Refill product'
-                : 'Refill product · Hidden from catalog';
+              const newGallonPrice = Number(
+                prod.new_container_price ?? (isReturnable ? Number(prod.price || 25) + 125 : prod.price)
+              );
+              const subtitle = isReturnable
+                ? `Swap refill · New gallon + water: ${formatPeso(newGallonPrice)}`
+                : 'Sold outright · No empty container return';
               const hasPhoto = Boolean(prod.photo_url);
 
               const artInner = hasPhoto

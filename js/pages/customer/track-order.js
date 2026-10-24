@@ -10,6 +10,8 @@ import {
   getCustomerOrderById,
   getCustomerOrders,
   getEffectiveSlot,
+  getOrderItemPricingTag,
+  isOrderItemNewContainer,
   isSlotAdjusted,
   renderCustomerOrderHero,
   summarizeOrderItems,
@@ -129,11 +131,21 @@ export async function mount(me) {
       const canCancel = order.status === 'submitted';
       const riderName = order.rider?.full_name || 'Assigned rider';
       const firstName = riderName.split(/\s+/)[0];
-      // Swap model: only returnable items count toward empties.
-      const returnableGallons = (order.items || []).reduce(
-        (sum, item) => sum + (item.product?.is_returnable !== false ? Number(item.quantity || 0) : 0),
-        0
-      );
+      // Swap model: count returnable gallons split between 1-to-1 swaps and new gallon + water.
+      let returnableGallons = 0;
+      let swapGallons = 0;
+      let newContainerGallons = 0;
+      for (const item of order.items || []) {
+        const qty = Number(item.quantity || 0);
+        if (item.product?.is_returnable !== false) {
+          returnableGallons += qty;
+          if (isOrderItemNewContainer(item)) {
+            newContainerGallons += qty;
+          } else {
+            swapGallons += qty;
+          }
+        }
+      }
       const gallonText = `${returnableGallons} filled ${returnableGallons === 1 ? 'gallon' : 'gallons'}`;
 
       // Use only data the customer can already read. If a lookup fails, fall back to neutral text.
@@ -153,13 +165,38 @@ export async function mount(me) {
       let handoverText;
       if (returnableGallons === 0) {
         handoverText = 'The rider hands over your items. No empty gallons needed.';
+      } else if (swapGallons > 0 && newContainerGallons > 0) {
+        const emptyWord = swapGallons === 1 ? '1 empty gallon' : `${swapGallons} empty gallons`;
+        const newWord = newContainerGallons === 1 ? '1 new gallon' : `${newContainerGallons} new gallons`;
+        handoverText = `The rider hands over ${gallonText} (${swapGallons} swap + ${newWord}) and collects ${emptyWord}.`;
+      } else if (newContainerGallons > 0 && swapGallons === 0) {
+        handoverText = `The rider hands over ${gallonText} (new gallon + water). No empty gallons needed for this order.`;
       } else if (currentBalance !== null && currentBalance > 0) {
-        handoverText = `The rider hands over ${gallonText} and collects your empty gallons.`;
+        const expectedCollect = Math.min(swapGallons, currentBalance);
+        const emptyWord = expectedCollect === 1 ? '1 empty gallon' : `${expectedCollect} empty gallons`;
+        handoverText = `The rider hands over ${gallonText} and collects ${emptyWord}.`;
       } else if (hasEarlierDelivery === false) {
         handoverText = `The rider hands over ${gallonText}. First order: no empty gallons needed.`;
       } else {
         handoverText = `The rider hands over ${gallonText}.`;
       }
+
+      const itemsBreakdownHtml = (order.items || [])
+        .map((it) => {
+          const qty = Number(it.quantity || 0);
+          const unitPrice = Number(it.unit_price || 0);
+          let tag = getOrderItemPricingTag(it);
+          if (tag === 'Swap refill' && hasEarlierDelivery === false) {
+            tag = '1st order';
+          }
+          return `
+            <div class="kv-row">
+              <span class="kv-label">${escapeHtml(`${qty} × ${it.product?.name || 'Refill'} (${tag})`)}</span>
+              <span class="kv-value">${escapeHtml(formatPeso(qty * unitPrice))}</span>
+            </div>
+          `;
+        })
+        .join('');
 
       const adjustmentHtml = adjusted
         ? `
@@ -200,6 +237,7 @@ export async function mount(me) {
             </div>
 
             <div class="kv-list">
+              ${itemsBreakdownHtml}
               <div class="kv-row">
                 <span class="kv-label">Delivery address</span>
                 <span class="kv-value">${escapeHtml(formatAddressLine(order.address))}</span>

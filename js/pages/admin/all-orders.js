@@ -18,6 +18,7 @@ import {
   formatSlotWindow,
   getAllOrdersForStaff,
   getEffectiveSlot,
+  getOrderItemPricingTag,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
 
@@ -78,7 +79,7 @@ export async function mount() {
       .map(
         (it) => `
           <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1f5f9;">
-            <span>${escapeHtml(it.quantity)} × ${escapeHtml(it.product?.name || 'Water Refill')}</span>
+            <span>${escapeHtml(it.quantity)} × ${escapeHtml(it.product?.name || 'Water Refill')} (${escapeHtml(getOrderItemPricingTag(it))} · ${escapeHtml(formatPeso(it.unit_price || 0))})</span>
             <span style="font-weight:700;">${escapeHtml(formatPeso(Number(it.quantity || 0) * Number(it.unit_price || 0)))}</span>
           </div>
         `
