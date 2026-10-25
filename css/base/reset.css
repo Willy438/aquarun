@@ -1,6 +1,37 @@
 *, *::before, *::after { box-sizing: border-box; }
 [hidden] { display: none !important; }
-html { scroll-behavior: smooth; width: 100%; max-width: 100%; }
+
+/* Prevent layout shift caused by vertical scrollbars appearing/disappearing */
+html {
+  scroll-behavior: smooth;
+  width: 100%;
+  max-width: 100%;
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+/* Modern sleek custom scrollbars across all pages */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 9999px;
+  border: 2px solid var(--app-bg, #f4f7fb);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
 body { margin: 0; min-width: 320px; font-family: var(--font); background: var(--app-bg); color: var(--ink); -webkit-font-smoothing: antialiased; overflow-x: clip; width: 100%; max-width: 100%; }
 img, video, canvas, iframe { display: block; max-width: 100%; height: auto; }
 svg { max-width: 100%; }

@@ -213,7 +213,13 @@ export async function mount(me) {
 
       content.querySelectorAll('tr[data-order-id]').forEach((row) => {
         row.addEventListener('click', () => {
-          navigateCustomerSpa(`track-order.html?id=${encodeURIComponent(row.dataset.orderId)}`);
+          const id = row.dataset.orderId;
+          const target = allOrders.find((o) => o.id === id);
+          if (target && ['completed', 'cancelled'].includes(target.status)) {
+            navigateCustomerSpa(`order-history.html?viewOrder=${encodeURIComponent(id)}`);
+          } else {
+            navigateCustomerSpa(`track-order.html?id=${encodeURIComponent(id)}`);
+          }
         });
       });
     } catch (err) {

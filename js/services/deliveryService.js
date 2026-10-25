@@ -90,6 +90,17 @@ export async function riderStartDelivery(orderId) {
   invalidateDataCache();
 }
 
+export async function riderStartBatchDelivery(orderIds) {
+  if (!Array.isArray(orderIds) || !orderIds.length) return;
+  for (const orderId of orderIds) {
+    const { error } = await supabase.rpc('start_delivery', {
+      p_order_id: orderId,
+    });
+    if (error) throw new Error(error.message || `Could not start delivery for order ${orderId}.`);
+  }
+  invalidateDataCache();
+}
+
 export async function riderRecordDelivery({
   orderId,
   bottlesDelivered,
@@ -106,4 +117,9 @@ export async function riderRecordDelivery({
   });
   if (error) throw new Error(error.message || 'Could not record delivery.');
   invalidateDataCache();
+}
+
+export async function riderRecordAttempt({ orderId, reason, note }) {
+  const { markDeliveryAttempted } = await import('./ordersService.js');
+  return markDeliveryAttempted({ orderId, reason, note });
 }

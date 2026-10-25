@@ -1,6 +1,6 @@
 import { getCachedProfile, getCurrentProfile, logOut } from './auth.js';
 import { requireRole } from './guard.js';
-import { getInitials, escapeHtml } from './ui.js';
+import { getInitials, escapeHtml, confirmModal } from './ui.js';
 import { supabase } from '../config/supabaseClient.js';
 
 const BADGE_CACHE_KEY = 'aquarun_active_badge';
@@ -22,10 +22,13 @@ const ICONS = {
   chart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
   tag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+  gear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
   menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`,
   close: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="6" y1="18" x2="18" y2="6"/></svg>`,
   logoDrop: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.5C12 2.5 5.5 9.8 5.5 14.5a6.5 6.5 0 0 0 13 0C18.5 9.8 12 2.5 12 2.5Zm-1.5 14.2a2.8 2.8 0 0 1-2.2-2.7c0-.4.3-.7.7-.7s.7.3.7.7c0 .7.4 1.2 1 1.4.4.1.6.5.5.9-.1.3-.4.5-.7.4Z"/></svg>`,
+  panelCollapse: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9-3 3 3 3"/></svg>`,
+  panelExpand: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m11 9 3 3-3 3"/></svg>`,
 };
 
 const NAV_SECTIONS = {
@@ -99,6 +102,7 @@ const NAV_SECTIONS = {
         { key: 'users', label: 'Users', icon: 'user' },
         { key: 'products', label: 'Products & prices', icon: 'tag' },
         { key: 'time-slots', label: 'Time slots', icon: 'clock' },
+        { key: 'settings', label: 'Station settings', icon: 'gear' },
       ],
     },
   ],
@@ -229,6 +233,11 @@ const ADMIN_PAGE_META = {
     title: 'Time slots',
     docTitle: 'Time slots | AquaRun',
     sub: 'Set slot times and capacity per slot',
+  },
+  settings: {
+    title: 'Station settings',
+    docTitle: 'Settings | AquaRun',
+    sub: 'Station reference location, delivery radius, and store controls',
   },
 };
 
@@ -510,7 +519,7 @@ export async function renderNav(profileOrRole, activeKey) {
             ? `<span class="sidebar-badge" id="${item.badgeId}" ${badgeVal > 0 ? '' : 'hidden'}>${badgeVal > 0 ? badgeVal : ''}</span>`
             : '';
           return `
-            <a class="sidebar-link${isActive ? ' is-active' : ''}" href="${item.key}.html" data-nav-key="${escapeHtml(item.key)}">
+            <a class="sidebar-link${isActive ? ' is-active' : ''}" href="${item.key}.html" data-nav-key="${escapeHtml(item.key)}" title="${escapeHtml(item.label)}">
               <span class="sidebar-icon">${ICONS[item.icon] || ''}</span>
               <span class="sidebar-label">${escapeHtml(item.label)}</span>
               ${badgeHtml}
@@ -522,17 +531,32 @@ export async function renderNav(profileOrRole, activeKey) {
     })
     .join('');
 
+  const isSavedCollapsed = localStorage.getItem('aquarun_sidebar_collapsed') === 'true';
+  if (isSavedCollapsed) {
+    container.classList.add('is-collapsed');
+    document.querySelector('.shell')?.classList.add('is-collapsed');
+  }
+
   container.dataset.renderedRole = role;
   container.innerHTML = `
     <div class="sidebar-top">
       <div class="sidebar-brand-row">
-        <a class="sidebar-brand" href="${sections[0]?.items[0]?.key || 'home'}.html">
+        <a class="sidebar-brand" href="${sections[0]?.items[0]?.key || 'home'}.html" title="AquaRun">
           <span class="sidebar-brand-mark">${ICONS.logoDrop}</span>
           <span class="sidebar-brand-text">
             <span class="sidebar-brand-title">Aqua<span>Run</span></span>
             <span class="sidebar-brand-sub">${escapeHtml(BRAND_SUBTITLES[role] || 'Refill and delivery')}</span>
           </span>
         </a>
+        <button
+          type="button"
+          class="sidebar-collapse-btn"
+          id="sidebar-collapse-btn"
+          title="${isSavedCollapsed ? 'Expand sidebar' : 'Minimize sidebar'}"
+          aria-label="Toggle sidebar minimization"
+        >
+          ${isSavedCollapsed ? ICONS.panelExpand : ICONS.panelCollapse}
+        </button>
         <button
           type="button"
           class="sidebar-hamburger"
@@ -582,7 +606,34 @@ export async function renderNav(profileOrRole, activeKey) {
     </div>
   `;
 
-  container.querySelector('#sidebar-logout-btn')?.addEventListener('click', logOut);
+  const collapseBtn = container.querySelector('#sidebar-collapse-btn');
+  collapseBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const willBeCollapsed = !container.classList.contains('is-collapsed');
+    if (willBeCollapsed) {
+      container.classList.add('is-collapsed');
+      document.querySelector('.shell')?.classList.add('is-collapsed');
+      collapseBtn.innerHTML = ICONS.panelExpand;
+      collapseBtn.title = 'Expand sidebar';
+      localStorage.setItem('aquarun_sidebar_collapsed', 'true');
+    } else {
+      container.classList.remove('is-collapsed');
+      document.querySelector('.shell')?.classList.remove('is-collapsed');
+      collapseBtn.innerHTML = ICONS.panelCollapse;
+      collapseBtn.title = 'Minimize sidebar';
+      localStorage.setItem('aquarun_sidebar_collapsed', 'false');
+    }
+  });
+
+  container.querySelector('#sidebar-logout-btn')?.addEventListener('click', async () => {
+    const confirmed = await confirmModal({
+      title: 'Log out?',
+      message: 'Are you sure you want to end your current session and log out?',
+      confirmText: 'Log out',
+      cancelText: 'Stay logged in',
+    });
+    if (confirmed) logOut();
+  });
   const toggleBtn = container.querySelector('#sidebar-menu-toggle');
   const closeDrawerBtn = container.querySelector('#sidebar-drawer-close');
   const backdropEl = container.querySelector('#sidebar-backdrop');

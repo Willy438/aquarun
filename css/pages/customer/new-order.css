@@ -74,9 +74,133 @@
   margin-top: 10px;
 }
 
+.product-price-stack {
+  display: flex;
+  flex-direction: column;
+}
+
 .product-price {
   font-size: 15px;
   font-weight: 800;
+  color: var(--ink-navy);
+}
+
+.product-price-alt {
+  font-size: 11px;
+  color: var(--muted-blue);
+  margin-top: 1px;
+}
+
+/* Clean Segmented Category Tabs */
+.category-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 16px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.category-tab {
+  padding: 6px 14px;
+  border-radius: 9999px;
+  border: 1.5px solid var(--line-app, #e2e8f0);
+  background: var(--surface, #fff);
+  color: var(--muted-blue, #64748b);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.category-tab:hover {
+  border-color: #93c5fd;
+  color: var(--ink-navy, #0f172a);
+}
+
+.category-tab.is-active {
+  background: #2563eb;
+  border-color: #2563eb;
+  color: #fff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.category-tab .tab-count {
+  font-size: 11px;
+  padding: 1px 6px;
+  border-radius: 9999px;
+  background: rgba(0, 0, 0, 0.08);
+}
+
+.category-tab.is-active .tab-count {
+  background: rgba(255, 255, 255, 0.25);
+  color: #fff;
+}
+
+/* Product Card Type Badges */
+.product-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 5px;
+  margin-bottom: 4px;
+  width: fit-content;
+}
+
+.badge-water {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.badge-empty {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.qty-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 3px 6px;
+}
+
+.qty-btn {
+  width: 24px;
+  height: 24px;
+  border-radius: 5px;
+  border: none;
+  background: #e2e8f0;
+  color: #1e293b;
+  font-weight: 700;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+
+.qty-btn:hover {
+  background: #2563eb;
+  color: #fff;
+}
+
+.qty-num {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
   color: var(--ink-navy);
 }
 

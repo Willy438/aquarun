@@ -2,6 +2,7 @@
 import { bootAdminPage } from '../../core/nav.js';
 import { subscribeAdminWorkspace } from '../../core/realtime.js';
 import {
+  confirmModal,
   enablePasswordToggles,
   escapeHtml,
   getInitials,
@@ -189,6 +190,19 @@ export async function mount() {
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const fd = new FormData(form);
+
+      const willDeactivate = user.is_active && fd.get('isActive') === 'false';
+      if (willDeactivate) {
+        const confirmed = await confirmModal({
+          title: `Deactivate ${user.full_name}?`,
+          message: `Setting this account to Inactive will immediately block ${user.full_name} from logging in.`,
+          confirmText: 'Deactivate account',
+          cancelText: 'Cancel',
+          danger: true,
+        });
+        if (!confirmed) return;
+      }
+
       setBusy(submitBtn, true, 'Saving...');
       try {
         await updateUserByAdmin(user.id, {
@@ -382,6 +396,18 @@ export async function mount() {
         const id = btn.getAttribute('data-toggle-user');
         const user = users.find((u) => u.id === id);
         if (!user) return;
+
+        if (user.is_active) {
+          const confirmed = await confirmModal({
+            title: `Deactivate ${user.full_name}?`,
+            message: `Are you sure you want to deactivate ${user.full_name}? They will be immediately blocked from logging into the platform.`,
+            confirmText: 'Deactivate user',
+            cancelText: 'Cancel',
+            danger: true,
+          });
+          if (!confirmed) return;
+        }
+
         setBusy(btn, true, '...');
         try {
           await updateUserByAdmin(user.id, {

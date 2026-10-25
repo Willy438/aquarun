@@ -1,6 +1,6 @@
 import { bootRiderPage, navigateRiderSpa, renderNav } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
-import { escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
+import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
 import { isOrderItemNewContainer, summarizeOrderItems } from '../../services/ordersService.js';
 import {
   getCustomerBalanceForOrder,
@@ -188,6 +188,17 @@ export async function mount(me) {
 
     content.querySelector('#submit-delivery-btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
+
+      const confirmed = await confirmModal({
+        title: `Submit Delivery #${order.order_number}?`,
+        message: paymentReceived
+          ? `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) and collection of ${formatPeso(order.total)} cash?`
+          : `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) with cash payment marked pending for station review?`,
+        confirmText: 'Yes, record delivery',
+        cancelText: 'Back to review',
+      });
+      if (!confirmed) return;
+
       setBusy(btn, true, 'Submitting...');
       try {
         if (order.status === 'rider_assigned') {

@@ -2,6 +2,7 @@ import { bootRiderPage, navigateRiderSpa, renderNav } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeRiderWorkspace } from '../../core/realtime.js';
 import {
+  confirmModal,
   escapeHtml,
   formatDateShort,
   formatPeso,
@@ -16,9 +17,14 @@ import {
   getOrderItemPricingTag,
   isSlotAdjusted,
 } from '../../services/ordersService.js';
-import { getRiderCurrentOrder, riderStartDelivery } from '../../services/deliveryService.js';
+import {
+  getRiderCurrentOrder,
+  riderRecordAttempt,
+  riderStartDelivery,
+} from '../../services/deliveryService.js';
 
 const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const MAP_PIN_SVG = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`;
 
 export async function mount(me) {
   const pageTitle = document.querySelector('#page-title') || document.querySelector('.topbar h1');
@@ -105,7 +111,15 @@ export async function mount(me) {
       } else if (order.status === 'out_for_delivery') {
         actionBtnHtml = `
           <a class="btn btn-primary btn-block" href="complete-delivery.html?id=${encodeURIComponent(order.id)}">Complete delivery</a>
-          <p class="proc-action-hint" style="text-align:center; margin-top:8px;">Enter bottle counts and cash payment at the door</p>
+          <button type="button" class="btn btn-outline-danger btn-block" id="report-attempt-btn" style="margin-top: 8px;">Cannot Deliver / Report Issue</button>
+          <p class="proc-action-hint" style="text-align:center; margin-top:8px;">Enter bottle counts at door or report if customer is unavailable</p>
+        `;
+      } else if (order.status === 'attempted' || String(order.slot_note || '').startsWith('[ATTEMPTED]')) {
+        actionBtnHtml = `
+          <div class="notice notice-warning" style="margin-bottom: 8px;">
+            <strong>Delivery Attempted:</strong> ${escapeHtml(order.slot_note || 'Customer was unavailable.')}
+          </div>
+          <button type="button" class="btn btn-light btn-block" disabled>Delivery attempted</button>
         `;
       } else {
         actionBtnHtml = `
@@ -141,6 +155,20 @@ export async function mount(me) {
                     ? `<p class="rider-landmark">Landmark: ${escapeHtml(order.address.landmark)}</p>`
                     : ''
                 }
+                <div style="margin-top: 10px;">
+                  <a
+                    class="btn btn-outline-blue btn-sm"
+                    href="${
+                      order.address?.latitude && order.address?.longitude
+                        ? `https://www.google.com/maps/search/?api=1&query=${order.address.latitude},${order.address.longitude}`
+                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
+                    }"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    ${MAP_PIN_SVG} Open in Google Maps
+                  </a>
+                </div>
               </div>
             </div>
 
@@ -235,6 +263,84 @@ export async function mount(me) {
           showToast(err.message || 'Could not start delivery.', 'error');
           setBusy(btn, false);
         }
+      });
+
+      document.querySelector('#report-attempt-btn')?.addEventListener('click', () => {
+        const modalBackdrop = document.createElement('div');
+        modalBackdrop.className = 'modal-backdrop';
+        modalBackdrop.innerHTML = `
+          <div class="modal-card" style="max-width: 440px;">
+            <div class="modal-header">
+              <h3 class="modal-title">Report Delivery Issue</h3>
+              <button type="button" class="modal-close" data-action="cancel">×</button>
+            </div>
+            <div class="modal-body stack" style="gap: 12px;">
+              <p style="font-size: 13.5px; color: var(--muted-blue); line-height: 1.45;">
+                Select why Order #${escapeHtml(order.order_number)} could not be completed. The customer will be prompted to reschedule.
+              </p>
+              <div class="field">
+                <label class="field-label">Reason</label>
+                <div class="stack" style="gap: 8px;">
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="radio" name="attempt-reason" value="Customer not answering gate or phone" checked>
+                    <span>Customer not answering gate or phone</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="radio" name="attempt-reason" value="Gate locked / Nobody home">
+                    <span>Gate locked / Nobody home</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="radio" name="attempt-reason" value="No empty bottle ready to swap">
+                    <span>No empty bottle ready for 1-to-1 swap</span>
+                  </label>
+                  <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; cursor: pointer;">
+                    <input type="radio" name="attempt-reason" value="Customer requested later delivery">
+                    <span>Customer requested later delivery</span>
+                  </label>
+                </div>
+              </div>
+              <div class="field">
+                <label class="field-label" for="attempt-note">Optional note</label>
+                <input class="input" id="attempt-note" placeholder="e.g. Waited 10 mins, called twice">
+              </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end;">
+              <button type="button" class="btn btn-light" data-action="cancel">Cancel</button>
+              <button type="button" class="btn btn-danger" data-action="submit">Mark Attempted</button>
+            </div>
+          </div>
+        `;
+
+        document.body.appendChild(modalBackdrop);
+
+        const close = () => modalBackdrop.remove();
+        modalBackdrop.querySelectorAll('[data-action="cancel"]').forEach((b) => b.addEventListener('click', close));
+
+        modalBackdrop.querySelector('[data-action="submit"]')?.addEventListener('click', async (e) => {
+          const selectedReason = modalBackdrop.querySelector('input[name="attempt-reason"]:checked')?.value || 'Customer unavailable';
+          const noteVal = modalBackdrop.querySelector('#attempt-note')?.value || '';
+
+          const confirmed = await confirmModal({
+            title: 'Confirm Delivery Attempted?',
+            message: `Mark Order #${order.order_number} as Attempted (${selectedReason})? Customer will receive a notification to reschedule.`,
+            confirmText: 'Yes, mark attempted',
+            cancelText: 'Back',
+            danger: true,
+          });
+          if (!confirmed) return;
+
+          setBusy(e.currentTarget, true, 'Saving...');
+          try {
+            await riderRecordAttempt({ orderId: order.id, reason: selectedReason, note: noteVal });
+            showToast('Delivery attempt recorded. Order held for customer rescheduling.', 'success');
+            close();
+            await renderNav(me, 'delivery-details');
+            await renderPage();
+          } catch (err) {
+            showToast(err.message || 'Could not record attempt.', 'error');
+            setBusy(e.currentTarget, false);
+          }
+        });
       });
     } catch (err) {
       showToast(err.message || 'Could not load delivery details.', 'error');

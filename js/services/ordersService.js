@@ -47,21 +47,32 @@ const ORDER_SELECT = `
   status_log:order_status_log(status, changed_at)
 `;
 
+export function isOrderItemEmptyContainer(item) {
+  if (!item) return false;
+  const name = String(item.product?.name || '').toLowerCase();
+  if (name.includes('empty')) return true;
+  const unitPrice = Number(item.unit_price ?? 0);
+  const baseSwapPrice = Number(item.product?.price ?? unitPrice);
+  return item.product?.is_returnable && unitPrice > baseSwapPrice + 0.005 && unitPrice <= 135;
+}
+
 export function isOrderItemNewContainer(item) {
   if (!item || item.product?.is_returnable === false) return false;
+  if (isOrderItemEmptyContainer(item)) return false;
   const unitPrice = Number(item.unit_price ?? 0);
   const baseSwapPrice = Number(item.product?.price ?? unitPrice);
   return unitPrice > baseSwapPrice + 0.005;
 }
 
 export function getOrderItemPricingTag(item) {
+  if (isOrderItemEmptyContainer(item)) return 'Empty container only';
+  if (isOrderItemNewContainer(item)) return 'New gallon + water';
   if (item?.product?.is_returnable === false) return 'Sold outright';
-  return isOrderItemNewContainer(item) ? 'New gallon + water' : 'Swap refill';
+  return 'Swap refill';
 }
 
 export function summarizeOrderItems(items = []) {
   if (!items || items.length === 0) return 'Water refill';
-  const hasAnyNewContainer = items.some((it) => isOrderItemNewContainer(it));
   return items
     .map((item) => {
       const name = item.product?.name || 'Gallon Refill';
@@ -72,12 +83,16 @@ export function summarizeOrderItems(items = []) {
         .trim();
       const qty = Number(item.quantity || 0);
       const baseText = `${qty} ${shortName}${qty > 1 && !/s$/i.test(shortName) ? 's' : ''}`;
-      if (!hasAnyNewContainer || item.product?.is_returnable === false) {
+      if (item.product?.is_returnable === false) {
         return baseText;
       }
-      return isOrderItemNewContainer(item)
-        ? `${baseText} (new gallon + water)`
-        : `${baseText} (swap)`;
+      if (isOrderItemEmptyContainer(item)) {
+        return `${baseText} (empty container only)`;
+      }
+      if (isOrderItemNewContainer(item)) {
+        return `${baseText} (new gallon + water)`;
+      }
+      return `${baseText} (swap)`;
     })
     .join(', ');
 }
@@ -178,6 +193,47 @@ export function renderCustomerOrderHero(order, { showTrackButton = false } = {})
 
   const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
+  if (order.status === 'cancelled') {
+    return `
+      <div class="hero-banner hero-cancelled" style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%);">
+        <div class="hero-top">
+          <div>
+            <div class="hero-meta-line">
+              <span>Order #${escapeHtml(order.order_number)}</span>
+              <span class="pill" style="background: #ef4444; color: #fff; font-weight: 700;">Cancelled</span>
+            </div>
+            <h2 class="hero-status-title">Order cancelled</h2>
+            <p class="hero-status-sub">${escapeHtml(order.slot_note || 'This order was cancelled while Submitted. No payment was collected.')}</p>
+          </div>
+          ${
+            showTrackButton
+              ? `<a class="btn btn-white btn-sm" href="order-history.html?viewOrder=${encodeURIComponent(order.id)}">View receipt</a>`
+              : ''
+          }
+        </div>
+
+        <div class="hero-strip">
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Items</p>
+            <p class="hero-strip-value">${escapeHtml(summarizeOrderItems(order.items))}</p>
+          </div>
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Delivery</p>
+            <p class="hero-strip-value">${escapeHtml(deliveryDisplay)}</p>
+          </div>
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Address</p>
+            <p class="hero-strip-value">${escapeHtml(formatAddressLine(order.address))}</p>
+          </div>
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Status</p>
+            <p class="hero-strip-value" style="color: #fca5a5;">Cancelled (₱0 paid)</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   const stepsHtml = CUSTOMER_STEPS.map((step, index) => {
     const isDone = order.status === 'completed' || index < activeIdx;
     const isActive = order.status !== 'completed' && index === activeIdx;
@@ -259,6 +315,44 @@ export function renderStaffOrderHero(order) {
 
   const checkSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
 
+  const customerName = order.customer?.full_name || 'Customer';
+  const addressText = formatAddressFull(order.address);
+  const prefSlotText = formatSlotWindow(order.preferred_slot);
+  const schedSlotText = formatSlotWindow(getEffectiveSlot(order));
+
+  if (order.status === 'cancelled') {
+    return `
+      <div class="hero-banner hero-cancelled" style="background: linear-gradient(135deg, #334155 0%, #1e293b 100%);">
+        <div class="hero-top">
+          <div>
+            <div class="hero-meta-line">
+              <span>Order #${escapeHtml(order.order_number)} · ${escapeHtml(customerName)}</span>
+              <span class="pill" style="background: #ef4444; color: #fff; font-weight: 700;">Cancelled</span>
+            </div>
+            <h2 class="hero-status-title">Order cancelled</h2>
+            <p class="hero-status-sub">${escapeHtml(addressText)} · ${escapeHtml(order.slot_note || 'Order was cancelled.')}</p>
+          </div>
+          <a class="btn btn-white btn-sm" href="orders.html">Back to orders</a>
+        </div>
+
+        <div class="hero-strip">
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Items</p>
+            <p class="hero-strip-value">${escapeHtml(summarizeOrderItems(order.items))} refills</p>
+          </div>
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Delivery address</p>
+            <p class="hero-strip-value">${escapeHtml(addressText)}</p>
+          </div>
+          <div class="hero-strip-item">
+            <p class="hero-strip-label">Status</p>
+            <p class="hero-strip-value" style="color: #fca5a5;">Cancelled</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
   const stepsHtml = STAFF_STEPS.map((step, index) => {
     const isDone = order.status === 'completed' || (activeIdx >= 0 && index < activeIdx);
     const isActive = order.status !== 'completed' && index === activeIdx;
@@ -279,11 +373,6 @@ export function renderStaffOrderHero(order) {
       </div>
     `;
   }).join('');
-
-  const customerName = order.customer?.full_name || 'Customer';
-  const addressText = formatAddressFull(order.address);
-  const prefSlotText = formatSlotWindow(order.preferred_slot);
-  const schedSlotText = formatSlotWindow(getEffectiveSlot(order));
 
   return `
     <div class="hero-banner">
@@ -501,6 +590,21 @@ export async function staffAssignRider(orderId, riderId) {
   invalidateDataCache();
 }
 
+export async function staffAssignBatchToRider(orderIds, riderId) {
+  if (!riderId) throw new Error('Select a rider for this batch.');
+  if (!Array.isArray(orderIds) || !orderIds.length) {
+    throw new Error('No orders selected for this batch.');
+  }
+  for (const orderId of orderIds) {
+    const { error } = await supabase.rpc('assign_rider', {
+      p_order_id: orderId,
+      p_rider_id: riderId,
+    });
+    if (error) throw new Error(error.message || `Could not assign order ${orderId}.`);
+  }
+  invalidateDataCache();
+}
+
 export async function staffConfirmPayment(orderId) {
   const { error } = await supabase.rpc('confirm_payment', {
     p_order_id: orderId,
@@ -508,3 +612,146 @@ export async function staffConfirmPayment(orderId) {
   if (error) throw new Error(error.message || 'Could not confirm payment.');
   invalidateDataCache();
 }
+
+export async function markDeliveryAttempted({ orderId, reason, note }) {
+  const reasonText = (reason || 'Customer unavailable').trim();
+  const fullNote = note ? `${reasonText} - ${note.trim()}` : reasonText;
+
+  // Try RPC first
+  const { error: rpcErr } = await supabase.rpc('record_delivery_attempt', {
+    p_order_id: orderId,
+    p_reason: reasonText,
+    p_note: note || null,
+  });
+
+  if (rpcErr) {
+    // Graceful fallback to direct update
+    const updatePayload = {
+      status: 'attempted',
+      slot_note: `[ATTEMPTED]: ${fullNote}`,
+    };
+    try {
+      const { error: tableErr } = await supabase
+        .from('orders')
+        .update(updatePayload)
+        .eq('id', orderId);
+      if (tableErr) throw tableErr;
+    } catch {
+      // If status enum rejects 'attempted', fallback to keeping order out_for_delivery but tagging slot_note
+      await supabase
+        .from('orders')
+        .update({ slot_note: `[ATTEMPTED]: ${fullNote}` })
+        .eq('id', orderId);
+    }
+  }
+
+  invalidateDataCache();
+}
+
+export async function rescheduleOrder({ orderId, newDate, newSlotId }) {
+  if (!newDate || !newSlotId) throw new Error('Please pick a date and time slot.');
+
+  // Try RPC first
+  const { error: rpcErr } = await supabase.rpc('reschedule_attempted_order', {
+    p_order_id: orderId,
+    p_delivery_date: newDate,
+    p_slot_id: newSlotId,
+  });
+
+  if (rpcErr) {
+    // Direct table fallback
+    const { error: tableErr } = await supabase
+      .from('orders')
+      .update({
+        status: 'ready',
+        rider_id: null,
+        delivery_date: newDate,
+        scheduled_slot_id: newSlotId,
+        slot_note: `Rescheduled to ${newDate}`,
+      })
+      .eq('id', orderId);
+
+    if (tableErr) throw new Error(tableErr.message || 'Could not reschedule order.');
+  }
+
+  invalidateDataCache();
+}
+
+export async function getRiderRemittanceSummary(riderId) {
+  // Query all delivered or completed orders assigned to this rider
+  let data = null;
+  let { data: res, error } = await supabase
+    .from('orders')
+    .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, customer:profiles!customer_id(full_name)')
+    .eq('rider_id', riderId)
+    .in('status', ['delivered', 'completed']);
+
+  if (error) {
+    // If relation join fails, fallback to simple select
+    const fallback = await supabase
+      .from('orders')
+      .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at')
+      .eq('rider_id', riderId)
+      .in('status', ['delivered', 'completed']);
+    if (fallback.error) throw fallback.error;
+    data = fallback.data || [];
+  } else {
+    data = res || [];
+  }
+
+  // Filter orders that have not yet been remitted
+  const unremittedOrders = data.filter((o) => {
+    const note = String(o.slot_note || '');
+    const isRemittedTag = note.includes('[REMITTED]');
+    const isRemittedCol = Boolean(o.rider_remitted);
+    return !isRemittedTag && !isRemittedCol;
+  });
+
+  const totalCash = unremittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+
+  return {
+    unremittedOrders,
+    totalCash,
+    count: unremittedOrders.length,
+  };
+}
+
+export async function staffAcceptRiderRemittance(riderId) {
+  // Try RPC first
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('accept_rider_remittance', {
+    p_rider_id: riderId,
+  });
+
+  if (!rpcErr) {
+    invalidateDataCache();
+    return Number(rpcData || 0);
+  }
+
+  // Direct table fallback
+  const summary = await getRiderRemittanceSummary(riderId);
+  if (!summary.unremittedOrders.length) return 0;
+
+  for (const o of summary.unremittedOrders) {
+    const existingNote = o.slot_note ? `${o.slot_note} ` : '';
+    const payload = {
+      slot_note: `${existingNote}[REMITTED]`.trim(),
+      status: 'completed',
+      payment_status: 'paid',
+      paid_at: o.paid_at || new Date().toISOString(),
+      remitted_at: new Date().toISOString(),
+      rider_remitted: true,
+    };
+    let { error: updateErr } = await supabase.from('orders').update(payload).eq('id', o.id);
+    if (updateErr && /rider_remitted|remitted_at/i.test(updateErr.message || '')) {
+      delete payload.rider_remitted;
+      delete payload.remitted_at;
+      await supabase.from('orders').update(payload).eq('id', o.id);
+    }
+  }
+
+  invalidateDataCache();
+  return summary.totalCash;
+}
+
+export const riderRemitCash = staffAcceptRiderRemittance;
+

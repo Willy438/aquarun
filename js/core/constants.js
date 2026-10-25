@@ -10,6 +10,7 @@ export const ORDER_STATUS = {
   OUT_FOR_DELIVERY: 'out_for_delivery',
   DELIVERED: 'delivered',
   COMPLETED: 'completed',
+  ATTEMPTED: 'attempted',
   CANCELLED: 'cancelled',
 };
 
@@ -55,6 +56,7 @@ export const STATUS_LABELS = {
   out_for_delivery: 'Out for delivery',
   delivered: 'Delivered',
   completed: 'Completed',
+  attempted: 'Attempted',
   cancelled: 'Cancelled',
 };
 
@@ -67,7 +69,21 @@ export const CUSTOMER_STATUS_HEADINGS = {
   out_for_delivery: 'Out for delivery',
   delivered: 'Delivered',
   completed: 'Completed',
+  attempted: 'Delivery attempted',
   cancelled: 'Order cancelled',
+};
+
+export const STATUS_PILL_TONE = {
+  submitted: 'neutral',
+  confirmed: 'blue',
+  refilling: 'amber',
+  ready: 'blue',
+  rider_assigned: 'blue',
+  out_for_delivery: 'blue',
+  delivered: 'green',
+  completed: 'green',
+  attempted: 'amber',
+  cancelled: 'danger',
 };
 
 // Where each role lands after logging in.

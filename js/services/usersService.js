@@ -61,6 +61,21 @@ export async function getAvailableRiders() {
   });
 }
 
+export async function getAllActiveRiders() {
+  return cachedQuery('users:all_active_riders', async () => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone, is_available, is_active')
+      .eq('role', 'rider')
+      .eq('is_active', true)
+      .order('is_available', { ascending: false })
+      .order('full_name', { ascending: true });
+
+    if (error) throw error;
+    return data ?? [];
+  });
+}
+
 export async function setRiderAvailability(riderId, isAvailable) {
   const { data, error } = await supabase
     .from('profiles')

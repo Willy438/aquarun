@@ -2,6 +2,7 @@
 import { bootAdminPage } from '../../core/nav.js';
 import { subscribeAdminWorkspace } from '../../core/realtime.js';
 import {
+  confirmModal,
   escapeHtml,
   formatPeso,
   setBusy,
@@ -74,6 +75,20 @@ export async function mount() {
     const isEdit = Boolean(product?.id);
     let currentPhotoData = product?.photo_url || '';
 
+    // Determine initial product category
+    let currentType = 'refill';
+    if (product) {
+      if (product.is_returnable === false) {
+        currentType = 'empty';
+      } else {
+        currentType = 'refill';
+      }
+    }
+
+    const initSwap = Number(product?.price ?? 25);
+    const initNew = Number(product?.new_container_price ?? (initSwap + 125));
+    const initEmpty = Math.max(0, initNew - initSwap);
+
     // Interactive cropper state
     let sourceImg = null;
     let isCanvasTainted = false;
@@ -86,49 +101,102 @@ export async function mount() {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
-      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="prod-modal-title">
+      <div class="modal modal-product" role="dialog" aria-modal="true" aria-labelledby="prod-modal-title" style="max-width: 580px;">
         <div class="modal-header">
-          <h3 class="modal-title" id="prod-modal-title">${isEdit ? 'Edit refill product' : 'Add refill product'}</h3>
+          <div>
+            <h3 class="modal-title" id="prod-modal-title">${isEdit ? 'Edit product' : 'Add product'}</h3>
+            <p class="text-muted" style="font-size: 12px; margin-top: 2px;">Configure refill pricing, standalone empty containers, and catalog visibility</p>
+          </div>
           <button type="button" class="modal-close" data-close aria-label="Close">×</button>
         </div>
         <form id="prod-modal-form">
-          <div class="modal-body stack">
+          <div class="modal-body stack" style="gap: 13px;">
+            <!-- Product Category Tabs -->
+            <div class="prod-type-tabs-wrap">
+              <label class="label">Product Category</label>
+              <div class="prod-type-tabs" id="prod-type-tabs" role="tablist">
+                <button type="button" class="prod-type-tab${currentType === 'refill' ? ' is-active' : ''}" data-type="refill">
+                  Water Refill (with Swap)
+                </button>
+                <button type="button" class="prod-type-tab${currentType === 'empty' ? ' is-active' : ''}" data-type="empty">
+                  Empty Container Only
+                </button>
+              </div>
+            </div>
+
+            <!-- Product Name & Quick Presets -->
             <div class="field">
-              <label class="label" for="prod-name">Product name</label>
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <label class="label" for="prod-name" id="name-field-label">Product name</label>
+                <div class="prod-preset-chips" id="name-preset-chips"></div>
+              </div>
               <input class="input" id="prod-name" name="name" type="text" value="${escapeHtml(product?.name || '')}" placeholder="e.g. Round Gallon Refill" required />
             </div>
 
-            <div class="form-row">
-              <div class="field">
-                <label class="label" for="prod-price">Swap refill price — water only (₱)</label>
-                <input class="input" id="prod-price" name="price" type="number" step="0.01" min="0" value="${escapeHtml(product?.price ?? 25)}" required />
+            <!-- REFILL PRICING: 3-WAY CONNECTED PRICING -->
+            <div id="section-refill-pricing" ${currentType === 'refill' ? '' : 'hidden'}>
+              <label class="label" style="margin-bottom: 6px;">Pricing breakdown for Water Refill</label>
+              <div class="pricing-sync-grid">
+                <div class="field">
+                  <label class="label" for="prod-swap-price" style="font-size: 11.5px;">Swap refill price (₱)</label>
+                  <input class="input" id="prod-swap-price" type="number" step="0.01" min="0" value="${initSwap}" />
+                  <span class="field-hint" style="font-size: 10.5px; margin-top: 2px;">Water only (1:1 bottle swap)</span>
+                </div>
+                <div class="field">
+                  <label class="label" for="prod-empty-price" style="font-size: 11.5px;">Empty container price (₱)</label>
+                  <input class="input" id="prod-empty-price" type="number" step="0.01" min="0" value="${initEmpty}" />
+                  <span class="field-hint" style="font-size: 10.5px; margin-top: 2px;">Dry container cost</span>
+                </div>
+                <div class="field">
+                  <label class="label" for="prod-new-price" style="font-size: 11.5px;">New gallon + water price (₱)</label>
+                  <input class="input" id="prod-new-price" type="number" step="0.01" min="0" value="${initNew}" />
+                  <span class="field-hint" style="font-size: 10.5px; margin-top: 2px;">Auto: Swap + Bottle</span>
+                </div>
               </div>
-              <div class="field">
-                <label class="label" for="prod-new-container-price">New gallon + water price (₱)</label>
-                <input
-                  class="input"
-                  id="prod-new-container-price"
-                  name="newContainerPrice"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value="${escapeHtml(product?.new_container_price ?? (Number(product?.price ?? 25) + 125))}"
-                  ${product?.is_returnable === false ? 'disabled' : ''}
-                  required
-                />
+              <div class="pricing-preview-badge" id="refill-pricing-badge" style="margin-top: 8px;">
+                <strong>Customer Rates:</strong> Swap Refill: ₱<span id="badge-swap-val">${initSwap}</span> · Empty Container: ₱<span id="badge-empty-val">${initEmpty}</span> · New Gallon + Water: ₱<span id="badge-new-val">${initNew}</span>
               </div>
             </div>
 
-            <div class="form-row">
+            <!-- SINGLE PRICING (EMPTY CONTAINER ONLY) -->
+            <div id="section-single-pricing" ${currentType !== 'refill' ? '' : 'hidden'}>
+              <div class="form-row">
+                <div class="field">
+                  <label class="label" for="prod-single-price" id="single-price-label">Selling price (₱)</label>
+                  <input class="input" id="prod-single-price" type="number" step="0.01" min="0" value="${product?.price ?? 125}" />
+                </div>
+                <div class="field">
+                  <label class="label" for="prod-unit-single" id="single-unit-label">Unit label</label>
+                  <input class="input" id="prod-unit-single" type="text" value="${escapeHtml(product?.unit || 'container')}" />
+                </div>
+              </div>
+              <div class="notice" id="single-type-notice" style="margin-top: 6px; font-size: 12px; line-height: 1.5; padding: 10px 12px; background: #fefce8; border-color: #fef08a; color: #854d0e;">
+                <strong>Sold Outright:</strong> Clean dry container delivered without water. Customers receive <strong>+1 empty bottle balance</strong> upon delivery.
+              </div>
+            </div>
+
+            <!-- Unit & Visibility for Refill -->
+            <div class="form-row" id="row-refill-meta" ${currentType === 'refill' ? '' : 'hidden'}>
               <div class="field">
-                <label class="label" for="prod-unit">Unit label</label>
-                <input class="input" id="prod-unit" name="unit" type="text" value="${escapeHtml(product?.unit || 'gallon')}" required />
+                <label class="label" for="prod-unit-refill">Unit label</label>
+                <input class="input" id="prod-unit-refill" type="text" value="${escapeHtml(product?.unit || 'gallon')}" />
               </div>
               <div class="field">
-                <span class="field-hint">
-                  <strong>How pricing works:</strong> Customers pay the <strong>Swap refill price</strong> up to the number of station gallons they currently hold. Ordering extra gallons (or a 1st order) charges the <strong>New gallon + water price</strong>.
-                </span>
+                <label class="label" for="prod-active-refill">Visibility in catalog</label>
+                <select class="select" id="prod-active-refill">
+                  <option value="true" ${product?.is_active !== false ? 'selected' : ''}>Active (shown to customers)</option>
+                  <option value="false" ${product?.is_active === false ? 'selected' : ''}>Hidden from catalog</option>
+                </select>
               </div>
+            </div>
+
+            <!-- Visibility for Single item -->
+            <div class="field" id="row-single-meta" ${currentType !== 'refill' ? '' : 'hidden'}>
+              <label class="label" for="prod-active-single">Visibility in catalog</label>
+              <select class="select" id="prod-active-single">
+                <option value="true" ${product?.is_active !== false ? 'selected' : ''}>Active (shown to customers)</option>
+                <option value="false" ${product?.is_active === false ? 'selected' : ''}>Hidden from catalog</option>
+              </select>
             </div>
 
             <div class="field prod-photo-uploader">
@@ -170,7 +238,7 @@ export async function mount() {
               </div>
 
               <div class="prod-photo-presets">
-                <span class="field-hint" style="margin-right:2px;">Quick presets:</span>
+                <span class="field-hint" style="margin-right:2px;">Quick photo presets:</span>
                 <button type="button" class="prod-preset-chip" data-preset-photo="../assets/images/round-gallon-refill.png">Round Gallon</button>
                 <button type="button" class="prod-preset-chip" data-preset-photo="../assets/images/slim-gallon-refill.png">Slim Gallon</button>
                 <button type="button" class="prod-preset-chip" data-preset-photo="../assets/images/bottle-delivery.png">Bottle Delivery</button>
@@ -187,26 +255,6 @@ export async function mount() {
                   placeholder="https://example.com/gallon.png"
                 />
               </div>
-            </div>
-
-            <div class="field">
-              <label class="label" for="prod-active">Visibility</label>
-              <select class="select" id="prod-active" name="isActive">
-                <option value="true" ${product?.is_active !== false ? 'selected' : ''}>Active (shown to customers)</option>
-                <option value="false" ${product?.is_active === false ? 'selected' : ''}>Hidden from catalog</option>
-              </select>
-            </div>
-
-            <div class="field">
-              <label class="check" for="prod-returnable">
-                <input
-                  id="prod-returnable"
-                  name="is_returnable"
-                  type="checkbox"
-                  ${product?.is_returnable !== false ? 'checked' : ''}
-                />
-                <span>Customer returns the empty container</span>
-              </label>
             </div>
           </div>
 
@@ -562,19 +610,121 @@ export async function mount() {
       return currentPhotoData || String(fd.get('photoUrl') || '').trim() || null;
     }
 
-    const returnableCheckbox = backdrop.querySelector('#prod-returnable');
-    const newContainerPriceInput = backdrop.querySelector('#prod-new-container-price');
-    const swapPriceInput = backdrop.querySelector('#prod-price');
-    returnableCheckbox?.addEventListener('change', () => {
-      if (!newContainerPriceInput) return;
-      const checked = returnableCheckbox.checked;
-      newContainerPriceInput.disabled = !checked;
-      if (!checked && swapPriceInput) {
-        newContainerPriceInput.value = swapPriceInput.value;
-      } else if (checked && Number(newContainerPriceInput.value) <= Number(swapPriceInput?.value || 0)) {
-        newContainerPriceInput.value = String(Number(swapPriceInput?.value || 25) + 125);
-      }
+    const nameInput = backdrop.querySelector('#prod-name');
+    const nameLabel = backdrop.querySelector('#name-field-label');
+    const nameChipsEl = backdrop.querySelector('#name-preset-chips');
+    const sectionRefill = backdrop.querySelector('#section-refill-pricing');
+    const sectionSingle = backdrop.querySelector('#section-single-pricing');
+    const rowRefillMeta = backdrop.querySelector('#row-refill-meta');
+    const rowSingleMeta = backdrop.querySelector('#row-single-meta');
+    const singlePriceLabel = backdrop.querySelector('#single-price-label');
+    const singleTypeNotice = backdrop.querySelector('#single-type-notice');
+    const singlePriceInput = backdrop.querySelector('#prod-single-price');
+    const singleUnitInput = backdrop.querySelector('#prod-unit-single');
+
+    const swapPriceInput = backdrop.querySelector('#prod-swap-price');
+    const emptyPriceInput = backdrop.querySelector('#prod-empty-price');
+    const newContainerPriceInput = backdrop.querySelector('#prod-new-price');
+    const badgeSwap = backdrop.querySelector('#badge-swap-val');
+    const badgeEmpty = backdrop.querySelector('#badge-empty-val');
+    const badgeNew = backdrop.querySelector('#badge-new-val');
+
+    function syncRefillBadge() {
+      const s = Math.max(0, Number(swapPriceInput?.value || 0));
+      const e = Math.max(0, Number(emptyPriceInput?.value || 0));
+      const n = Math.max(s, Number(newContainerPriceInput?.value || s + e));
+      if (badgeSwap) badgeSwap.textContent = String(s);
+      if (badgeEmpty) badgeEmpty.textContent = String(e);
+      if (badgeNew) badgeNew.textContent = String(n);
+    }
+
+    swapPriceInput?.addEventListener('input', () => {
+      const s = Math.max(0, Number(swapPriceInput.value || 0));
+      const e = Math.max(0, Number(emptyPriceInput.value || 125));
+      newContainerPriceInput.value = String(s + e);
+      syncRefillBadge();
     });
+
+    emptyPriceInput?.addEventListener('input', () => {
+      const s = Math.max(0, Number(swapPriceInput.value || 0));
+      const e = Math.max(0, Number(emptyPriceInput.value || 0));
+      newContainerPriceInput.value = String(s + e);
+      syncRefillBadge();
+    });
+
+    newContainerPriceInput?.addEventListener('input', () => {
+      const s = Math.max(0, Number(swapPriceInput.value || 0));
+      const n = Math.max(s, Number(newContainerPriceInput.value || 0));
+      emptyPriceInput.value = String(Math.max(0, n - s));
+      syncRefillBadge();
+    });
+
+    function applyCategoryUI(isUserSwitch = false) {
+      backdrop.querySelectorAll('#prod-type-tabs .prod-type-tab').forEach((tab) => {
+        tab.classList.toggle('is-active', tab.dataset.type === currentType);
+      });
+
+      if (currentType === 'refill') {
+        sectionRefill.hidden = false;
+        sectionSingle.hidden = true;
+        rowRefillMeta.hidden = false;
+        rowSingleMeta.hidden = true;
+        nameLabel.textContent = 'Water refill product name';
+        nameInput.placeholder = 'e.g. Purified Water Refill (Round Gallon)';
+
+        nameChipsEl.innerHTML = `
+          <button type="button" class="prod-preset-chip" data-set-name="Purified Water Refill (Round Gallon)">+ Round Refill</button>
+          <button type="button" class="prod-preset-chip" data-set-name="Mineral Water Refill (Slim Gallon)">+ Slim Refill</button>
+          <button type="button" class="prod-preset-chip" data-set-name="Alkaline Water Refill (Round Gallon)">+ Alkaline Refill</button>
+        `;
+
+        if (isUserSwitch && !isEdit) {
+          if (!nameInput.value || /empty|pump|tap|carrier/i.test(nameInput.value)) {
+            nameInput.value = 'Purified Water Refill (Round Gallon)';
+          }
+        }
+        syncRefillBadge();
+      } else {
+        // empty container only
+        sectionRefill.hidden = true;
+        sectionSingle.hidden = false;
+        rowRefillMeta.hidden = true;
+        rowSingleMeta.hidden = false;
+        nameLabel.textContent = 'Empty container product name';
+        nameInput.placeholder = 'e.g. Empty 5-Gallon Container (Round)';
+        singlePriceLabel.textContent = 'Empty container selling price (₱)';
+        singleTypeNotice.innerHTML = `
+          <strong>Sold Outright:</strong> Clean dry container delivered without water. Customers receive <strong>+1 empty bottle balance</strong> upon delivery.
+        `;
+
+        nameChipsEl.innerHTML = `
+          <button type="button" class="prod-preset-chip" data-set-name="Empty 5-Gallon Container (Round)">+ Empty Round (₱125)</button>
+          <button type="button" class="prod-preset-chip" data-set-name="Empty 5-Gallon Container (Slim)">+ Empty Slim (₱125)</button>
+        `;
+
+        if (isUserSwitch && !isEdit) {
+          nameInput.value = 'Empty 5-Gallon Container (Round)';
+          if (singlePriceInput) singlePriceInput.value = '125';
+          if (singleUnitInput) singleUnitInput.value = 'container';
+        }
+      }
+
+      nameChipsEl.querySelectorAll('[data-set-name]').forEach((chip) => {
+        chip.addEventListener('click', () => {
+          nameInput.value = chip.dataset.setName;
+          nameInput.focus();
+        });
+      });
+    }
+
+    backdrop.querySelector('#prod-type-tabs')?.addEventListener('click', (e) => {
+      const tab = e.target.closest('.prod-type-tab');
+      if (!tab) return;
+      currentType = tab.dataset.type === 'empty' ? 'empty' : 'refill';
+      applyCategoryUI(true);
+    });
+
+    applyCategoryUI(false);
 
     const form = backdrop.querySelector('#prod-modal-form');
     const submitBtn = backdrop.querySelector('#btn-save-prod');
@@ -582,22 +732,48 @@ export async function mount() {
       e.preventDefault();
       const fd = new FormData(form);
       const finalPhoto = exportFinalPhotoString(fd);
-      const isReturnableVal = Boolean(form.querySelector('#prod-returnable')?.checked);
+      const nameVal = String(nameInput?.value || fd.get('name') || '').trim();
+
+      let priceVal = 0;
+      let newPriceVal = 0;
+      let unitVal = 'gallon';
+      let isActiveVal = true;
+      let isReturnableVal = true;
+
+      if (currentType === 'refill') {
+        priceVal = Number(swapPriceInput?.value || 25);
+        newPriceVal = Number(newContainerPriceInput?.value || priceVal + 125);
+        unitVal =
+          String(backdrop.querySelector('#prod-unit-refill')?.value || 'gallon').trim() ||
+          'gallon';
+        isActiveVal = backdrop.querySelector('#prod-active-refill')?.value === 'true';
+        isReturnableVal = true;
+      } else {
+        // empty container
+        priceVal = Number(singlePriceInput?.value || 125);
+        newPriceVal = priceVal;
+        unitVal =
+          String(singleUnitInput?.value || 'container').trim() || 'container';
+        isActiveVal = backdrop.querySelector('#prod-active-single')?.value === 'true';
+        isReturnableVal = false;
+      }
+
       setBusy(submitBtn, true, 'Saving...');
       try {
         await saveProduct({
           id: product?.id || null,
-          name: fd.get('name'),
-          price: fd.get('price'),
-          newContainerPrice: isReturnableVal
-            ? fd.get('newContainerPrice') ?? newContainerPriceInput?.value
-            : fd.get('price'),
-          unit: fd.get('unit'),
+          name: nameVal,
+          price: priceVal,
+          newContainerPrice: newPriceVal,
+          unit: unitVal,
           photoUrl: finalPhoto,
-          isActive: fd.get('isActive') === 'true',
+          isActive: isActiveVal,
           isReturnable: isReturnableVal,
         });
-        showToast(isEdit ? 'Product updated.' : 'Product added.', 'success');
+        showToast(
+          isEdit ? 'Product updated.' : `${nameVal} added to catalog.`,
+          'success'
+        );
         close();
         await loadCatalog();
       } catch (err) {
@@ -605,6 +781,151 @@ export async function mount() {
         setBusy(submitBtn, false);
       }
     });
+  }
+
+  function openQuickPriceModal(product) {
+    const isReturnable = product.is_returnable !== false;
+    const currentSwapPrice = Number(product.price || 0);
+    const currentNewPrice = Number(
+      product.new_container_price ?? (isReturnable ? currentSwapPrice + 125 : currentSwapPrice)
+    );
+    const currentEmptyPrice = Math.max(25, currentNewPrice - currentSwapPrice);
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" style="max-width: 440px;">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">Edit prices · ${escapeHtml(product.name)}</h3>
+            <p class="modal-subtitle" style="font-size: 12px; color: var(--text-muted); margin-top: 2px;">
+              Directly manipulate refill, new gallon, and container prices
+            </p>
+          </div>
+          <button type="button" class="modal-close" data-close aria-label="Close">×</button>
+        </div>
+        <form id="quick-price-form">
+          <div class="modal-body stack">
+            <div class="field">
+              <label class="label" for="qp-swap-price">
+                ${isReturnable ? 'Swap refill price — water only (₱)' : 'Product price (₱)'}
+              </label>
+              <input class="input" id="qp-swap-price" name="price" type="number" step="0.5" min="0" value="${currentSwapPrice}" required />
+              <p class="field-hint">${isReturnable ? 'Charged when customer returns an empty bottle (1-to-1 swap).' : 'Outright purchase price.'}</p>
+            </div>
+
+            ${
+              isReturnable
+                ? `
+              <div class="field">
+                <label class="label" for="qp-new-price">New gallon + water price (₱)</label>
+                <input class="input" id="qp-new-price" name="newPrice" type="number" step="0.5" min="0" value="${currentNewPrice}" required />
+                <p class="field-hint">Charged when customer needs a new bottle (water + container).</p>
+              </div>
+
+              <div class="field">
+                <label class="label" for="qp-empty-price">Empty container value (₱)</label>
+                <input class="input" id="qp-empty-price" name="emptyPrice" type="number" step="0.5" min="0" value="${currentEmptyPrice}" />
+                <p class="field-hint">Net value of container only (New Gallon − Refill).</p>
+              </div>
+
+              <div class="notice" style="font-size: 12px; line-height: 1.5; padding: 10px 12px; background: #f0f7ff; border-left: 3px solid #2563eb;">
+                <strong>Live Pricing Summary:</strong>
+                <br>• Swap Refill: <strong>₱<span id="qp-live-swap">${currentSwapPrice}</span></strong> (customer has empty bottle)
+                <br>• New Gallon + Water: <strong>₱<span id="qp-live-new">${currentNewPrice}</span></strong> (filled new bottle)
+                <br>• Empty Container: <strong>₱<span id="qp-live-empty">${currentEmptyPrice}</span></strong>
+              </div>
+            `
+                : ''
+            }
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+            <button type="submit" class="btn btn-primary" id="btn-save-qp">Save prices</button>
+          </div>
+        </form>
+      </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    const swapInput = backdrop.querySelector('#qp-swap-price');
+    const newInput = backdrop.querySelector('#qp-new-price');
+    const emptyInput = backdrop.querySelector('#qp-empty-price');
+    const liveSwap = backdrop.querySelector('#qp-live-swap');
+    const liveNew = backdrop.querySelector('#qp-live-new');
+    const liveEmpty = backdrop.querySelector('#qp-live-empty');
+
+    function syncLiveHints() {
+      const s = Math.max(0, Number(swapInput?.value || 0));
+      const n = Math.max(s, Number(newInput?.value || 0));
+      const e = Math.max(0, n - s);
+      if (liveSwap) liveSwap.textContent = String(s);
+      if (liveNew) liveNew.textContent = String(n);
+      if (liveEmpty) liveEmpty.textContent = String(e);
+    }
+
+    swapInput?.addEventListener('input', () => {
+      if (isReturnable && emptyInput && newInput) {
+        const s = Math.max(0, Number(swapInput.value || 0));
+        const e = Math.max(0, Number(emptyInput.value || 125));
+        newInput.value = String(s + e);
+      }
+      syncLiveHints();
+    });
+
+    emptyInput?.addEventListener('input', () => {
+      if (isReturnable && swapInput && newInput) {
+        const s = Math.max(0, Number(swapInput.value || 0));
+        const e = Math.max(0, Number(emptyInput.value || 0));
+        newInput.value = String(s + e);
+      }
+      syncLiveHints();
+    });
+
+    newInput?.addEventListener('input', () => {
+      if (isReturnable && swapInput && emptyInput) {
+        const s = Math.max(0, Number(swapInput.value || 0));
+        const n = Math.max(s, Number(newInput.value || 0));
+        emptyInput.value = String(Math.max(0, n - s));
+      }
+      syncLiveHints();
+    });
+
+    const close = () => backdrop.remove();
+    backdrop.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', close));
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
+    });
+
+    const form = backdrop.querySelector('#quick-price-form');
+    const saveBtn = backdrop.querySelector('#btn-save-qp');
+    form?.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const newSwap = Number(swapInput.value);
+      const newGallon = isReturnable ? Number(newInput.value) : newSwap;
+      setBusy(saveBtn, true, 'Updating prices...');
+      try {
+        await saveProduct({
+          id: product.id,
+          name: product.name,
+          price: newSwap,
+          newContainerPrice: newGallon,
+          unit: product.unit,
+          photoUrl: product.photo_url,
+          isActive: product.is_active,
+          isReturnable: product.is_returnable,
+        });
+        showToast(`Prices updated for ${product.name}!`, 'success');
+        close();
+        await loadCatalog();
+      } catch (err) {
+        showToast(err.message || 'Could not update prices.', 'error');
+        setBusy(saveBtn, false);
+      }
+    });
+
+    swapInput?.focus();
+    swapInput?.select();
   }
 
   function renderView() {
@@ -624,6 +945,7 @@ export async function mount() {
               const newGallonPrice = Number(
                 prod.new_container_price ?? (isReturnable ? Number(prod.price || 25) + 125 : prod.price)
               );
+              const emptyContainerPrice = Math.max(25, newGallonPrice - Number(prod.price || 0));
               const subtitle = isReturnable
                 ? `Swap refill · New gallon + water: ${formatPeso(newGallonPrice)}`
                 : 'Sold outright · No empty container return';
@@ -658,21 +980,48 @@ export async function mount() {
                     </div>
 
                     <div class="admin-product-price-row">
-                      <div class="admin-product-price">
-                        ${escapeHtml(formatPeso(prod.price))}<span>/ ${escapeHtml(prod.unit || 'gallon')}</span>
+                      <div class="admin-product-pricing-box">
+                        <div class="admin-price-chip">
+                          <span class="price-label">${isReturnable ? 'Swap refill:' : 'Price:'}</span>
+                          <strong class="price-val">${escapeHtml(formatPeso(prod.price))}</strong>
+                        </div>
+                        ${
+                          isReturnable
+                            ? `
+                          <div class="admin-price-chip">
+                            <span class="price-label">New gallon + water:</span>
+                            <strong class="price-val">${escapeHtml(formatPeso(newGallonPrice))}</strong>
+                          </div>
+                          <div class="admin-price-chip">
+                            <span class="price-label">Empty container:</span>
+                            <strong class="price-val">${escapeHtml(formatPeso(emptyContainerPrice))}</strong>
+                          </div>
+                        `
+                            : `
+                          <div class="admin-price-chip">
+                            <span class="price-label">Unit:</span>
+                            <strong class="price-val">per ${escapeHtml(prod.unit || 'piece')}</strong>
+                          </div>
+                        `
+                        }
                       </div>
-                      <button
-                        type="button"
-                        class="admin-switch${isActive ? ' is-on' : ''}"
-                        data-toggle-prod="${escapeHtml(prod.id)}"
-                        aria-label="Toggle product visibility"
-                        title="${isActive ? 'Hide from customer catalog' : 'Show in customer catalog'}"
-                      ></button>
+
+                      <div class="admin-product-switch-row">
+                        <span>Visibility:</span>
+                        <button
+                          type="button"
+                          class="admin-switch${isActive ? ' is-on' : ''}"
+                          data-toggle-prod="${escapeHtml(prod.id)}"
+                          aria-label="Toggle product visibility"
+                          title="${isActive ? 'Hide from customer catalog' : 'Show in customer catalog'}"
+                        ></button>
+                      </div>
                     </div>
 
                     <div class="admin-product-actions">
-                      <button type="button" class="btn btn-secondary btn-sm" data-edit-prod="${escapeHtml(prod.id)}">Edit product</button>
-                      <button type="button" class="btn btn-secondary btn-sm" data-edit-photo="${escapeHtml(prod.id)}">${hasPhoto ? 'Adjust photo' : 'Upload photo'}</button>
+                      <button type="button" class="btn btn-primary btn-sm" data-quick-price="${escapeHtml(prod.id)}">Edit prices</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-edit-prod="${escapeHtml(prod.id)}">Full details</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-edit-photo="${escapeHtml(prod.id)}">${hasPhoto ? 'Photo' : 'Upload photo'}</button>
                     </div>
                   </div>
                 </article>
@@ -730,6 +1079,18 @@ export async function mount() {
         const id = sw.getAttribute('data-toggle-prod');
         const prod = products.find((p) => p.id === id);
         if (!prod) return;
+
+        if (prod.is_active) {
+          const confirmed = await confirmModal({
+            title: `Disable ${prod.name}?`,
+            message: `This product will be hidden immediately and customers will not be able to order it.`,
+            confirmText: 'Disable product',
+            cancelText: 'Keep active',
+            danger: true,
+          });
+          if (!confirmed) return;
+        }
+
         sw.disabled = true;
         try {
           await toggleProductActive(prod.id, !prod.is_active);
@@ -742,6 +1103,14 @@ export async function mount() {
           showToast(err.message || 'Could not update product status.', 'error');
           sw.disabled = false;
         }
+      });
+    });
+
+    content.querySelectorAll('[data-quick-price]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-quick-price');
+        const prod = products.find((p) => p.id === id);
+        if (prod) openQuickPriceModal(prod);
       });
     });
 

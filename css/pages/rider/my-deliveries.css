@@ -310,3 +310,136 @@
     min-height: 36px;
   }
 }
+
+/* Trip Manifest banner on Rider side */
+.trip-manifest-card {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(30, 58, 138, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trip-manifest-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trip-manifest-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.trip-manifest-title svg {
+  width: 20px;
+  height: 20px;
+  stroke: #93c5fd;
+}
+
+.trip-manifest-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.trip-stat-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.trip-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #bfdbfe;
+  margin-bottom: 3px;
+}
+
+.trip-stat-val {
+  font-size: 16px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.trip-manifest-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.trip-manifest-hub {
+  font-size: 12px;
+  color: #dbeafe;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.trip-depart-btn {
+  background: #22c55e;
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+  transition: all 0.15s ease;
+}
+
+.trip-depart-btn:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+/* Stop Sequence Pill */
+.stop-sequence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.stop-sequence-badge.is-first {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.stop-map-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11.5px;
+  color: var(--blue-app);
+  font-weight: 600;
+  text-decoration: none;
+  margin-top: 4px;
+}
+
+.stop-map-link:hover {
+  text-decoration: underline;
+}
+

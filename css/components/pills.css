@@ -24,7 +24,8 @@
 .pill-amber,
 .pill-warning,
 .status-refilling,
-.status-out_for_delivery {
+.status-out_for_delivery,
+.status-attempted {
   background: #fff0cf;
   color: #a15c07;
 }

@@ -1,15 +1,26 @@
 import { bootStaffPage, navigateStaffSpa } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeStaffWorkspace } from '../../core/realtime.js';
-import { escapeHtml, formatPeso, showToast } from '../../core/ui.js';
+import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
 import {
   formatSlotCompact,
   getAllOrdersForStaff,
   getEffectiveSlot,
+  getRiderRemittanceSummary,
+  isOrderItemNewContainer,
+  staffAcceptRiderRemittance,
+  staffAssignBatchToRider,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
+import { getAllActiveRiders } from '../../services/usersService.js';
 
-const CART_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L21 7H6"/></svg>`;
+const ICONS = {
+  cart: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L21 7H6"/></svg>`,
+  bolt: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+  pin: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
+  truck: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  money: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+};
 
 const FILTER_STATUSES = [
   { value: 'all', label: 'All statuses' },
@@ -21,24 +32,149 @@ const FILTER_STATUSES = [
   { value: 'out_for_delivery', label: 'Out for delivery' },
   { value: 'delivered', label: 'Delivered' },
   { value: 'completed', label: 'Completed' },
+  { value: 'attempted', label: 'Attempted' },
   { value: 'cancelled', label: 'Cancelled' },
 ];
 
+function ensureOrdersAssets() {
+  if (!document.querySelector('link[href*="orders.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = '../css/pages/staff/orders.css';
+    document.head.appendChild(link);
+  }
+}
+
 export async function mount() {
+  ensureOrdersAssets();
   const content = document.querySelector('#content');
   let allOrders = [];
+  let activeRiders = [];
+  let currentTab = 'all'; // 'all' | 'batch'
   let searchQuery = '';
   let statusFilter = 'all';
 
-  function renderTableBody() {
-    const tbody = document.querySelector('#staff-orders-tbody');
-    const activeCountEl = document.querySelector('#staff-active-count');
-    if (!tbody) return;
+  function countBatchReadyOrders() {
+    return allOrders.filter(
+      (o) => !o.rider_id && ['ready', 'confirmed', 'refilling'].includes(o.status)
+    ).length;
+  }
 
+  function renderView() {
+    const batchReadyCount = countBatchReadyOrders();
     const activeCount = allOrders.filter(
       (o) => !['completed', 'cancelled'].includes(o.status)
     ).length;
-    if (activeCountEl) activeCountEl.textContent = `${activeCount} active`;
+
+    content.innerHTML = `
+      <!-- View Mode Tabs -->
+      <div class="orders-view-tabs">
+        <button type="button" class="orders-view-tab ${currentTab === 'all' ? 'is-active' : ''}" id="tab-all-orders">
+          ${ICONS.cart}
+          <span>All Orders</span>
+          <span class="badge">${activeCount} active</span>
+        </button>
+        <button type="button" class="orders-view-tab ${currentTab === 'batch' ? 'is-active' : ''}" id="tab-batch-dispatch">
+          ${ICONS.bolt}
+          <span>Smart Batch Dispatch</span>
+          ${batchReadyCount > 0 ? `<span class="badge" style="background:#22c55e;color:#fff;font-weight:700;">${batchReadyCount} ready</span>` : ''}
+        </button>
+        <button type="button" class="orders-view-tab ${currentTab === 'remittance' ? 'is-active' : ''}" id="tab-rider-remittance">
+          ${ICONS.money}
+          <span>Rider Remittances</span>
+        </button>
+      </div>
+
+      <div id="orders-tab-body"></div>
+    `;
+
+    document.querySelector('#tab-all-orders')?.addEventListener('click', () => {
+      currentTab = 'all';
+      renderView();
+    });
+
+    document.querySelector('#tab-batch-dispatch')?.addEventListener('click', () => {
+      currentTab = 'batch';
+      renderView();
+    });
+
+    document.querySelector('#tab-rider-remittance')?.addEventListener('click', () => {
+      currentTab = 'remittance';
+      renderView();
+    });
+
+    const bodyContainer = document.querySelector('#orders-tab-body');
+    if (currentTab === 'all') {
+      renderAllOrdersTab(bodyContainer);
+    } else if (currentTab === 'batch') {
+      renderBatchDispatchTab(bodyContainer);
+    } else {
+      renderRiderRemittanceTab(bodyContainer);
+    }
+  }
+
+  function renderAllOrdersTab(container) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-group">
+            <span class="card-icon">${ICONS.cart}</span>
+            <h2 class="card-title">Order queue</h2>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="field">
+            <label class="field-label" for="order-search">Search order, customer, or barangay</label>
+            <input class="input" id="order-search" type="search" placeholder="e.g. AR-1052, Nina Santos, or Camarin" value="${escapeHtml(searchQuery)}">
+          </div>
+          <div class="field">
+            <label class="field-label" for="status-filter">Status</label>
+            <select class="select" id="status-filter">
+              ${FILTER_STATUSES.map(
+                (s) =>
+                  `<option value="${escapeHtml(s.value)}"${s.value === statusFilter ? ' selected' : ''}>${escapeHtml(s.label)}</option>`
+              ).join('')}
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Area / Barangay</th>
+                <th>Items</th>
+                <th>Delivery slot</th>
+                <th>Status</th>
+                <th>Total</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="staff-orders-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    `;
+
+    document.querySelector('#order-search')?.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      populateTableBody();
+    });
+
+    document.querySelector('#status-filter')?.addEventListener('change', (e) => {
+      statusFilter = e.target.value;
+      populateTableBody();
+    });
+
+    populateTableBody();
+  }
+
+  function populateTableBody() {
+    const tbody = document.querySelector('#staff-orders-tbody');
+    if (!tbody) return;
 
     const q = searchQuery.trim().toLowerCase();
     const filtered = allOrders.filter((order) => {
@@ -46,13 +182,14 @@ export async function mount() {
       if (!q) return true;
       const orderNum = String(order.order_number || '').toLowerCase();
       const customerName = String(order.customer?.full_name || '').toLowerCase();
-      return orderNum.includes(q) || customerName.includes(q);
+      const brgy = String(order.address?.barangay || '').toLowerCase();
+      return orderNum.includes(q) || customerName.includes(q) || brgy.includes(q);
     });
 
     if (!filtered.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="7" class="empty-state">No matching orders found.</td>
+          <td colspan="8" class="empty-state">No matching orders found.</td>
         </tr>
       `;
       return;
@@ -61,11 +198,13 @@ export async function mount() {
     tbody.innerHTML = filtered
       .map((order) => {
         const customerName = order.customer?.full_name || 'Customer';
+        const brgy = order.address?.barangay && order.address.barangay !== 'N/A' ? order.address.barangay : '—';
         const slotText = formatSlotCompact(getEffectiveSlot(order));
         return `
           <tr class="is-clickable" data-order-id="${escapeHtml(order.id)}">
             <td class="table-order-id">#${escapeHtml(order.order_number)}</td>
             <td>${escapeHtml(customerName)}</td>
+            <td><span class="badge" style="font-size:11px; background:#f1f5f9; color:#334155; display:inline-flex; align-items:center; gap:3px;">${ICONS.pin} ${escapeHtml(brgy)}</span></td>
             <td>${escapeHtml(summarizeOrderItems(order.items))}</td>
             <td>${escapeHtml(slotText)}</td>
             <td>
@@ -90,71 +229,341 @@ export async function mount() {
     });
   }
 
-  content.innerHTML = `
-    <div class="card">
-      <div class="card-header">
-        <div class="card-title-group">
-          <span class="card-icon">${CART_ICON}</span>
-          <h2 class="card-title">All orders <span class="card-count-sub" id="staff-active-count">0 active</span></h2>
+  function renderBatchDispatchTab(container) {
+    // Filter unassigned orders ready for delivery
+    const dispatchableOrders = allOrders.filter(
+      (o) => !o.rider_id && ['ready', 'confirmed', 'refilling'].includes(o.status)
+    );
+
+    if (!dispatchableOrders.length) {
+      container.innerHTML = `
+        <div class="card empty-state" style="padding: 40px 20px; text-align: center;">
+          <div style="font-size: 28px; margin-bottom: 8px;">✓</div>
+          <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">No unassigned orders ready for dispatch</h3>
+          <p class="text-muted" style="font-size: 13px;">All confirmed and ready orders have been assigned to riders or completed.</p>
         </div>
+      `;
+      return;
+    }
+
+    // Group orders by Area / Barangay
+    const clusterMap = new Map();
+    dispatchableOrders.forEach((order) => {
+      const rawBrgy = order.address?.barangay;
+      const key = rawBrgy && rawBrgy !== 'N/A' ? rawBrgy.trim() : 'General Station Vicinity';
+      if (!clusterMap.has(key)) {
+        clusterMap.set(key, []);
+      }
+      clusterMap.get(key).push(order);
+    });
+
+    const clusters = Array.from(clusterMap.entries()).map(([areaName, orders]) => {
+      let totalGallons = 0;
+      let roundCount = 0;
+      let slimCount = 0;
+      let newCount = 0;
+      let totalCod = 0;
+
+      orders.forEach((o) => {
+        totalCod += Number(o.total || 0);
+        (o.items || []).forEach((item) => {
+          const qty = Number(item.quantity || 0);
+          totalGallons += qty;
+          const name = String(item.product?.name || '').toLowerCase();
+          if (isOrderItemNewContainer(item)) {
+            newCount += qty;
+          } else if (name.includes('slim')) {
+            slimCount += qty;
+          } else {
+            roundCount += qty;
+          }
+        });
+      });
+
+      return {
+        areaName,
+        orders,
+        totalGallons,
+        roundCount,
+        slimCount,
+        newCount,
+        totalCod,
+      };
+    });
+
+    container.innerHTML = `
+      <div style="margin-bottom: 14px;">
+        <h2 style="font-size: 15px; font-weight: 700; color: #0f172a; margin-bottom: 2px;">
+          Smart Neighborhood Clusters (${clusters.length} Areas)
+        </h2>
+        <p class="text-muted" style="font-size: 12.5px;">
+          Orders in the same barangay are clustered together to save rider gas. Assign an entire neighborhood batch in 1 click.
+        </p>
       </div>
 
-      <div class="filter-bar">
-        <div class="field">
-          <label class="field-label" for="order-search">Search order or customer</label>
-          <input class="input" id="order-search" type="search" placeholder="e.g. AR-1052 or Nina Santos" value="${escapeHtml(searchQuery)}">
-        </div>
-        <div class="field">
-          <label class="field-label" for="status-filter">Status</label>
-          <select class="select" id="status-filter">
-            ${FILTER_STATUSES.map(
-              (s) =>
-                `<option value="${escapeHtml(s.value)}"${s.value === statusFilter ? ' selected' : ''}>${escapeHtml(s.label)}</option>`
-            ).join('')}
-          </select>
-        </div>
+      <div class="batch-cards-grid">
+        ${clusters
+          .map((c, idx) => {
+            const clusterId = `cluster-${idx}`;
+            const breakdownParts = [];
+            if (c.roundCount > 0) breakdownParts.push(`${c.roundCount} Round`);
+            if (c.slimCount > 0) breakdownParts.push(`${c.slimCount} Slim`);
+            if (c.newCount > 0) breakdownParts.push(`${c.newCount} New Gallon`);
+
+            return `
+              <div class="batch-card" data-cluster-key="${clusterId}">
+                <div class="batch-card-header">
+                  <div>
+                    <div class="batch-area-title">
+                      ${ICONS.pin}
+                      <span>${escapeHtml(c.areaName)}</span>
+                    </div>
+                    <div class="batch-stats-strip">
+                      <span class="batch-stat-pill is-gallons">
+                        ${c.totalGallons} Gallons (${c.orders.length} ${c.orders.length === 1 ? 'order' : 'orders'})
+                      </span>
+                      <span class="batch-stat-pill is-cash">
+                        ${formatPeso(c.totalCod)} Total COD
+                      </span>
+                      ${
+                        breakdownParts.length
+                          ? `<span class="batch-stat-pill">${escapeHtml(breakdownParts.join(', '))}</span>`
+                          : ''
+                      }
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Orders in this Cluster -->
+                <div class="batch-orders-list">
+                  ${c.orders
+                    .map((o) => {
+                      const customerName = o.customer?.full_name || 'Customer';
+                      const street = o.address?.street || 'Address';
+                      const itemsStr = summarizeOrderItems(o.items);
+                      return `
+                        <div class="batch-order-item">
+                          <div class="batch-order-left">
+                            <span class="batch-order-num">#${escapeHtml(o.order_number)} · ${escapeHtml(customerName)}</span>
+                            <span class="batch-order-addr">${escapeHtml(street)}</span>
+                          </div>
+                          <div class="batch-order-right">
+                            <span style="font-weight:700; color:#1e40af;">${escapeHtml(itemsStr)}</span>
+                            <span class="pill status-${escapeHtml(o.status)}" style="font-size:10px; padding:2px 6px;">
+                              ${escapeHtml(STATUS_LABELS[o.status] || o.status)}
+                            </span>
+                          </div>
+                        </div>
+                      `;
+                    })
+                    .join('')}
+                </div>
+
+                <!-- Assign Batch to Rider Action -->
+                <div class="batch-action-bar">
+                  <select class="batch-rider-select" id="select-${clusterId}">
+                    <option value="">Select rider to dispatch...</option>
+                    ${activeRiders
+                      .map(
+                        (r) => `
+                        <option value="${escapeHtml(r.id)}">
+                          ${escapeHtml(r.full_name)} (${r.is_available ? '● Available' : 'Off-shift'})
+                        </option>
+                      `
+                      )
+                      .join('')}
+                  </select>
+                  <button type="button" class="btn btn-primary batch-assign-btn" data-batch-btn="${clusterId}">
+                    ${ICONS.truck}
+                    <span>Assign Batch</span>
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('')}
       </div>
+    `;
 
-      <div class="table-wrap">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Order</th>
-              <th>Customer</th>
-              <th>Items</th>
-              <th>Delivery slot</th>
-              <th>Status</th>
-              <th>Total</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="staff-orders-tbody"></tbody>
-        </table>
+    // Hook up batch assign buttons
+    clusters.forEach((c, idx) => {
+      const clusterId = `cluster-${idx}`;
+      const btn = container.querySelector(`[data-batch-btn="${clusterId}"]`);
+      const select = container.querySelector(`#select-${clusterId}`);
+
+      btn?.addEventListener('click', async () => {
+        const riderId = select?.value;
+        if (!riderId) {
+          showToast('Please select a rider from the dropdown first.', 'error');
+          select?.focus();
+          return;
+        }
+
+        const riderObj = activeRiders.find((r) => r.id === riderId);
+        const riderName = riderObj?.full_name || 'Rider';
+
+        const confirmed = await confirmModal({
+          title: `Assign Batch to ${riderName}?`,
+          message: `Assign ${c.orders.length} orders (${c.totalGallons} total gallons) in "${c.areaName}" to ${riderName}?`,
+          confirmText: 'Yes, assign batch',
+          cancelText: 'Cancel',
+        });
+        if (!confirmed) return;
+
+        setBusy(btn, true, 'Assigning...');
+        try {
+          const orderIds = c.orders.map((o) => o.id);
+          await staffAssignBatchToRider(orderIds, riderId);
+          showToast(`Batch of ${c.orders.length} orders assigned to ${riderName}!`, 'success');
+          await loadData();
+        } catch (err) {
+          showToast(err.message || 'Could not assign batch.', 'error');
+          setBusy(btn, false);
+        }
+      });
+    });
+  }
+
+  async function renderRiderRemittanceTab(container) {
+    container.innerHTML = `
+      <div style="padding: 24px; text-align: center; color: var(--muted-blue);">
+        Loading rider remittances...
       </div>
-    </div>
-  `;
+    `;
 
-  document.querySelector('#order-search')?.addEventListener('input', (e) => {
-    searchQuery = e.target.value;
-    renderTableBody();
-  });
-
-  document.querySelector('#status-filter')?.addEventListener('change', (e) => {
-    statusFilter = e.target.value;
-    renderTableBody();
-  });
-
-  async function loadOrders() {
     try {
-      allOrders = await getAllOrdersForStaff({ limit: 200 });
-      renderTableBody();
+      const summaries = await Promise.all(
+        activeRiders.map(async (rider) => {
+          const sum = await getRiderRemittanceSummary(rider.id).catch(() => ({ totalCash: 0, count: 0, unremittedOrders: [] }));
+          return { rider, ...sum };
+        })
+      );
+
+      container.innerHTML = `
+        <div class="card" style="margin-bottom: 16px;">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Rider Cash Remittances & Shift Handover</h2>
+              <p class="text-muted" style="margin: 4px 0 0 0; font-size: 13px;">
+                Verify physical cash envelopes turned in by riders upon returning to the station. Acknowledging remittance logs the funds and clears the rider's pending cash on hand.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div class="batch-clusters-grid">
+          ${
+            summaries.length
+              ? summaries
+                  .map((s) => {
+                    const isSettled = s.totalCash === 0;
+                    return `
+                      <div class="batch-cluster-card" style="border-top: 4px solid ${isSettled ? '#cbd5e1' : '#10b981'};">
+                        <div class="batch-cluster-header">
+                          <div>
+                            <span class="batch-cluster-title" style="font-size: 15px; font-weight: 700; color: #0f172a;">
+                              ${escapeHtml(s.rider.full_name)}
+                            </span>
+                            <span class="batch-cluster-meta" style="font-size: 12px; color: #64748b;">
+                              ${escapeHtml(s.rider.phone || 'No phone')} · Rider
+                            </span>
+                          </div>
+                          <span class="pill ${isSettled ? 'pill-neutral' : 'pill-green'}">
+                            ${isSettled ? '✓ All Settled' : '● Cash to Remit'}
+                          </span>
+                        </div>
+
+                        <div class="batch-stats-row" style="margin: 12px 0;">
+                          <span class="batch-stat-pill is-cash" style="font-size: 14px; font-weight: 800;">
+                            ${formatPeso(s.totalCash)} Cash on Hand
+                          </span>
+                          <span class="batch-stat-pill">
+                            ${s.count} completed ${s.count === 1 ? 'order' : 'orders'}
+                          </span>
+                        </div>
+
+                        ${
+                          !isSettled
+                            ? `
+                              <div style="margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
+                                <button
+                                  type="button"
+                                  class="btn btn-primary btn-block"
+                                  data-accept-remittance="${escapeHtml(s.rider.id)}"
+                                  data-rider-name="${escapeHtml(s.rider.full_name)}"
+                                  data-amount="${s.totalCash}"
+                                  style="font-weight: 700;"
+                                >
+                                  Acknowledge & Accept Cash (${formatPeso(s.totalCash)})
+                                </button>
+                              </div>
+                            `
+                            : `
+                              <div style="margin-top: 12px; font-size: 12.5px; color: #64748b; text-align: center; padding: 6px 0;">
+                                No pending cash collection for this rider.
+                              </div>
+                            `
+                        }
+                      </div>
+                    `;
+                  })
+                  .join('')
+              : `
+                <div class="card empty-state" style="padding: 40px; text-align: center; grid-column: 1 / -1;">
+                  <p>No active riders found.</p>
+                </div>
+              `
+          }
+        </div>
+      `;
+
+      container.querySelectorAll('[data-accept-remittance]').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const riderId = btn.dataset.acceptRemittance;
+          const riderName = btn.dataset.riderName;
+          const amount = Number(btn.dataset.amount || 0);
+
+          const confirmed = await confirmModal({
+            title: `Accept Cash Remittance from ${riderName}?`,
+            message: `Confirm that ${riderName} has physically turned over ${formatPeso(amount)} cash from completed deliveries to the station cash register?`,
+            confirmText: 'Yes, accept remittance',
+            cancelText: 'Cancel',
+          });
+          if (!confirmed) return;
+
+          setBusy(btn, true, 'Accepting...');
+          try {
+            await staffAcceptRiderRemittance(riderId);
+            showToast(`Cash remittance of ${formatPeso(amount)} from ${riderName} accepted!`, 'success');
+            await loadData();
+            renderView();
+          } catch (err) {
+            showToast(err.message || 'Could not accept remittance.', 'error');
+            setBusy(btn, false);
+          }
+        });
+      });
+    } catch (err) {
+      container.innerHTML = `<div class="card"><p class="text-danger">Could not load remittances: ${escapeHtml(err.message)}</p></div>`;
+    }
+  }
+
+  async function loadData() {
+    try {
+      const [orders, riders] = await Promise.all([
+        getAllOrdersForStaff({ limit: 200 }),
+        getAllActiveRiders().catch(() => []),
+      ]);
+      allOrders = orders;
+      activeRiders = riders;
+      renderView();
     } catch (err) {
       showToast(err.message || 'Could not load orders.', 'error');
     }
   }
 
-  await loadOrders();
-  return subscribeStaffWorkspace(loadOrders);
+  await loadData();
+  return subscribeStaffWorkspace(loadData);
 }
 
 bootStaffPage('orders', mount);

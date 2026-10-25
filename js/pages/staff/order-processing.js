@@ -1,6 +1,6 @@
 import { bootStaffPage, renderNav } from '../../core/nav.js';
 import { subscribeStaffWorkspace } from '../../core/realtime.js';
-import { escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
+import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
 import {
   formatSlotWindow,
   getEffectiveSlot,
@@ -306,6 +306,16 @@ export async function mount(me) {
             await staffAssignRider(order.id, chosenRiderId);
             showToast('Rider assigned!', 'success');
           } else if (order.status === 'delivered' && order.payment_status === 'unpaid') {
+            const confirmed = await confirmModal({
+              title: `Confirm Payment for Order #${order.order_number}?`,
+              message: `Confirm that cash payment of ${formatPeso(order.total)} has been received from ${order.customer?.full_name || 'Customer'}? This will complete the order.`,
+              confirmText: 'Confirm payment',
+              cancelText: 'Cancel',
+            });
+            if (!confirmed) {
+              setBusy(btn, false);
+              return;
+            }
             await staffConfirmPayment(order.id);
             showToast('Payment confirmed and order completed!', 'success');
           }

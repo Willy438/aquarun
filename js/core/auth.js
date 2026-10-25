@@ -49,7 +49,7 @@ export function parseAddressParts(rawAddress) {
   if (parts.length === 2) {
     return { street: parts[0], barangay: 'N/A', city: parts[1] };
   }
-  return { street: parts[0] || String(rawAddress ?? '').trim(), barangay: 'N/A', city: 'Pasig' };
+  return { street: parts[0] || String(rawAddress ?? '').trim(), barangay: 'N/A', city: 'Caloocan' };
 }
 
 async function ensureInitialAddress(user) {

@@ -404,10 +404,46 @@
 
 .admin-product-price-row {
   display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
+}
+
+.admin-product-pricing-box {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--bg-alt, #f8fafc);
+  border: 1px solid var(--border-subtle, #e2e8f0);
+  border-radius: 9px;
+  padding: 8px 10px;
+  width: 100%;
+}
+
+.admin-price-chip {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-price-chip .price-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.admin-price-chip .price-val {
+  font-weight: 700;
+  color: var(--text);
+}
+
+.admin-product-switch-row {
+  display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding-top: 2px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .admin-product-price {
@@ -426,7 +462,7 @@
 
 .admin-product-actions {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 8px;
   margin-top: auto;
   min-width: 0;

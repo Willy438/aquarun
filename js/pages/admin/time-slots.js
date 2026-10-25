@@ -2,6 +2,7 @@
 import { bootAdminPage } from '../../core/nav.js';
 import { subscribeAdminWorkspace } from '../../core/realtime.js';
 import {
+  confirmModal,
   escapeHtml,
   getTodayManila,
   setBusy,
@@ -250,6 +251,18 @@ export async function mount() {
         const id = sw.getAttribute('data-toggle-slot');
         const slot = slots.find((s) => s.id === id);
         if (!slot) return;
+
+        if (slot.is_active) {
+          const confirmed = await confirmModal({
+            title: `Disable ${slot.label}?`,
+            message: `This delivery window will be deactivated and hidden from customers permanently until re-enabled.`,
+            confirmText: 'Disable window',
+            cancelText: 'Keep active',
+            danger: true,
+          });
+          if (!confirmed) return;
+        }
+
         sw.disabled = true;
         try {
           if (slot.is_closed_today) {
@@ -281,6 +294,19 @@ export async function mount() {
         const id = btn.getAttribute('data-close-today');
         const slot = slots.find((s) => s.id === id);
         if (!slot) return;
+
+        const shouldClose = !slot.is_closed_today;
+        if (shouldClose) {
+          const confirmed = await confirmModal({
+            title: `Close ${slot.label} for today?`,
+            message: `Customers will no longer be able to select this delivery window for today's orders.`,
+            confirmText: 'Close for today',
+            cancelText: 'Keep open',
+            danger: true,
+          });
+          if (!confirmed) return;
+        }
+
         setBusy(btn, true, '...');
         try {
           const shouldClose = !slot.is_closed_today;

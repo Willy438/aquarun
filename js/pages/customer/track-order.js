@@ -1,7 +1,7 @@
 import { bootCustomerPage, renderNav } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeCustomerOrders } from '../../core/realtime.js';
-import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
+import { confirmModal, escapeHtml, formatPeso, getTodayManila, setBusy, showToast } from '../../core/ui.js';
 import {
   cancelOrder,
   formatAddressLine,
@@ -14,9 +14,11 @@ import {
   isOrderItemNewContainer,
   isSlotAdjusted,
   renderCustomerOrderHero,
+  rescheduleOrder,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
 import { getCustomerBottleBalance } from '../../services/ledgerService.js';
+import { getSlotAvailability } from '../../services/slotsService.js';
 
 const ICONS = {
   pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
@@ -33,20 +35,29 @@ export async function mount(me) {
     try {
       const activeOrders = await getCustomerActiveOrders(me.id);
       let order = null;
+      let pastTerminalOrder = null;
 
       if (currentOrderId) {
-        order =
-          activeOrders.find((o) => o.id === currentOrderId) ||
-          (await getCustomerOrderById(me.id, currentOrderId));
+        order = activeOrders.find((o) => o.id === currentOrderId);
+        if (!order) {
+          // Check if this was a completed or cancelled past order
+          const found = await getCustomerOrderById(me.id, currentOrderId).catch(() => null);
+          if (found && ['completed', 'cancelled'].includes(found.status)) {
+            pastTerminalOrder = found;
+          }
+        }
       }
 
+      // If customer has active orders and tried to track a past/cancelled order or visited with no ID,
+      // default to tracking their active order!
       if (!order && activeOrders.length > 0) {
         order = activeOrders[0];
         currentOrderId = order.id;
+        window.history.replaceState({}, '', `track-order.html?id=${encodeURIComponent(order.id)}`);
       }
 
       if (rightEl) {
-        if (activeOrders.length > 1) {
+        if (activeOrders.length > 1 && order) {
           rightEl.innerHTML = `
             <div class="admin-seg-group" role="tablist" aria-label="Switch active order">
               ${activeOrders
@@ -54,7 +65,7 @@ export async function mount(me) {
                   (o) => `
                   <button
                     type="button"
-                    class="admin-seg-btn${order && o.id === order.id ? ' is-active' : ''}"
+                    class="admin-seg-btn${o.id === order.id ? ' is-active' : ''}"
                     data-switch-order="${escapeHtml(o.id)}"
                   >
                     #${escapeHtml(o.order_number)}
@@ -78,11 +89,65 @@ export async function mount(me) {
         }
       }
 
+      // If customer has NO active orders and opened a past/cancelled order
+      if (!order && pastTerminalOrder) {
+        const isCancelled = pastTerminalOrder.status === 'cancelled';
+        content.innerHTML = `
+          <div class="card" style="border-left: 4px solid ${isCancelled ? '#ef4444' : '#22c55e'}; background: ${isCancelled ? '#fef2f2' : '#f0fdf4'}; padding: 22px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+              <div>
+                <span class="pill ${isCancelled ? 'pill-danger' : 'pill-green'}" style="margin-bottom: 8px;">
+                  ${isCancelled ? 'Cancelled' : 'Completed'}
+                </span>
+                <h2 style="font-size: 19px; font-weight: 800; color: var(--ink-navy); margin: 0 0 6px 0;">
+                  Order #${escapeHtml(pastTerminalOrder.order_number)}
+                </h2>
+                <p style="font-size: 13.5px; color: var(--muted-blue); margin: 0; line-height: 1.5;">
+                  ${
+                    isCancelled
+                      ? 'This order was cancelled while Submitted. You have no active orders in flight right now.'
+                      : `This order was delivered and completed on ${escapeHtml(formatDateShort(pastTerminalOrder.delivered_at || pastTerminalOrder.delivery_date))}.`
+                  }
+                </p>
+              </div>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                <a class="btn btn-primary" href="new-order.html">Place refill order</a>
+                <a class="btn btn-light" href="order-history.html?viewOrder=${encodeURIComponent(pastTerminalOrder.id)}">View full receipt in Order history</a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">${ICONS.pin}</span>
+                <h3 class="card-title">Order summary</h3>
+              </div>
+            </div>
+            <div class="kv-list">
+              <div class="kv-row">
+                <span class="kv-label">Items</span>
+                <span class="kv-value">${escapeHtml(summarizeOrderItems(pastTerminalOrder.items))}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">Delivery address</span>
+                <span class="kv-value">${escapeHtml(formatAddressLine(pastTerminalOrder.address))}</span>
+              </div>
+              <div class="kv-row">
+                <span class="kv-label">Total</span>
+                <span class="kv-value" style="font-weight: 700;">${escapeHtml(formatPeso(pastTerminalOrder.total))} · Cash on delivery</span>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       if (!order) {
         content.innerHTML = `
           <div class="card empty-state">
-            <h3>No active order to track</h3>
-            <p>Place a refill order to see your live status tracker here, or view past orders in Order history.</p>
+            <h3>No active orders to track</h3>
+            <p>You don't have any refill deliveries in progress right now. Place a new order or check your past receipts in Order history.</p>
             <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
               <a class="btn btn-primary" href="new-order.html">Place a refill order</a>
               <a class="btn btn-light" href="order-history.html">Order history</a>
@@ -92,9 +157,7 @@ export async function mount(me) {
         return;
       }
 
-      const showSwitcherBar =
-        activeOrders.length > 1 ||
-        (activeOrders.length === 1 && activeOrders[0].id !== order.id);
+      const showSwitcherBar = activeOrders.length > 1;
 
       const switcherHtml = showSwitcherBar
         ? `
@@ -121,6 +184,15 @@ export async function mount(me) {
                 })
                 .join('')}
             </div>
+          </div>
+        `
+        : '';
+
+      const noticeRedirectHtml = pastTerminalOrder
+        ? `
+          <div class="notice notice-info" style="margin-bottom: 14px;">
+            Order #${escapeHtml(pastTerminalOrder.order_number)} is ${escapeHtml(pastTerminalOrder.status)}. Tracking your active order #${escapeHtml(order.order_number)}.
+            <a href="order-history.html?viewOrder=${encodeURIComponent(pastTerminalOrder.id)}" style="font-weight: 700; margin-left: 6px;">View receipt in Order history →</a>
           </div>
         `
         : '';
@@ -223,8 +295,39 @@ export async function mount(me) {
             }
           `;
 
+      const isAttempted =
+        order.status === 'attempted' ||
+        String(order.slot_note || '').startsWith('[ATTEMPTED]');
+
+      const attemptedAlertHtml = isAttempted
+        ? `
+          <div class="card" style="border-left: 4px solid #f59e0b; background: #fffbeb; padding: 16px; margin-bottom: 16px;">
+            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div>
+                <h3 style="font-size: 15px; font-weight: 700; color: #92400e; margin: 0 0 4px 0;">
+                  ⚠️ Delivery Attempted — Customer Unavailable
+                </h3>
+                <p style="font-size: 13px; color: #b45309; margin: 0; line-height: 1.45;">
+                  ${escapeHtml(
+                    order.slot_note
+                      ? order.slot_note.replace('[ATTEMPTED]:', 'Reason:').trim()
+                      : 'The rider visited your address but was unable to complete the delivery.'
+                  )}
+                  <br>Your order is safely held at the station. Please choose a new delivery time window below.
+                </p>
+              </div>
+              <button type="button" class="btn btn-primary" id="track-reschedule-btn" style="background: #d97706; border-color: #d97706; font-weight: 700;">
+                Reschedule delivery
+              </button>
+            </div>
+          </div>
+        `
+        : '';
+
       content.innerHTML = `
+        ${noticeRedirectHtml}
         ${switcherHtml}
+        ${attemptedAlertHtml}
         ${renderCustomerOrderHero(order, { showTrackButton: false })}
 
         <div class="grid-2">
@@ -329,6 +432,99 @@ export async function mount(me) {
           setBusy(btn, false);
           await renderPage();
         }
+      });
+
+      document.querySelector('#track-reschedule-btn')?.addEventListener('click', async () => {
+        let rescheduleDate = getTodayManila();
+        let availSlots = [];
+
+        async function fetchSlots(d) {
+          availSlots = await getSlotAvailability(d).catch(() => []);
+        }
+
+        await fetchSlots(rescheduleDate);
+
+        const modalBackdrop = document.createElement('div');
+        modalBackdrop.className = 'modal-backdrop';
+
+        function renderModalInner() {
+          const now = new Date();
+          const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+          const slotOptions = availSlots.length
+            ? availSlots
+                .map((s) => {
+                  let isPassed = false;
+                  if (rescheduleDate === getTodayManila() && s.end_time) {
+                    const [h, m] = s.end_time.split(':').map(Number);
+                    isPassed = currentMinutes >= (h * 60 + (m || 0));
+                  }
+                  const disabled = s.is_closed || s.is_full || isPassed;
+                  const suffix = s.is_closed ? ' (Closed)' : s.is_full ? ' (Full)' : isPassed ? ' (Window passed)' : '';
+                  return `<option value="${escapeHtml(s.slot_id)}"${disabled ? ' disabled' : ''}>${escapeHtml(s.label.replace(/\s*-\s*/g, '–'))}${suffix}</option>`;
+                })
+                .join('')
+            : '<option value="">No slots available</option>';
+
+          modalBackdrop.innerHTML = `
+            <div class="modal-card" style="max-width: 440px;">
+              <div class="modal-header">
+                <h3 class="modal-title">Reschedule Delivery</h3>
+                <button type="button" class="modal-close" data-action="cancel">×</button>
+              </div>
+              <div class="modal-body stack" style="gap: 14px;">
+                <p style="font-size: 13.5px; color: var(--muted-blue); line-height: 1.45;">
+                  Pick a new date and delivery window for Order #${escapeHtml(order.order_number)}. Your order will return to the station queue.
+                </p>
+                <div class="field">
+                  <label class="field-label" for="resched-date">Delivery date</label>
+                  <input class="input" type="date" id="resched-date" min="${getTodayManila()}" value="${rescheduleDate}">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="resched-slot">Preferred delivery window</label>
+                  <select class="select" id="resched-slot">
+                    ${slotOptions}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-actions" style="margin-top: 14px; display: flex; gap: 8px; justify-content: flex-end;">
+                <button type="button" class="btn btn-light" data-action="cancel">Cancel</button>
+                <button type="button" class="btn btn-primary" data-action="submit" style="font-weight: 700;">Confirm Reschedule</button>
+              </div>
+            </div>
+          `;
+
+          const close = () => modalBackdrop.remove();
+          modalBackdrop.querySelectorAll('[data-action="cancel"]').forEach((b) => b.addEventListener('click', close));
+
+          modalBackdrop.querySelector('#resched-date')?.addEventListener('change', async (e) => {
+            rescheduleDate = e.target.value;
+            await fetchSlots(rescheduleDate);
+            renderModalInner();
+          });
+
+          modalBackdrop.querySelector('[data-action="submit"]')?.addEventListener('click', async (e) => {
+            const slotVal = modalBackdrop.querySelector('#resched-slot')?.value;
+            if (!slotVal) {
+              showToast('Please pick an available delivery window.', 'error');
+              return;
+            }
+            setBusy(e.currentTarget, true, 'Rescheduling...');
+            try {
+              await rescheduleOrder({ orderId: order.id, newDate: rescheduleDate, newSlotId: slotVal });
+              showToast('Delivery rescheduled! Order returned to station queue.', 'success');
+              close();
+              await renderNav(me, 'track-order');
+              await renderPage();
+            } catch (err) {
+              showToast(err.message || 'Could not reschedule delivery.', 'error');
+              setBusy(e.currentTarget, false);
+            }
+          });
+        }
+
+        renderModalInner();
+        document.body.appendChild(modalBackdrop);
       });
     } catch (err) {
       showToast(err.message || 'Could not load order tracking.', 'error');

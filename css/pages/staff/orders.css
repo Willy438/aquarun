@@ -1,0 +1,326 @@
+/* Staff Orders Workspace & Batch Dispatch styles */
+
+.orders-view-tabs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 12px;
+}
+
+.orders-view-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orders-view-tab:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.orders-view-tab.is-active {
+  background: var(--blue-app, #2563eb);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+}
+
+.orders-view-tab .badge {
+  background: rgba(0, 0, 0, 0.12);
+  color: currentColor;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+.orders-view-tab.is-active .badge {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Smart Batch Dispatch Grid */
+.batch-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 900px) {
+  .batch-cards-grid {
+    grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+    gap: 20px;
+  }
+}
+
+.batch-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.batch-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.06);
+}
+
+.batch-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
+}
+
+.batch-area-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.batch-area-title svg {
+  width: 16px;
+  height: 16px;
+  color: var(--blue-app, #2563eb);
+}
+
+.batch-stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.batch-stat-pill {
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #f1f5f9;
+  color: #475569;
+}
+
+.batch-stat-pill.is-gallons {
+  background: #eff6ff;
+  color: #1d4ed8;
+  font-weight: 700;
+}
+
+.batch-stat-pill.is-cash {
+  background: #ecfdf5;
+  color: #047857;
+  font-weight: 700;
+}
+
+.batch-orders-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 9px;
+  padding: 10px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.batch-order-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  padding: 7px 10px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+}
+
+.batch-order-left {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.batch-order-num {
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.batch-order-addr {
+  font-size: 11px;
+  color: #64748b;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 220px;
+}
+
+.batch-order-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.batch-action-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: auto;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.batch-rider-select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 12.5px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.batch-assign-btn {
+  white-space: nowrap;
+  font-size: 12.5px;
+  padding: 8px 14px;
+}
+
+/* Trip Manifest banner on Rider side */
+.trip-manifest-card {
+  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+  color: #ffffff;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 15px rgba(30, 58, 138, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.trip-manifest-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.trip-manifest-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.trip-manifest-title svg {
+  width: 20px;
+  height: 20px;
+  fill: #93c5fd;
+}
+
+.trip-manifest-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.10);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.trip-stat-block {
+  display: flex;
+  flex-direction: column;
+}
+
+.trip-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #bfdbfe;
+  margin-bottom: 3px;
+}
+
+.trip-stat-val {
+  font-size: 17px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.trip-manifest-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.trip-manifest-hub {
+  font-size: 12px;
+  color: #dbeafe;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.trip-depart-btn {
+  background: #22c55e;
+  color: #ffffff;
+  border: none;
+  font-weight: 700;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(34, 197, 94, 0.35);
+  transition: all 0.15s ease;
+}
+
+.trip-depart-btn:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+/* Stop Sequence Pill */
+.stop-sequence-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.stop-sequence-badge.is-first {
+  background: #dcfce7;
+  color: #15803d;
+}

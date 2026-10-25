@@ -1,12 +1,18 @@
 import { bootRiderPage } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeRiderWorkspace } from '../../core/realtime.js';
-import { escapeHtml, formatDateShort, showToast } from '../../core/ui.js';
-import { getOrderTotalGallons } from '../../services/ordersService.js';
+import { escapeHtml, formatDateShort, formatPeso, formatTimeShort, setBusy, showToast } from '../../core/ui.js';
+import {
+  formatAddressFull,
+  getOrderItemPricingTag,
+  getOrderTotalGallons,
+  getRiderRemittanceSummary,
+  riderRemitCash,
+} from '../../services/ordersService.js';
 import { getRiderDeliveries } from '../../services/deliveryService.js';
 
 const ICONS = {
-  truck: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
+  truck: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
   drop: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.7 6 11a6 6 0 1 1-12 0c0-4.3 6-11 6-11Z"/></svg>`,
   cube: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/></svg>`,
 };
@@ -15,10 +21,91 @@ export async function mount(me) {
   const content = document.querySelector('#content');
   let historyOrders = [];
   let filterMode = 'all'; // 'all' | 'completed' | 'pending'
+  let remittance = { totalCash: 0, count: 0, unremittedOrders: [] };
 
   function getLedgerEntry(order) {
     if (Array.isArray(order.ledger)) return order.ledger[0] || null;
     return order.ledger || null;
+  }
+
+  function openDeliveryModal(order) {
+    const l = getLedgerEntry(order);
+    const delivered = l?.bottles_delivered ?? getOrderTotalGallons(order.items);
+    const empties = l?.empties_collected ?? 0;
+    const isPaid = order.payment_status === 'paid';
+    const customerName = order.customer?.full_name || 'Customer';
+    const customerPhone = order.customer?.phone || '—';
+    const addressText = formatAddressFull(order.address);
+
+    const itemsHtml = (order.items || [])
+      .map((it) => {
+        const qty = Number(it.quantity || 0);
+        const unitPrice = Number(it.unit_price || 0);
+        return `
+          <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid #f1f5f9; font-size:13px;">
+            <span>${escapeHtml(qty)} × ${escapeHtml(it.product?.name || 'Refill')} (${escapeHtml(getOrderItemPricingTag(it))})</span>
+            <span style="font-weight:700;">${escapeHtml(formatPeso(qty * unitPrice))}</span>
+          </div>
+        `;
+      })
+      .join('');
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.innerHTML = `
+      <div class="modal" role="dialog" aria-modal="true" style="max-width:480px;">
+        <div class="modal-header">
+          <div>
+            <h3 class="modal-title">Delivery #${escapeHtml(order.order_number)}</h3>
+            <p class="text-muted" style="font-size:12px; margin-top:2px;">
+              ${escapeHtml(formatDateShort(order.delivered_at || order.delivery_date))} · ${order.delivered_at ? escapeHtml(formatTimeShort(order.delivered_at)) : ''}
+            </p>
+          </div>
+          <span class="pill ${isPaid ? 'pill-green' : 'pill-amber'}">
+            ${isPaid ? 'Paid' : 'Pending payment'}
+          </span>
+        </div>
+
+        <div class="modal-body stack" style="gap:12px;">
+          <div>
+            <p class="label" style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin-bottom:3px;">Customer</p>
+            <p style="color:var(--ink-navy); font-weight:700; margin:0;">${escapeHtml(customerName)}</p>
+            <p style="font-size:13px; color:var(--muted-blue); margin:2px 0 0;">${escapeHtml(customerPhone)} · ${escapeHtml(addressText)}</p>
+          </div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f8fafc; padding:12px; border-radius:10px; border:1px solid #e2e8f0;">
+            <div>
+              <p style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin:0 0 2px;">Delivered Gallons</p>
+              <p style="font-size:18px; font-weight:800; color:#1d5bd6; margin:0;">${escapeHtml(delivered)}</p>
+            </div>
+            <div>
+              <p style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin:0 0 2px;">Empties Collected</p>
+              <p style="font-size:18px; font-weight:800; color:#0f766e; margin:0;">${escapeHtml(empties)}</p>
+            </div>
+          </div>
+
+          <div>
+            <p class="label" style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin-bottom:4px;">Items Delivered</p>
+            ${itemsHtml || '<p class="text-muted">No items</p>'}
+            <div style="display:flex; justify-content:space-between; padding-top:8px; font-size:15px; font-weight:800; color:var(--ink-navy);">
+              <span>Cash collected:</span>
+              <span style="color:var(--blue-app);">${escapeHtml(formatPeso(order.total))}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-primary" data-close>Done</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    const close = () => backdrop.remove();
+    backdrop.querySelectorAll('[data-close]').forEach((b) => b.addEventListener('click', close));
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
+    });
   }
 
   function renderView() {
@@ -47,7 +134,7 @@ export async function mount(me) {
             const isPaid = o.payment_status === 'paid';
 
             return `
-              <tr>
+              <tr class="is-clickable" data-delivery-id="${escapeHtml(o.id)}">
                 <td class="table-order-id">#${escapeHtml(o.order_number)}</td>
                 <td>${escapeHtml(o.customer?.full_name || 'Customer')}</td>
                 <td>${escapeHtml(formatDateShort(o.delivered_at || o.delivery_date))}</td>
@@ -63,17 +150,50 @@ export async function mount(me) {
                     ${escapeHtml(STATUS_LABELS[o.status] || o.status)}
                   </span>
                 </td>
+                <td style="text-align:right;">
+                  <button type="button" class="btn btn-sm btn-light" data-view-delivery="${escapeHtml(o.id)}" onclick="event.stopPropagation();">
+                    Details
+                  </button>
+                </td>
               </tr>
             `;
           })
           .join('')
       : `
         <tr>
-          <td colspan="7" class="empty-state">No past deliveries match this filter.</td>
+          <td colspan="8" class="empty-state">No past deliveries match this filter.</td>
         </tr>
       `;
 
     content.innerHTML = `
+      <div class="card" style="border-left: 4px solid #10b981; background: #f0fdf4; padding: 14px 18px; margin-bottom: 14px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div style="width: 36px; height: 36px; border-radius: 9px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800;">
+              ₱
+            </div>
+            <div>
+              <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #15803d;">
+                Cash in Hand (Unremitted COD)
+              </p>
+              <p style="margin: 2px 0 0 0; font-size: 16px; font-weight: 800; color: #14532d;">
+                ${formatPeso(remittance.totalCash)}
+                <span style="font-size: 12px; font-weight: 500; color: #166534; margin-left: 6px;">
+                  (${remittance.count} completed ${remittance.count === 1 ? 'order' : 'orders'})
+                </span>
+              </p>
+            </div>
+          </div>
+          <div>
+            ${
+              remittance.count > 0
+                ? `<button type="button" class="btn btn-primary btn-sm" id="btn-history-remit" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">Turn over &amp; remit cash (${formatPeso(remittance.totalCash)}) →</button>`
+                : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash remitted to station</span>`
+            }
+          </div>
+        </div>
+      </div>
+
       <div class="grid-3">
         <div class="stat-card stat-card-between">
           <div>
@@ -118,6 +238,7 @@ export async function mount(me) {
                 <th>Empties</th>
                 <th>Payment</th>
                 <th>Status</th>
+                <th style="text-align:right;">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -134,12 +255,130 @@ export async function mount(me) {
         renderView();
       });
     });
+
+    content.querySelectorAll('tr[data-delivery-id]').forEach((row) => {
+      row.addEventListener('click', () => {
+        const id = row.dataset.deliveryId;
+        const target = historyOrders.find((o) => o.id === id);
+        if (target) openDeliveryModal(target);
+      });
+    });
+
+    content.querySelectorAll('[data-view-delivery]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.viewDelivery;
+        const target = historyOrders.find((o) => o.id === id);
+        if (target) openDeliveryModal(target);
+      });
+    });
+
+    content.querySelector('#btn-history-remit')?.addEventListener('click', () => {
+      openRiderRemittanceModal(remittance);
+    });
+  }
+
+  function openRiderRemittanceModal(remittance) {
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+
+    const ordersRows = (remittance.unremittedOrders || [])
+      .map((o) => {
+        const custName = o.customer?.full_name || 'Customer';
+        const orderDate = formatDateShort(o.delivered_at || o.paid_at || new Date());
+        return `
+          <tr style="border-bottom: 1px solid #f1f5f9; font-size: 13px;">
+            <td style="padding: 9px 8px; font-weight: 700; color: var(--blue-app);">#${escapeHtml(o.order_number)}</td>
+            <td style="padding: 9px 8px;">${escapeHtml(custName)}</td>
+            <td style="padding: 9px 8px; color: #64748b;">${escapeHtml(orderDate)}</td>
+            <td style="padding: 9px 8px; text-align: right; font-weight: 700; color: #15803d;">${escapeHtml(formatPeso(o.total))}</td>
+          </tr>
+        `;
+      })
+      .join('');
+
+    backdrop.innerHTML = `
+      <div class="modal-card" style="max-width: 520px; width: 100%; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); background: #ffffff;">
+        <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #e2e8f0;">
+          <div>
+            <h3 class="modal-title" style="margin: 0; font-size: 17px; font-weight: 800; color: #0f172a;">Turn Over &amp; Remit Cash</h3>
+            <p style="margin: 2px 0 0; font-size: 12.5px; color: #64748b;">Turn over Cash on Delivery (COD) collections to station cashier</p>
+          </div>
+          <button type="button" class="modal-close" data-action="cancel" style="border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #94a3b8; padding: 4px;">×</button>
+        </div>
+        <div class="modal-body stack" style="gap: 14px; padding: 18px 22px;">
+          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <p style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.5px;">Total Cash to Turn Over</p>
+              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 800; color: #14532d;">${formatPeso(remittance.totalCash)}</p>
+            </div>
+            <span class="pill pill-green" style="font-weight: 700; font-size: 12px; padding: 6px 14px;">${remittance.count} ${remittance.count === 1 ? 'Order' : 'Orders'}</span>
+          </div>
+
+          <div>
+            <p style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px; letter-spacing: 0.5px;">Orders Breakdown</p>
+            <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+              <table style="width: 100%; border-collapse: collapse; text-align: left;">
+                <thead style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0;">
+                  <tr>
+                    <th style="padding: 8px;">Order</th>
+                    <th style="padding: 8px;">Customer</th>
+                    <th style="padding: 8px;">Delivered</th>
+                    <th style="padding: 8px; text-align: right;">Cash</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${ordersRows}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="notice notice-tint" style="font-size: 12px; margin: 0; line-height: 1.45;">
+            Confirming records that you have turned over this cash to the station cashier. All listed deliveries will be marked as remitted and your cash on hand balance will reset to ₱0.00.
+          </div>
+        </div>
+        <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+          <button type="button" class="btn btn-light" data-action="cancel">Cancel</button>
+          <button type="button" class="btn btn-primary" id="btn-confirm-remit-modal" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
+            Confirm Cash Turnover (${formatPeso(remittance.totalCash)})
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+    const close = () => backdrop.remove();
+
+    backdrop.querySelectorAll('[data-action="cancel"]').forEach((el) => {
+      el.addEventListener('click', close);
+    });
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close();
+    });
+
+    backdrop.querySelector('#btn-confirm-remit-modal')?.addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      setBusy(btn, true, 'Turning over cash...');
+      try {
+        await riderRemitCash(me.id);
+        showToast(`Successfully remitted ${formatPeso(remittance.totalCash)} to station cashier!`, 'success');
+        close();
+        await loadHistory();
+      } catch (err) {
+        showToast(err.message || 'Could not record cash remittance.', 'error');
+        setBusy(btn, false);
+      }
+    });
   }
 
   async function loadHistory() {
     try {
-      const all = await getRiderDeliveries(me.id);
+      const [all, rem] = await Promise.all([
+        getRiderDeliveries(me.id),
+        getRiderRemittanceSummary(me.id).catch(() => ({ totalCash: 0, count: 0, unremittedOrders: [] })),
+      ]);
       historyOrders = all.filter((o) => ['delivered', 'completed'].includes(o.status));
+      remittance = rem;
       renderView();
     } catch (err) {
       showToast(err.message || 'Could not load delivery history.', 'error');
