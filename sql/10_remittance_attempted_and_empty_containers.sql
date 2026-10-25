@@ -30,6 +30,27 @@ begin
   end if;
 end $$;
 
+-- 2c. Enable Supabase Realtime publication on key tables for live role sync
+do $$
+begin
+  begin
+    alter publication supabase_realtime add table public.orders;
+  exception when duplicate_object then null; when undefined_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.bottle_ledger;
+  exception when duplicate_object then null; when undefined_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.profiles;
+  exception when duplicate_object then null; when undefined_object then null;
+  end;
+  begin
+    alter publication supabase_realtime add table public.products;
+  exception when duplicate_object then null; when undefined_object then null;
+  end;
+end $$;
+
 -- 3. Function to record delivery attempt (for Rider when customer cannot be reached)
 create or replace function public.record_delivery_attempt(
   p_order_id uuid,
