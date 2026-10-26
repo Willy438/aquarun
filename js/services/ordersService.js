@@ -146,9 +146,75 @@ export function formatAddressFull(addr) {
   return [addr.street, brgy, addr.city].filter(Boolean).join(', ');
 }
 
+/**
+ * Checks whether the current time is ahead of, within, or after the order's scheduled delivery window.
+ */
+export function checkOrderDeliveryTiming(order) {
+  const today = getTodayManila();
+  const deliveryDate = order?.delivery_date || today;
+  const slot = getEffectiveSlot(order);
+  const slotWindow = formatSlotWindow(slot);
+  const isToday = deliveryDate === today;
+  const isFutureDate = deliveryDate > today;
+  const isPastDate = deliveryDate < today;
+
+  if (!slot?.start_time || !slot?.end_time) {
+    return {
+      isEarly: isFutureDate,
+      isCurrentWindow: isToday,
+      isLate: isPastDate,
+      isFutureDate,
+      isPastDate,
+      minutesDiff: 0,
+      slotWindow,
+      warningText: isFutureDate ? `Scheduled for future date (${deliveryDate})` : '',
+    };
+  }
+
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const [sH, sM] = slot.start_time.split(':').map(Number);
+  const slotStartMinutes = sH * 60 + (sM || 0);
+
+  const [eH, eM] = slot.end_time.split(':').map(Number);
+  const slotEndMinutes = eH * 60 + (eM || 0);
+
+  // Early if >20 minutes before slot start time (or future date)
+  const isEarly = isFutureDate || (isToday && currentMinutes < slotStartMinutes - 20);
+  const isLate = isPastDate || (isToday && currentMinutes > slotEndMinutes + 30);
+  const isCurrentWindow = isToday && !isEarly && !isLate;
+  const minutesDiff = slotStartMinutes - currentMinutes;
+
+  let warningText = '';
+  if (isFutureDate) {
+    warningText = `Order is scheduled for ${deliveryDate} (${slotWindow}).`;
+  } else if (isEarly) {
+    const hoursEarly = Math.floor(minutesDiff / 60);
+    const minsEarly = minutesDiff % 60;
+    const diffStr = hoursEarly > 0 ? `${hoursEarly}h ${minsEarly}m` : `${minsEarly}m`;
+    warningText = `Order is scheduled for ${slotWindow} (currently ${diffStr} ahead of scheduled window).`;
+  } else if (isLate) {
+    warningText = `Order is past scheduled window (${slotWindow}).`;
+  }
+
+  return {
+    isEarly,
+    isCurrentWindow,
+    isLate,
+    isFutureDate,
+    isPastDate,
+    minutesDiff,
+    slotWindow,
+    warningText,
+  };
+}
+
 function getCustomerStepSubtitle(order) {
   const slotLabel = formatSlotWindow(getEffectiveSlot(order));
   const riderName = order?.rider?.full_name || 'Your rider';
+  const timing = checkOrderDeliveryTiming(order);
+
   switch (order?.status) {
     case 'submitted':
       return 'We have received your order. Waiting for station confirmation.';
@@ -157,9 +223,12 @@ function getCustomerStepSubtitle(order) {
     case 'ready':
       return `The station is preparing your clean gallons. Expected window: ${slotLabel}.`;
     case 'rider_assigned':
-      return `Order prepared! ${riderName} is assigned and will depart soon. Expected window: ${slotLabel}.`;
+      return `Order prepared! ${riderName} is assigned and will depart for your ${slotLabel} window.`;
     case 'out_for_delivery':
-      return `${riderName} is on the way to your delivery address. Arriving between ${slotLabel.replace('–', ' and ')}.`;
+      if (timing.isEarly) {
+        return `${riderName} is on the way for an early delivery to your address. Scheduled window was ${slotLabel}.`;
+      }
+      return `${riderName} is on the way to your delivery address now. Arriving during your ${slotLabel} window.`;
     case 'delivered':
       return 'Your order has been delivered. Waiting for payment confirmation.';
     case 'completed':

@@ -14,6 +14,7 @@ import {
   showToast,
 } from '../../core/ui.js';
 import {
+  checkOrderDeliveryTiming,
   formatAddressLine,
   formatSlotWindow,
   getEffectiveSlot,
@@ -288,6 +289,7 @@ export async function mount(initialMe) {
         const bottlesQty = expectedEmptiesByOrder.get(nextDelivery.id) ?? 0;
         const isOut = nextDelivery.status === 'out_for_delivery';
         const stopDistText = nextDelivery._distFromHub !== null ? `${nextDelivery._distFromHub} km from hub` : 'First stop';
+        const timing = checkOrderDeliveryTiming(nextDelivery);
 
         const mapUrl = nextDelivery.address?.latitude && nextDelivery.address?.longitude
           ? `https://www.google.com/maps/dir/?api=1&destination=${nextDelivery.address.latitude},${nextDelivery.address.longitude}`
@@ -300,6 +302,11 @@ export async function mount(initialMe) {
                 <div class="hero-meta-line" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                   <span class="stop-sequence-badge is-first">${ICONS.pin} Stop #1 (${stopDistText})</span>
                   <span>Order #${escapeHtml(nextDelivery.order_number)} · ${escapeHtml(STATUS_LABELS[nextDelivery.status] || nextDelivery.status)}</span>
+                  ${
+                    timing.isEarly
+                      ? `<span class="pill pill-amber" style="background:#fef3c7;color:#92400e;font-weight:700;font-size:11px;">⚠️ Ahead of window (${escapeHtml(timing.slotWindow)})</span>`
+                      : ''
+                  }
                 </div>
                 <h2 class="hero-status-title">
                   <a href="delivery-details.html?id=${encodeURIComponent(nextDelivery.id)}">${escapeHtml(customerName)}</a>
@@ -534,9 +541,14 @@ export async function mount(initialMe) {
         const btn = e.currentTarget;
         if (!unstartedOrders.length) return;
 
+        const earlyOrders = unstartedOrders.filter((o) => checkOrderDeliveryTiming(o).isEarly);
+        const earlyWarning = earlyOrders.length > 0
+          ? `\n\n⚠️ Notice: ${earlyOrders.length} of ${unstartedOrders.length} orders are scheduled for later delivery windows. Confirm departure ahead of schedule?`
+          : '';
+
         const confirmed = await confirmModal({
           title: 'Depart Station with Batch?',
-          message: `Start delivery for all ${unstartedOrders.length} assigned orders? They will all transition to "Out for delivery".`,
+          message: `Start delivery for all ${unstartedOrders.length} assigned orders? They will all transition to "Out for delivery".${earlyWarning}`,
           confirmText: 'Yes, depart station',
           cancelText: 'Cancel',
         });
@@ -586,6 +598,19 @@ export async function mount(initialMe) {
       content.querySelector('#hero-start-delivery-btn')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         const orderId = btn.dataset.orderId;
+        const targetOrder = allDeliveries.find((o) => o.id === orderId);
+        if (targetOrder) {
+          const timing = checkOrderDeliveryTiming(targetOrder);
+          if (timing.isEarly) {
+            const confirmed = await confirmModal({
+              title: 'Start delivery ahead of schedule?',
+              message: `${timing.warningText} The customer requested delivery during ${timing.slotWindow}. Are you sure you want to depart and deliver early?`,
+              confirmText: 'Yes, start early',
+              cancelText: 'Wait for window',
+            });
+            if (!confirmed) return;
+          }
+        }
         setBusy(btn, true, 'Starting...');
         try {
           await riderStartDelivery(orderId);

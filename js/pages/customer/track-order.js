@@ -1,7 +1,15 @@
 import { bootCustomerPage, renderNav } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeCustomerOrders } from '../../core/realtime.js';
-import { confirmModal, escapeHtml, formatPeso, getTodayManila, setBusy, showToast } from '../../core/ui.js';
+import {
+  confirmModal,
+  escapeHtml,
+  formatDateShort,
+  formatPeso,
+  getTodayManila,
+  setBusy,
+  showToast,
+} from '../../core/ui.js';
 import {
   cancelOrder,
   formatAddressLine,
@@ -93,15 +101,17 @@ export async function mount(me) {
       if (!order && pastTerminalOrder) {
         const isCancelled = pastTerminalOrder.status === 'cancelled';
         content.innerHTML = `
-          <div class="card" style="border-left: 4px solid ${isCancelled ? '#ef4444' : '#22c55e'}; background: ${isCancelled ? '#fef2f2' : '#f0fdf4'}; padding: 22px; margin-bottom: 20px;">
+          ${renderCustomerOrderHero(pastTerminalOrder, { showTrackButton: false })}
+
+          <div class="card" style="border-left: 4px solid ${isCancelled ? '#ef4444' : '#22c55e'}; background: ${isCancelled ? '#fef2f2' : '#f0fdf4'}; padding: 18px 22px; margin: 18px 0;">
             <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
               <div>
                 <span class="pill ${isCancelled ? 'pill-danger' : 'pill-green'}" style="margin-bottom: 8px;">
                   ${isCancelled ? 'Cancelled' : 'Completed'}
                 </span>
-                <h2 style="font-size: 19px; font-weight: 800; color: var(--ink-navy); margin: 0 0 6px 0;">
+                <h3 style="font-size: 17px; font-weight: 800; color: var(--ink-navy); margin: 0 0 4px 0;">
                   Order #${escapeHtml(pastTerminalOrder.order_number)}
-                </h2>
+                </h3>
                 <p style="font-size: 13.5px; color: var(--muted-blue); margin: 0; line-height: 1.5;">
                   ${
                     isCancelled
@@ -110,9 +120,9 @@ export async function mount(me) {
                   }
                 </p>
               </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                <a class="btn btn-primary" href="new-order.html">Place refill order</a>
-                <a class="btn btn-light" href="order-history.html?viewOrder=${encodeURIComponent(pastTerminalOrder.id)}">View full receipt in Order history</a>
+              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+                <a class="btn btn-primary btn-sm" href="new-order.html">Place refill order</a>
+                <a class="btn btn-light btn-sm" href="order-history.html?viewOrder=${encodeURIComponent(pastTerminalOrder.id)}">View full receipt</a>
               </div>
             </div>
           </div>

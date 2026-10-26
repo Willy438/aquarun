@@ -1,7 +1,11 @@
 import { bootRiderPage, navigateRiderSpa, renderNav } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
-import { isOrderItemNewContainer, summarizeOrderItems } from '../../services/ordersService.js';
+import {
+  checkOrderDeliveryTiming,
+  isOrderItemNewContainer,
+  summarizeOrderItems,
+} from '../../services/ordersService.js';
 import {
   getCustomerBalanceForOrder,
   getOrderReturnableQty,
@@ -69,6 +73,7 @@ export async function mount(me) {
     const emptiesCollected = hasNoReturnableItems ? 0 : expectedEmpties;
     let paymentReceived = true;
     let noteText = '';
+    const timing = checkOrderDeliveryTiming(order);
 
     function renderFormState() {
       const delivEl = document.querySelector('#val-delivered');
@@ -88,6 +93,13 @@ export async function mount(me) {
     }
 
     content.innerHTML = `
+      ${
+        timing.isEarly
+          ? `<div class="notice notice-warning" style="margin-bottom: 14px; background: #fef3c7; border-color: #fde68a; color: #92400e; padding: 12px 14px; border-radius: 8px;">
+              <strong>⚠️ Early Delivery Notice:</strong> ${escapeHtml(timing.warningText)} Please verify that the customer is present and agrees to receive the delivery ahead of their requested window.
+            </div>`
+          : ''
+      }
       <div class="grid-split">
         <div class="card">
           <div class="card-header">
@@ -189,11 +201,15 @@ export async function mount(me) {
     content.querySelector('#submit-delivery-btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
 
+      const earlyPrompt = timing.isEarly
+        ? `\n\n⚠️ NOTE: This delivery is being completed ahead of the customer's scheduled delivery window (${timing.slotWindow}). Please confirm customer has accepted early receipt of items.`
+        : '';
+
       const confirmed = await confirmModal({
         title: `Submit Delivery #${order.order_number}?`,
-        message: paymentReceived
+        message: (paymentReceived
           ? `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) and collection of ${formatPeso(order.total)} cash?`
-          : `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) with cash payment marked pending for station review?`,
+          : `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) with cash payment marked pending for station review?`) + earlyPrompt,
         confirmText: 'Yes, record delivery',
         cancelText: 'Back to review',
       });
