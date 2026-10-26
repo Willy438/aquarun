@@ -6,6 +6,7 @@ import {
   formatPeso,
   formatTimeShort,
   getTodayManila,
+  matchesDateFilter,
   paginateList,
   renderPaginationHtml,
   setBusy,
@@ -86,22 +87,7 @@ export async function mount(me) {
       if (filterTab === 'unsubmitted' && !isUnsubmitted) return false;
 
       // 2. Date filter
-      if (dateFilter !== 'all') {
-        const dStr = String(o.remitted_at || o.delivered_at || '');
-        if (dateFilter === 'today') {
-          if (!dStr.startsWith(today)) return false;
-        } else if (dateFilter === 'yesterday') {
-          const yDate = new Date();
-          yDate.setDate(yDate.getDate() - 1);
-          const yStr = yDate.toISOString().slice(0, 10);
-          if (!dStr.startsWith(yStr)) return false;
-        } else if (dateFilter === 'week') {
-          const t = new Date(dStr).getTime();
-          if (isNaN(t) || now - t > 7 * 86400000) return false;
-        } else if (dateFilter === 'month') {
-          if (!dStr.startsWith(today.slice(0, 7))) return false;
-        }
-      }
+      if (!matchesDateFilter(o.remitted_at || o.delivered_at || o.delivery_date || o.created_at, dateFilter)) return false;
 
       // 3. Search query
       if (q) {

@@ -6,6 +6,7 @@ import {
   formatDateShort,
   formatPeso,
   formatTimeShort,
+  matchesDateFilter,
   paginateList,
   renderPaginationHtml,
   showToast,
@@ -28,6 +29,7 @@ export async function mount(me) {
 
   let orders = [];
   let filterMode = 'all'; // 'all' | 'active' | 'completed' | 'cancelled'
+  let dateFilter = 'all'; // 'all' | 'today' | 'yesterday' | 'week' | 'month'
   let searchQuery = '';
   let ordersPage = 1;
   const ordersPageSize = 10;
@@ -166,6 +168,10 @@ export async function mount(me) {
       if (filterMode === 'completed' && order.status !== 'completed') return false;
       if (filterMode === 'cancelled' && order.status !== 'cancelled') return false;
 
+      if (!matchesDateFilter(order.delivery_date || order.delivered_at || order.created_at, dateFilter)) {
+        return false;
+      }
+
       if (q) {
         const num = String(order.order_number || '').toLowerCase();
         const items = summarizeOrderItems(order.items).toLowerCase();
@@ -245,11 +251,21 @@ export async function mount(me) {
             <input type="search" id="customer-order-search" placeholder="Search order #, items..." value="${escapeHtml(searchQuery)}">
           </div>
 
-          ${
-            searchQuery
-              ? `<button type="button" class="btn btn-light btn-sm" id="btn-reset-customer-search" style="font-size: 12px; height: 36px;">Clear search</button>`
-              : ''
-          }
+          <div class="table-filter-group">
+            <select class="table-filter-select" id="customer-date-filter">
+              <option value="all"${dateFilter === 'all' ? ' selected' : ''}>All Dates</option>
+              <option value="today"${dateFilter === 'today' ? ' selected' : ''}>Today</option>
+              <option value="yesterday"${dateFilter === 'yesterday' ? ' selected' : ''}>Yesterday</option>
+              <option value="week"${dateFilter === 'week' ? ' selected' : ''}>Past 7 Days</option>
+              <option value="month"${dateFilter === 'month' ? ' selected' : ''}>This Month</option>
+            </select>
+
+            ${
+              searchQuery || dateFilter !== 'all' || filterMode !== 'all'
+                ? `<button type="button" class="btn btn-light btn-sm" id="btn-reset-customer-filters" style="font-size: 12px; height: 36px;">Reset</button>`
+                : ''
+            }
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -287,6 +303,21 @@ export async function mount(me) {
     // Search input
     content.querySelector('#customer-order-search')?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      ordersPage = 1;
+      renderView();
+    });
+
+    // Date filter
+    content.querySelector('#customer-date-filter')?.addEventListener('change', (e) => {
+      dateFilter = e.target.value;
+      ordersPage = 1;
+      renderView();
+    });
+
+    content.querySelector('#btn-reset-customer-filters')?.addEventListener('click', () => {
+      searchQuery = '';
+      dateFilter = 'all';
+      filterMode = 'all';
       ordersPage = 1;
       renderView();
     });

@@ -10,6 +10,7 @@ import {
   formatPeso,
   getGreeting,
   getTodayManila,
+  matchesDateFilter,
   setBusy,
   showToast,
 } from '../../core/ui.js';
@@ -156,7 +157,7 @@ export async function mount(initialMe) {
       const completedToday = allDeliveries.filter(
         (o) =>
           ['delivered', 'completed'].includes(o.status) &&
-          (o.delivery_date === today || (o.delivered_at && o.delivered_at.startsWith(today)))
+          matchesDateFilter(o.delivered_at || o.delivery_date, 'today')
       ).length;
 
       const assignedTodayCount = activeDeliveries.length + completedToday;

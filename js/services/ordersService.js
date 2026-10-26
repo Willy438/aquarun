@@ -16,6 +16,7 @@ import {
   formatTimeShort,
   getTodayManila,
   invalidateDataCache,
+  matchesDateFilter,
 } from '../core/ui.js';
 
 const ORDER_SELECT = `
@@ -246,35 +247,32 @@ export function promptDeliveryTimingModal({
 
     let title = '';
     let badgeLabel = '';
-    let themeColor = '';
-    let themeBg = '';
-    let themeBorder = '';
+    let badgeBg = '';
+    let badgeColor = '';
 
     if (actionType === 'batch_depart') {
       title = isEarly
         ? 'Early Batch Departure Confirmation'
-        : 'Late Batch Departure Schedule Alert';
-      badgeLabel = isEarly ? 'Early Batch Departure' : 'Late Batch Departure';
+        : 'Late Batch Departure Confirmation';
+      badgeLabel = isEarly ? 'Early Batch' : 'Late Batch';
     } else if (actionType === 'depart') {
       title = isEarly
         ? 'Early Departure Confirmation'
-        : 'Late Departure Schedule Alert';
-      badgeLabel = isEarly ? 'Departing Ahead of Window' : 'Departing Past Window';
+        : 'Late Departure Confirmation';
+      badgeLabel = isEarly ? 'Early Departure' : 'Late Departure';
     } else {
       title = isEarly
-        ? 'Early Delivery Completion'
-        : 'Late Delivery Completion';
-      badgeLabel = isEarly ? 'Delivered Ahead of Window' : 'Delivered Past Window';
+        ? 'Early Delivery Confirmation'
+        : 'Late Delivery Confirmation';
+      badgeLabel = isEarly ? 'Early Delivery' : 'Late Delivery';
     }
 
     if (isEarly) {
-      themeColor = '#92400e';
-      themeBg = '#fef3c7';
-      themeBorder = '#fde68a';
+      badgeBg = '#fef3c7';
+      badgeColor = '#92400e';
     } else {
-      themeColor = '#991b1b';
-      themeBg = '#fee2e2';
-      themeBorder = '#fecaca';
+      badgeBg = '#fee2e2';
+      badgeColor = '#991b1b';
     }
 
     let presets = [];
@@ -324,39 +322,48 @@ export function promptDeliveryTimingModal({
       'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
 
     backdrop.innerHTML = `
-      <div class="modal-card" role="dialog" aria-modal="true" style="max-width: 480px; width: 100%; border-radius: 12px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0; display:flex; flex-direction:column;">
-        <div style="padding: 16px 20px; background: ${themeBg}; border-bottom: 1px solid ${themeBorder}; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+      <div class="modal-card" role="dialog" aria-modal="true" style="max-width: 480px; width: 100%; border-radius: 12px; background: #ffffff; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.05); overflow: hidden; border: 1px solid #e2e8f0; display:flex; flex-direction:column;">
+        
+        <!-- Clean Professional Header -->
+        <div style="padding: 18px 22px; border-bottom: 1px solid #e2e8f0; display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; background: #ffffff;">
           <div>
-            <span style="display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 6px; background: #ffffff; color: ${themeColor}; border: 1px solid ${themeBorder}; margin-bottom: 6px;">
-              ${escapeHtml(badgeLabel)}
-            </span>
-            <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.3;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 9999px; background: ${badgeBg}; color: ${badgeColor};">
+                ${escapeHtml(badgeLabel)}
+              </span>
+              <span style="font-size: 12px; color: #64748b; font-weight: 600;">
+                ${escapeHtml(orderNumberText)}${escapeHtml(customerText)}
+              </span>
+            </div>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 700; color: #0f172a; line-height: 1.3;">
               ${escapeHtml(title)}
             </h3>
-            <p style="margin: 3px 0 0 0; font-size: 12.5px; color: ${themeColor}; font-weight: 600;">
-              ${escapeHtml(orderNumberText)}${escapeHtml(customerText)}
-            </p>
           </div>
-          <button type="button" class="modal-close" data-action="cancel" style="background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: ${themeColor}; padding: 0 4px;">&times;</button>
+          <button type="button" class="modal-close" data-action="cancel" style="background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: #94a3b8; padding: 0 4px;" title="Close">&times;</button>
         </div>
 
-        <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; max-height: 75vh; overflow-y: auto;">
-          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; font-size: 13px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
-              <span style="color: #64748b; font-weight: 600;">Scheduled Window:</span>
-              <span style="font-weight: 700; color: #0f172a;">${escapeHtml(timing?.slotWindow || 'Flexible')} (${escapeHtml(timing?.deliveryDate || 'Today')})</span>
+        <!-- Body -->
+        <div style="padding: 18px 22px; display: flex; flex-direction: column; gap: 14px; max-height: 75vh; overflow-y: auto;">
+          
+          <!-- Structured Schedule Card: No horizontal collision -->
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px;">
+              <span style="color: #64748b; font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">Scheduled Window</span>
+              <span style="font-weight: 700; color: #0f172a; font-size: 13px;">${escapeHtml(timing?.slotWindow || 'Flexible')} (${escapeHtml(timing?.deliveryDate || 'Today')})</span>
             </div>
-            <div style="display: flex; justify-content: space-between;">
-              <span style="color: #64748b; font-weight: 600;">Schedule Gap:</span>
-              <span style="font-weight: 700; color: ${themeColor};">${escapeHtml(timing?.warningText || 'Outside window')}</span>
+            <div style="border-top: 1px solid #e2e8f0; padding-top: 8px; display: flex; flex-direction: column; gap: 2px;">
+              <span style="color: #64748b; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;">Timing Status</span>
+              <span style="font-weight: 600; color: ${isEarly ? '#b45309' : '#b91c1c'}; font-size: 13px; line-height: 1.4;">
+                ${escapeHtml(timing?.warningText || 'Outside window')}
+              </span>
             </div>
           </div>
 
-          <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+          <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.45;">
             ${
               isEarly
                 ? 'Departing or delivering ahead of the scheduled window requires an operational reason note for station records and customer tracking.'
-                : 'Departing or delivering after the scheduled window requires a schedule delay reason for station quality assurance.'
+                : 'Departing or delivering past the scheduled window requires a schedule delay reason for station quality assurance.'
             }
           </p>
 
@@ -368,8 +375,8 @@ export function promptDeliveryTimingModal({
               ${presets
                 .map(
                   (p, idx) => `
-                <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; border: 1px solid ${idx === 0 ? '#3b82f6' : '#e2e8f0'}; background: ${idx === 0 ? '#eff6ff' : '#ffffff'}; font-size: 13px; cursor: pointer; color: #1e293b; transition: all 0.15s ease;">
-                  <input type="radio" name="timing-preset-choice" value="${escapeHtml(p)}" ${idx === 0 ? 'checked' : ''} style="margin: 0;">
+                <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; border: 1px solid ${idx === 0 ? '#0284c7' : '#e2e8f0'}; background: ${idx === 0 ? '#f0f9ff' : '#ffffff'}; font-size: 13px; cursor: pointer; color: #1e293b; transition: all 0.15s ease;">
+                  <input type="radio" name="timing-preset-choice" value="${escapeHtml(p)}" ${idx === 0 ? 'checked' : ''} style="margin: 0; accent-color: #0284c7;">
                   <span>${escapeHtml(p)}</span>
                 </label>
               `
@@ -382,18 +389,19 @@ export function promptDeliveryTimingModal({
             <label for="timing-custom-reason" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 4px;">
               Reason Details / Dispatch Note <span style="color: #dc2626;">*</span>
             </label>
-            <textarea id="timing-custom-reason" rows="2" class="form-input" style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Provide specific reason or details...">${escapeHtml(defaultPreset)}</textarea>
+            <textarea id="timing-custom-reason" rows="2" class="form-input" style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; resize: vertical;" placeholder="Provide specific reason or details...">${escapeHtml(defaultPreset)}</textarea>
             <div id="timing-reason-err" style="display: none; font-size: 12px; color: #dc2626; margin-top: 4px; font-weight: 600;">
               Please select or enter a reason before proceeding.
             </div>
           </div>
         </div>
 
-        <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+        <!-- On-theme Footer Buttons -->
+        <div style="padding: 12px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
           <button type="button" class="btn btn-light" data-action="cancel" style="font-size: 13px;">
             Wait for Window / Cancel
           </button>
-          <button type="button" class="btn btn-primary" id="btn-confirm-timing" style="font-size: 13px; font-weight: 700; background: ${isEarly ? '#d97706' : '#dc2626'}; border-color: ${isEarly ? '#d97706' : '#dc2626'};">
+          <button type="button" class="btn btn-primary" id="btn-confirm-timing" style="font-size: 13px; font-weight: 700;">
             ${isEarly ? (actionType === 'deliver' ? 'Confirm Early Delivery' : 'Confirm Early Departure') : (actionType === 'deliver' ? 'Confirm Late Delivery' : 'Confirm Late Departure')}
           </button>
         </div>
@@ -416,8 +424,8 @@ export function promptDeliveryTimingModal({
         });
         const parentLabel = e.target.closest('label');
         if (parentLabel) {
-          parentLabel.style.borderColor = '#3b82f6';
-          parentLabel.style.background = '#eff6ff';
+          parentLabel.style.borderColor = '#0284c7';
+          parentLabel.style.background = '#f0f9ff';
         }
         if (e.target.value.includes('Other')) {
           textarea.value = '';
@@ -1123,10 +1131,7 @@ export async function getRiderRemittanceSummary(riderId) {
   const unsubmittedCash = unsubmittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const settledCash = settledOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const todaySettledCash = settledOrders
-    .filter((o) => {
-      const d = String(o.remitted_at || o.delivered_at || '');
-      return d.startsWith(today);
-    })
+    .filter((o) => matchesDateFilter(o.remitted_at || o.delivered_at || o.created_at, 'today'))
     .reduce((sum, o) => sum + Number(o.total || 0), 0);
   const totalLifetimeSales = totalCash + settledCash;
 

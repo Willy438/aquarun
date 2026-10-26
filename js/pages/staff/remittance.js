@@ -7,6 +7,7 @@ import {
   formatPeso,
   formatTimeShort,
   getTodayManila,
+  matchesDateFilter,
   paginateList,
   renderPaginationHtml,
   setBusy,
@@ -71,10 +72,7 @@ export async function mount(me) {
   function renderView() {
     const today = getTodayManila();
     const todaySettledTotal = salesHistory
-      .filter((o) => {
-        const d = String(o.remitted_at || o.delivered_at || '');
-        return d.startsWith(today);
-      })
+      .filter((o) => matchesDateFilter(o.remitted_at || o.delivered_at || o.created_at, 'today'))
       .reduce((sum, o) => sum + Number(o.total || 0), 0);
 
     const pendingApprovalTotal = riderSummaries.reduce(
@@ -399,22 +397,7 @@ export async function mount(me) {
       }
 
       // 2. Date filter
-      if (historyDate !== 'all') {
-        const dStr = String(o.remitted_at || o.delivered_at || '');
-        if (historyDate === 'today') {
-          if (!dStr.startsWith(today)) return false;
-        } else if (historyDate === 'yesterday') {
-          const yDate = new Date();
-          yDate.setDate(yDate.getDate() - 1);
-          const yStr = yDate.toISOString().slice(0, 10);
-          if (!dStr.startsWith(yStr)) return false;
-        } else if (historyDate === 'week') {
-          const t = new Date(dStr).getTime();
-          if (isNaN(t) || now - t > 7 * 86400000) return false;
-        } else if (historyDate === 'month') {
-          if (!dStr.startsWith(today.slice(0, 7))) return false;
-        }
-      }
+      if (!matchesDateFilter(o.remitted_at || o.delivered_at || o.created_at, historyDate)) return false;
 
       // 3. Search query
       if (q) {

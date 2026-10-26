@@ -50,6 +50,54 @@ export function getTodayManila() {
   return `${y}-${m}-${d}`;
 }
 
+export function getDateManila(dateValue) {
+  if (!dateValue) return '';
+  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
+    return dateValue;
+  }
+  const d = new Date(dateValue);
+  if (Number.isNaN(d.getTime())) return '';
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Asia/Manila',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(d);
+  const y = parts.find((p) => p.type === 'year')?.value;
+  const m = parts.find((p) => p.type === 'month')?.value;
+  const day = parts.find((p) => p.type === 'day')?.value;
+  return `${y}-${m}-${day}`;
+}
+
+export function matchesDateFilter(dateValue, filterType) {
+  if (!filterType || filterType === 'all') return true;
+  const dStr = getDateManila(dateValue);
+  if (!dStr) return false;
+
+  const today = getTodayManila();
+  if (filterType === 'today') {
+    return dStr === today;
+  }
+
+  const todayMidnight = new Date(`${today}T00:00:00+08:00`);
+  if (filterType === 'yesterday') {
+    const yesterdayDate = new Date(todayMidnight.getTime() - 86400000);
+    return dStr === getDateManila(yesterdayDate);
+  }
+
+  if (filterType === 'week') {
+    const weekAgo = new Date(todayMidnight.getTime() - 7 * 86400000);
+    const itemDate = new Date(`${dStr}T00:00:00+08:00`);
+    return itemDate >= weekAgo && itemDate <= new Date(todayMidnight.getTime() + 86400000 - 1);
+  }
+
+  if (filterType === 'month') {
+    return dStr.slice(0, 7) === today.slice(0, 7);
+  }
+
+  return true;
+}
+
 export function getGreeting(fullName = '', role = 'customer') {
   const hour = Number(
     new Intl.DateTimeFormat('en-US', {
