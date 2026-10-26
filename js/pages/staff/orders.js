@@ -1,7 +1,16 @@
 import { bootStaffPage, navigateStaffSpa } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeStaffWorkspace } from '../../core/realtime.js';
-import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../core/ui.js';
+import {
+  confirmModal,
+  escapeHtml,
+  formatPeso,
+  getTodayManila,
+  paginateList,
+  renderPaginationHtml,
+  setBusy,
+  showToast,
+} from '../../core/ui.js';
 import {
   formatSlotCompact,
   getAllOrdersForStaff,
@@ -54,6 +63,9 @@ export async function mount() {
   let currentTab = 'all'; // 'all' | 'batch'
   let searchQuery = '';
   let statusFilter = 'all';
+  let ordersDateFilter = 'all'; // 'all' | 'today' | 'yesterday' | 'week' | 'month'
+  let ordersPage = 1;
+  const ordersPageSize = 10;
 
   function countBatchReadyOrders() {
     return allOrders.filter(
@@ -109,27 +121,46 @@ export async function mount() {
 
   function renderAllOrdersTab(container) {
     container.innerHTML = `
-      <div class="card">
-        <div class="card-header">
+      <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div class="card-title-group">
             <span class="card-icon">${ICONS.cart}</span>
-            <h2 class="card-title">Order queue</h2>
+            <h2 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">Order Queue &amp; History</h2>
           </div>
+          <span class="pill pill-neutral" id="staff-orders-count-badge" style="font-size: 11.5px; font-weight: 700;">
+            ${allOrders.length} orders
+          </span>
         </div>
 
-        <div class="filter-bar">
-          <div class="field">
-            <label class="field-label" for="order-search">Search order, customer, or barangay</label>
-            <input class="input" id="order-search" type="search" placeholder="e.g. AR-1052, Nina Santos, or Camarin" value="${escapeHtml(searchQuery)}">
+        <div class="table-filter-toolbar">
+          <div class="table-search-box">
+            <span class="table-search-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="search" id="order-search" placeholder="Search order #, customer, or barangay..." value="${escapeHtml(searchQuery)}">
           </div>
-          <div class="field">
-            <label class="field-label" for="status-filter">Status</label>
-            <select class="select" id="status-filter">
+
+          <div class="table-filter-group">
+            <select class="table-filter-select" id="status-filter">
               ${FILTER_STATUSES.map(
                 (s) =>
                   `<option value="${escapeHtml(s.value)}"${s.value === statusFilter ? ' selected' : ''}>${escapeHtml(s.label)}</option>`
               ).join('')}
             </select>
+
+            <select class="table-filter-select" id="date-filter">
+              <option value="all"${ordersDateFilter === 'all' ? ' selected' : ''}>All Dates</option>
+              <option value="today"${ordersDateFilter === 'today' ? ' selected' : ''}>Today</option>
+              <option value="yesterday"${ordersDateFilter === 'yesterday' ? ' selected' : ''}>Yesterday</option>
+              <option value="week"${ordersDateFilter === 'week' ? ' selected' : ''}>Past 7 Days</option>
+              <option value="month"${ordersDateFilter === 'month' ? ' selected' : ''}>This Month</option>
+            </select>
+
+            ${
+              searchQuery || statusFilter !== 'all' || ordersDateFilter !== 'all'
+                ? `<button type="button" class="btn btn-light btn-sm" id="btn-reset-order-filters" style="font-size: 12px; height: 36px;">Reset</button>`
+                : ''
+            }
           </div>
         </div>
 
@@ -144,23 +175,41 @@ export async function mount() {
                 <th>Delivery slot</th>
                 <th>Status</th>
                 <th>Total</th>
-                <th></th>
+                <th style="text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody id="staff-orders-tbody"></tbody>
           </table>
         </div>
+
+        <div id="staff-orders-pagination"></div>
       </div>
     `;
 
     document.querySelector('#order-search')?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      ordersPage = 1;
       populateTableBody();
     });
 
     document.querySelector('#status-filter')?.addEventListener('change', (e) => {
       statusFilter = e.target.value;
+      ordersPage = 1;
       populateTableBody();
+    });
+
+    document.querySelector('#date-filter')?.addEventListener('change', (e) => {
+      ordersDateFilter = e.target.value;
+      ordersPage = 1;
+      populateTableBody();
+    });
+
+    document.querySelector('#btn-reset-order-filters')?.addEventListener('click', () => {
+      searchQuery = '';
+      statusFilter = 'all';
+      ordersDateFilter = 'all';
+      ordersPage = 1;
+      renderAllOrdersTab(container);
     });
 
     populateTableBody();
@@ -168,28 +217,66 @@ export async function mount() {
 
   function populateTableBody() {
     const tbody = document.querySelector('#staff-orders-tbody');
+    const paginationContainer = document.querySelector('#staff-orders-pagination');
+    const countBadge = document.querySelector('#staff-orders-count-badge');
     if (!tbody) return;
 
     const q = searchQuery.trim().toLowerCase();
+    const today = getTodayManila();
+    const now = Date.now();
+
     const filtered = allOrders.filter((order) => {
+      // 1. Status Filter
       if (statusFilter !== 'all' && order.status !== statusFilter) return false;
-      if (!q) return true;
-      const orderNum = String(order.order_number || '').toLowerCase();
-      const customerName = String(order.customer?.full_name || '').toLowerCase();
-      const brgy = String(order.address?.barangay || '').toLowerCase();
-      return orderNum.includes(q) || customerName.includes(q) || brgy.includes(q);
+
+      // 2. Date Filter
+      if (ordersDateFilter !== 'all') {
+        const dStr = String(order.delivery_date || order.delivered_at || order.created_at || '');
+        if (ordersDateFilter === 'today') {
+          if (!dStr.startsWith(today)) return false;
+        } else if (ordersDateFilter === 'yesterday') {
+          const yDate = new Date();
+          yDate.setDate(yDate.getDate() - 1);
+          const yStr = yDate.toISOString().slice(0, 10);
+          if (!dStr.startsWith(yStr)) return false;
+        } else if (ordersDateFilter === 'week') {
+          const t = new Date(dStr).getTime();
+          if (isNaN(t) || now - t > 7 * 86400000) return false;
+        } else if (ordersDateFilter === 'month') {
+          if (!dStr.startsWith(today.slice(0, 7))) return false;
+        }
+      }
+
+      // 3. Search Query
+      if (q) {
+        const orderNum = String(order.order_number || '').toLowerCase();
+        const customerName = String(order.customer?.full_name || '').toLowerCase();
+        const brgy = String(order.address?.barangay || '').toLowerCase();
+        if (!orderNum.includes(q) && !customerName.includes(q) && !brgy.includes(q)) return false;
+      }
+
+      return true;
     });
+
+    if (countBadge) {
+      countBadge.textContent = `${filtered.length} ${filtered.length === 1 ? 'order' : 'orders'}`;
+    }
 
     if (!filtered.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="8" class="empty-state">No matching orders found.</td>
+          <td colspan="8" class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+            No matching orders found.
+          </td>
         </tr>
       `;
+      if (paginationContainer) paginationContainer.innerHTML = '';
       return;
     }
 
-    tbody.innerHTML = filtered
+    const paged = paginateList(filtered, ordersPage, ordersPageSize);
+
+    tbody.innerHTML = paged.items
       .map((order) => {
         const customerName = order.customer?.full_name || 'Customer';
         const brgy = order.address?.barangay && order.address.barangay !== 'N/A' ? order.address.barangay : '—';
@@ -197,23 +284,36 @@ export async function mount() {
         return `
           <tr class="is-clickable" data-order-id="${escapeHtml(order.id)}">
             <td class="table-order-id">#${escapeHtml(order.order_number)}</td>
-            <td>${escapeHtml(customerName)}</td>
+            <td style="font-weight: 600; color: #0f172a;">${escapeHtml(customerName)}</td>
             <td><span class="badge" style="font-size:11px; background:#f1f5f9; color:#334155; display:inline-flex; align-items:center; gap:3px;">${ICONS.pin} ${escapeHtml(brgy)}</span></td>
             <td>${escapeHtml(summarizeOrderItems(order.items))}</td>
-            <td>${escapeHtml(slotText)}</td>
+            <td style="color: #64748b; font-size: 13px;">${escapeHtml(slotText)}</td>
             <td>
               <span class="pill status-${escapeHtml(order.status)}">
                 ${escapeHtml(STATUS_LABELS[order.status] || order.status)}
               </span>
             </td>
             <td class="table-strong">${escapeHtml(formatPeso(order.total))}</td>
-            <td>
+            <td style="text-align: right;">
               <a class="table-action-link" href="order-processing.html?id=${encodeURIComponent(order.id)}">View</a>
             </td>
           </tr>
         `;
       })
       .join('');
+
+    if (paginationContainer) {
+      paginationContainer.innerHTML = renderPaginationHtml(paged);
+      paginationContainer.querySelectorAll('.pagination-btn[data-page]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const p = Number(btn.dataset.page);
+          if (!isNaN(p) && p >= 1 && p !== ordersPage) {
+            ordersPage = p;
+            populateTableBody();
+          }
+        });
+      });
+    }
 
     tbody.querySelectorAll('tr[data-order-id]').forEach((row) => {
       row.addEventListener('click', (e) => {

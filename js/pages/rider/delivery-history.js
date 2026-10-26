@@ -1,7 +1,17 @@
 import { bootRiderPage } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeRiderWorkspace } from '../../core/realtime.js';
-import { escapeHtml, formatDateShort, formatPeso, formatTimeShort, setBusy, showToast } from '../../core/ui.js';
+import {
+  escapeHtml,
+  formatDateShort,
+  formatPeso,
+  formatTimeShort,
+  getTodayManila,
+  paginateList,
+  renderPaginationHtml,
+  setBusy,
+  showToast,
+} from '../../core/ui.js';
 import {
   formatAddressFull,
   getOrderItemPricingTag,
@@ -23,6 +33,10 @@ export async function mount(me) {
   const content = document.querySelector('#content');
   let historyOrders = [];
   let filterMode = 'all'; // 'all' | 'completed' | 'pending'
+  let searchQuery = '';
+  let dateFilter = 'all'; // 'all' | 'today' | 'yesterday' | 'week' | 'month'
+  let historyPage = 1;
+  const historyPageSize = 10;
   let remittance = { totalCash: 0, count: 0, unremittedOrders: [] };
 
   function getLedgerEntry(order) {
@@ -111,9 +125,40 @@ export async function mount(me) {
   }
 
   function renderView() {
+    const q = searchQuery.trim().toLowerCase();
+    const today = getTodayManila();
+    const now = Date.now();
+
     const filtered = historyOrders.filter((o) => {
-      if (filterMode === 'completed') return o.status === 'completed' || o.payment_status === 'paid';
-      if (filterMode === 'pending') return o.status === 'delivered' && o.payment_status === 'unpaid';
+      // 1. Status Filter
+      if (filterMode === 'completed' && !(o.status === 'completed' || o.payment_status === 'paid')) return false;
+      if (filterMode === 'pending' && !(o.status === 'delivered' && o.payment_status === 'unpaid')) return false;
+
+      // 2. Date Filter
+      if (dateFilter !== 'all') {
+        const dStr = String(o.delivered_at || o.delivery_date || '');
+        if (dateFilter === 'today') {
+          if (!dStr.startsWith(today)) return false;
+        } else if (dateFilter === 'yesterday') {
+          const yDate = new Date();
+          yDate.setDate(yDate.getDate() - 1);
+          const yStr = yDate.toISOString().slice(0, 10);
+          if (!dStr.startsWith(yStr)) return false;
+        } else if (dateFilter === 'week') {
+          const t = new Date(dStr).getTime();
+          if (isNaN(t) || now - t > 7 * 86400000) return false;
+        } else if (dateFilter === 'month') {
+          if (!dStr.startsWith(today.slice(0, 7))) return false;
+        }
+      }
+
+      // 3. Search Query
+      if (q) {
+        const orderNum = String(o.order_number || '').toLowerCase();
+        const custName = String(o.customer?.full_name || '').toLowerCase();
+        if (!orderNum.includes(q) && !custName.includes(q)) return false;
+      }
+
       return true;
     });
 
@@ -127,8 +172,10 @@ export async function mount(me) {
       return sum + Number(l?.empties_collected ?? 0);
     }, 0);
 
-    const rowsHtml = filtered.length
-      ? filtered
+    const paged = paginateList(filtered, historyPage, historyPageSize);
+
+    const rowsHtml = paged.items.length
+      ? paged.items
           .map((o) => {
             const l = getLedgerEntry(o);
             const delivered = l?.bottles_delivered ?? getOrderTotalGallons(o.items);
@@ -163,7 +210,9 @@ export async function mount(me) {
           .join('')
       : `
         <tr>
-          <td colspan="8" class="empty-state">No past deliveries match this filter.</td>
+          <td colspan="8" class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+            No past deliveries match your current filters.
+          </td>
         </tr>
       `;
 
@@ -245,11 +294,41 @@ export async function mount(me) {
         </div>
       </div>
 
-      <div class="card">
-        <div class="filter-pills">
-          <button type="button" class="filter-pill ${filterMode === 'all' ? 'is-active' : ''}" data-filter="all">All</button>
-          <button type="button" class="filter-pill ${filterMode === 'completed' ? 'is-active' : ''}" data-filter="completed">Completed</button>
-          <button type="button" class="filter-pill ${filterMode === 'pending' ? 'is-active' : ''}" data-filter="pending">Payment pending</button>
+      <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div class="filter-pills" style="margin-bottom: 0;">
+            <button type="button" class="filter-pill ${filterMode === 'all' ? 'is-active' : ''}" data-filter="all">All (${historyOrders.length})</button>
+            <button type="button" class="filter-pill ${filterMode === 'completed' ? 'is-active' : ''}" data-filter="completed">Completed</button>
+            <button type="button" class="filter-pill ${filterMode === 'pending' ? 'is-active' : ''}" data-filter="pending">Payment pending</button>
+          </div>
+          <span class="pill pill-neutral" style="font-size: 11.5px; font-weight: 700;">
+            ${filtered.length} ${filtered.length === 1 ? 'delivery' : 'deliveries'}
+          </span>
+        </div>
+
+        <div class="table-filter-toolbar">
+          <div class="table-search-box">
+            <span class="table-search-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="search" id="rider-history-search" placeholder="Search order #, customer..." value="${escapeHtml(searchQuery)}">
+          </div>
+
+          <div class="table-filter-group">
+            <select class="table-filter-select" id="rider-history-date">
+              <option value="all"${dateFilter === 'all' ? ' selected' : ''}>All Dates</option>
+              <option value="today"${dateFilter === 'today' ? ' selected' : ''}>Today</option>
+              <option value="yesterday"${dateFilter === 'yesterday' ? ' selected' : ''}>Yesterday</option>
+              <option value="week"${dateFilter === 'week' ? ' selected' : ''}>Past 7 Days</option>
+              <option value="month"${dateFilter === 'month' ? ' selected' : ''}>This Month</option>
+            </select>
+
+            ${
+              searchQuery || dateFilter !== 'all' || filterMode !== 'all'
+                ? `<button type="button" class="btn btn-light btn-sm" id="btn-reset-rider-filters" style="font-size: 12px; height: 36px;">Reset</button>`
+                : ''
+            }
+          </div>
         </div>
 
         <div class="table-wrap">
@@ -271,13 +350,49 @@ export async function mount(me) {
             </tbody>
           </table>
         </div>
+
+        ${renderPaginationHtml(paged)}
       </div>
     `;
 
+    // Filter pill buttons
     content.querySelectorAll('[data-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         filterMode = btn.dataset.filter;
+        historyPage = 1;
         renderView();
+      });
+    });
+
+    // Search and date filters
+    content.querySelector('#rider-history-search')?.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      historyPage = 1;
+      renderView();
+    });
+
+    content.querySelector('#rider-history-date')?.addEventListener('change', (e) => {
+      dateFilter = e.target.value;
+      historyPage = 1;
+      renderView();
+    });
+
+    content.querySelector('#btn-reset-rider-filters')?.addEventListener('click', () => {
+      searchQuery = '';
+      dateFilter = 'all';
+      filterMode = 'all';
+      historyPage = 1;
+      renderView();
+    });
+
+    // Pagination buttons
+    content.querySelectorAll('.pagination-btn[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = Number(btn.dataset.page);
+        if (!isNaN(p) && p >= 1 && p !== historyPage) {
+          historyPage = p;
+          renderView();
+        }
       });
     });
 

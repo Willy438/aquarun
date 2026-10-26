@@ -1,7 +1,15 @@
 import { bootCustomerPage, navigateCustomerSpa } from '../../core/nav.js';
 import { STATUS_LABELS, STATUS_PILL_TONE } from '../../core/constants.js';
 import { subscribeCustomerOrders } from '../../core/realtime.js';
-import { escapeHtml, formatDateShort, formatPeso, formatTimeShort, showToast } from '../../core/ui.js';
+import {
+  escapeHtml,
+  formatDateShort,
+  formatPeso,
+  formatTimeShort,
+  paginateList,
+  renderPaginationHtml,
+  showToast,
+} from '../../core/ui.js';
 import {
   formatAddressFull,
   formatSlotWindow,
@@ -20,6 +28,9 @@ export async function mount(me) {
 
   let orders = [];
   let filterMode = 'all'; // 'all' | 'active' | 'completed' | 'cancelled'
+  let searchQuery = '';
+  let ordersPage = 1;
+  const ordersPageSize = 10;
   let autoOpenedId = null;
 
   function isActiveOrder(order) {
@@ -148,16 +159,26 @@ export async function mount(me) {
     const activeCount = orders.filter(isActiveOrder).length;
     const completedCount = orders.filter((o) => o.status === 'completed').length;
     const cancelledCount = orders.filter((o) => o.status === 'cancelled').length;
+    const q = searchQuery.trim().toLowerCase();
 
     const filtered = orders.filter((order) => {
-      if (filterMode === 'active') return isActiveOrder(order);
-      if (filterMode === 'completed') return order.status === 'completed';
-      if (filterMode === 'cancelled') return order.status === 'cancelled';
+      if (filterMode === 'active' && !isActiveOrder(order)) return false;
+      if (filterMode === 'completed' && order.status !== 'completed') return false;
+      if (filterMode === 'cancelled' && order.status !== 'cancelled') return false;
+
+      if (q) {
+        const num = String(order.order_number || '').toLowerCase();
+        const items = summarizeOrderItems(order.items).toLowerCase();
+        if (!num.includes(q) && !items.includes(q)) return false;
+      }
+
       return true;
     });
 
-    const rowsHtml = filtered.length
-      ? filtered
+    const paged = paginateList(filtered, ordersPage, ordersPageSize);
+
+    const rowsHtml = paged.items.length
+      ? paged.items
           .map((order) => {
             const slotWindow = formatSlotWindow(getEffectiveSlot(order));
             const isActive = isActiveOrder(order);
@@ -187,20 +208,22 @@ export async function mount(me) {
           .join('')
       : `
         <tr>
-          <td colspan="7" class="empty-state">No orders found in this category.</td>
+          <td colspan="7" class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+            No orders match your current filters.
+          </td>
         </tr>
       `;
 
     content.innerHTML = `
-      <div class="card">
-        <div class="card-header" style="flex-wrap:wrap; gap:12px;">
+      <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; flex-wrap: wrap; gap: 12px; display: flex; justify-content: space-between; align-items: center;">
           <div class="card-title-group">
             <span class="card-icon">${CLOCK_ICON}</span>
-            <h2 class="card-title">Order history</h2>
+            <h2 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">Order history</h2>
           </div>
-          <div class="filter-pills" role="tablist" aria-label="Filter orders">
+          <div class="filter-pills" role="tablist" aria-label="Filter orders" style="margin-bottom: 0;">
             <button type="button" class="filter-pill ${filterMode === 'all' ? 'is-active' : ''}" data-filter="all">
-              All orders (${totalCount})
+              All (${totalCount})
             </button>
             <button type="button" class="filter-pill ${filterMode === 'active' ? 'is-active' : ''}" data-filter="active">
               Active (${activeCount})
@@ -212,6 +235,21 @@ export async function mount(me) {
               Cancelled (${cancelledCount})
             </button>
           </div>
+        </div>
+
+        <div class="table-filter-toolbar">
+          <div class="table-search-box">
+            <span class="table-search-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="search" id="customer-order-search" placeholder="Search order #, items..." value="${escapeHtml(searchQuery)}">
+          </div>
+
+          ${
+            searchQuery
+              ? `<button type="button" class="btn btn-light btn-sm" id="btn-reset-customer-search" style="font-size: 12px; height: 36px;">Clear search</button>`
+              : ''
+          }
         </div>
 
         <div class="table-wrap">
@@ -232,6 +270,8 @@ export async function mount(me) {
             </tbody>
           </table>
         </div>
+
+        ${renderPaginationHtml(paged)}
       </div>
     `;
 
@@ -239,7 +279,32 @@ export async function mount(me) {
     content.querySelectorAll('[data-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         filterMode = btn.dataset.filter;
+        ordersPage = 1;
         renderView();
+      });
+    });
+
+    // Search input
+    content.querySelector('#customer-order-search')?.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      ordersPage = 1;
+      renderView();
+    });
+
+    content.querySelector('#btn-reset-customer-search')?.addEventListener('click', () => {
+      searchQuery = '';
+      ordersPage = 1;
+      renderView();
+    });
+
+    // Pagination buttons
+    content.querySelectorAll('.pagination-btn[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = Number(btn.dataset.page);
+        if (!isNaN(p) && p >= 1 && p !== ordersPage) {
+          ordersPage = p;
+          renderView();
+        }
       });
     });
 

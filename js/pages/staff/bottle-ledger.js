@@ -1,6 +1,6 @@
 import { bootStaffPage } from '../../core/nav.js';
 import { subscribeStaffWorkspace } from '../../core/realtime.js';
-import { escapeHtml, formatTimeShort, showToast } from '../../core/ui.js';
+import { escapeHtml, formatTimeShort, paginateList, renderPaginationHtml, showToast } from '../../core/ui.js';
 import { getStaffLedgerEntries } from '../../services/ledgerService.js';
 
 const ICONS = {
@@ -20,119 +20,177 @@ function formatRecorderShort(fullName = '') {
 
 export async function mount() {
   const content = document.querySelector('#content');
+  let rawEntries = [];
+  let searchQuery = '';
+  let ledgerPage = 1;
+  const ledgerPageSize = 10;
 
-  async function loadAndRender() {
+  async function loadData() {
     try {
-      const entries = await getStaffLedgerEntries({ limit: 100 });
-
-      const totalEmpties = entries.reduce((sum, e) => sum + Number(e.empties_collected || 0), 0);
-      const totalRefilled = entries.reduce((sum, e) => sum + Number(e.bottles_refilled || 0), 0);
-      const totalDelivered = entries.reduce((sum, e) => sum + Number(e.bottles_delivered || 0), 0);
-      const totalCount = entries.length;
-
-      const rowsHtml = entries.length
-        ? entries
-            .map((entry) => {
-              const orderNum = entry.order?.order_number || '—';
-              const customerName = entry.customer?.full_name || 'Customer';
-              const recorderName = entry.recorder?.full_name
-                ? formatRecorderShort(entry.recorder.full_name)
-                : 'Station';
-              const timeVal = entry.order?.delivered_at || entry.created_at;
-
-              return `
-                <tr>
-                  <td class="table-order-id">#${escapeHtml(orderNum)}</td>
-                  <td>${escapeHtml(customerName)}</td>
-                  <td>${escapeHtml(entry.empties_collected)}</td>
-                  <td>${escapeHtml(entry.bottles_refilled)}</td>
-                  <td>${escapeHtml(entry.bottles_delivered)}</td>
-                  <td>${escapeHtml(recorderName)}</td>
-                  <td>${escapeHtml(formatTimeShort(timeVal))}</td>
-                </tr>
-              `;
-            })
-            .join('')
-        : `
-          <tr>
-            <td colspan="7" class="empty-state">No bottle ledger entries recorded yet.</td>
-          </tr>
-        `;
-
-      content.innerHTML = `
-        <div class="grid-4">
-          <div class="stat-card">
-            <span class="stat-icon">${ICONS.bookmark}</span>
-            <div>
-              <p class="stat-value">${escapeHtml(totalEmpties)}</p>
-              <p class="stat-label">Empties received</p>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <span class="stat-icon">${ICONS.drop}</span>
-            <div>
-              <p class="stat-value">${escapeHtml(totalRefilled)}</p>
-              <p class="stat-label">Bottles refilled</p>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <span class="stat-icon">${ICONS.pin}</span>
-            <div>
-              <p class="stat-value">${escapeHtml(totalDelivered)}</p>
-              <p class="stat-label">Bottles delivered</p>
-            </div>
-          </div>
-
-          <div class="stat-card">
-            <span class="stat-icon">${ICONS.check}</span>
-            <div>
-              <p class="stat-value">${escapeHtml(totalCount)}</p>
-              <p class="stat-label">Ledger entries</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="card-header">
-            <div class="card-title-group">
-              <span class="card-icon">${ICONS.clock}</span>
-              <h2 class="card-title">Recent entries</h2>
-            </div>
-          </div>
-
-          <div class="notice balance-how-notice">
-            <strong>Balance rule:</strong> A customer's balance is bottles delivered minus empties collected.
-          </div>
-
-          <div class="table-wrap">
-            <table class="table">
-              <thead>
-                <tr>
-                  <th>Order</th>
-                  <th>Customer</th>
-                  <th>Empties</th>
-                  <th>Refilled</th>
-                  <th>Delivered</th>
-                  <th>Recorded by</th>
-                  <th>Time</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${rowsHtml}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      `;
+      rawEntries = await getStaffLedgerEntries({ limit: 150 });
+      renderView();
     } catch (err) {
       showToast(err.message || 'Could not load bottle ledger.', 'error');
     }
   }
 
-  await loadAndRender();
-  return subscribeStaffWorkspace(loadAndRender);
+  function renderView() {
+    const totalEmpties = rawEntries.reduce((sum, e) => sum + Number(e.empties_collected || 0), 0);
+    const totalRefilled = rawEntries.reduce((sum, e) => sum + Number(e.bottles_refilled || 0), 0);
+    const totalDelivered = rawEntries.reduce((sum, e) => sum + Number(e.bottles_delivered || 0), 0);
+    const totalCount = rawEntries.length;
+
+    const q = searchQuery.trim().toLowerCase();
+    const filtered = rawEntries.filter((entry) => {
+      if (!q) return true;
+      const orderNum = String(entry.order?.order_number || '').toLowerCase();
+      const customerName = String(entry.customer?.full_name || '').toLowerCase();
+      const recorderName = String(entry.recorder?.full_name || '').toLowerCase();
+      return orderNum.includes(q) || customerName.includes(q) || recorderName.includes(q);
+    });
+
+    const paged = paginateList(filtered, ledgerPage, ledgerPageSize);
+
+    const rowsHtml = paged.items.length
+      ? paged.items
+          .map((entry) => {
+            const orderNum = entry.order?.order_number || '—';
+            const customerName = entry.customer?.full_name || 'Customer';
+            const recorderName = entry.recorder?.full_name
+              ? formatRecorderShort(entry.recorder.full_name)
+              : 'Station';
+            const timeVal = entry.order?.delivered_at || entry.created_at;
+
+            return `
+              <tr>
+                <td class="table-order-id">#${escapeHtml(orderNum)}</td>
+                <td style="font-weight: 600; color: #0f172a;">${escapeHtml(customerName)}</td>
+                <td style="font-weight: 700; color: #0f766e;">${escapeHtml(entry.empties_collected)}</td>
+                <td style="font-weight: 700; color: #1d5bd6;">${escapeHtml(entry.bottles_refilled)}</td>
+                <td style="font-weight: 700; color: #0f172a;">${escapeHtml(entry.bottles_delivered)}</td>
+                <td style="color: #64748b;">${escapeHtml(recorderName)}</td>
+                <td style="color: #64748b; font-size: 13px;">${escapeHtml(formatTimeShort(timeVal))}</td>
+              </tr>
+            `;
+          })
+          .join('')
+      : `
+        <tr>
+          <td colspan="7" class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+            No bottle ledger entries match your search.
+          </td>
+        </tr>
+      `;
+
+    content.innerHTML = `
+      <div class="grid-4" style="margin-bottom: 16px;">
+        <div class="stat-card">
+          <span class="stat-icon">${ICONS.bookmark}</span>
+          <div>
+            <p class="stat-value">${escapeHtml(totalEmpties)}</p>
+            <p class="stat-label">Empties received</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-icon">${ICONS.drop}</span>
+          <div>
+            <p class="stat-value">${escapeHtml(totalRefilled)}</p>
+            <p class="stat-label">Bottles refilled</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-icon">${ICONS.pin}</span>
+          <div>
+            <p class="stat-value">${escapeHtml(totalDelivered)}</p>
+            <p class="stat-label">Bottles delivered</p>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <span class="stat-icon">${ICONS.check}</span>
+          <div>
+            <p class="stat-value">${escapeHtml(totalCount)}</p>
+            <p class="stat-label">Ledger entries</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+          <div class="card-title-group">
+            <span class="card-icon">${ICONS.clock}</span>
+            <h2 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">Recent bottle transactions</h2>
+          </div>
+          <span class="pill pill-neutral" style="font-size: 11.5px; font-weight: 700;">
+            ${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'}
+          </span>
+        </div>
+
+        <div class="table-filter-toolbar">
+          <div class="table-search-box">
+            <span class="table-search-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="search" id="ledger-search-input" placeholder="Search order #, customer, recorder..." value="${escapeHtml(searchQuery)}">
+          </div>
+
+          ${
+            searchQuery
+              ? `<button type="button" class="btn btn-light btn-sm" id="btn-reset-ledger-search" style="font-size: 12px; height: 36px;">Clear search</button>`
+              : ''
+          }
+        </div>
+
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Customer</th>
+                <th>Empties</th>
+                <th>Refilled</th>
+                <th>Delivered</th>
+                <th>Recorded by</th>
+                <th>Time</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rowsHtml}
+            </tbody>
+          </table>
+        </div>
+
+        ${renderPaginationHtml(paged)}
+      </div>
+    `;
+
+    content.querySelector('#ledger-search-input')?.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      ledgerPage = 1;
+      renderView();
+    });
+
+    content.querySelector('#btn-reset-ledger-search')?.addEventListener('click', () => {
+      searchQuery = '';
+      ledgerPage = 1;
+      renderView();
+    });
+
+    content.querySelectorAll('.pagination-btn[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = Number(btn.dataset.page);
+        if (!isNaN(p) && p >= 1 && p !== ledgerPage) {
+          ledgerPage = p;
+          renderView();
+        }
+      });
+    });
+  }
+
+  await loadData();
+  return subscribeStaffWorkspace(loadData);
 }
 
 bootStaffPage('bottle-ledger', mount);

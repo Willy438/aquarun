@@ -248,3 +248,86 @@ export function invalidateDataCache(prefix = '') {
     }
   } catch {}
 }
+
+/**
+ * Paginates an in-memory array of items.
+ * @param {Array} items
+ * @param {number} page 1-based page index
+ * @param {number} pageSize items per page
+ * @returns {{ items: Array, currentPage: number, totalPages: number, totalItems: number, startIndex: number, endIndex: number }}
+ */
+export function paginateList(items, page = 1, pageSize = 10) {
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const currentPage = Math.min(Math.max(1, Number(page) || 1), totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, totalItems);
+  const paginatedItems = items.slice(startIndex, endIndex);
+
+  return {
+    items: paginatedItems,
+    currentPage,
+    totalPages,
+    totalItems,
+    startIndex: totalItems === 0 ? 0 : startIndex + 1,
+    endIndex,
+  };
+}
+
+/**
+ * Renders numbered pagination buttons (e.g. < Prev 1 2 3 4 Next >).
+ * @param {{ currentPage: number, totalPages: number, totalItems: number, startIndex: number, endIndex: number }} meta
+ * @returns {string} HTML string
+ */
+export function renderPaginationHtml({ currentPage, totalPages, totalItems, startIndex, endIndex }) {
+  if (totalItems === 0) return '';
+
+  const pages = [];
+  if (totalPages <= 7) {
+    for (let i = 1; i <= totalPages; i++) pages.push(i);
+  } else {
+    pages.push(1);
+    if (currentPage > 3) pages.push('...');
+
+    const start = Math.max(2, currentPage - 1);
+    const end = Math.min(totalPages - 1, currentPage + 1);
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+
+    if (currentPage < totalPages - 2) pages.push('...');
+    pages.push(totalPages);
+  }
+
+  const buttonsHtml = pages
+    .map((p) => {
+      if (p === '...') {
+        return `<span class="pagination-ellipsis">&hellip;</span>`;
+      }
+      const isActive = p === currentPage;
+      return `
+        <button type="button" class="pagination-btn ${isActive ? 'is-active' : ''}" data-page="${p}" aria-label="Page ${p}">
+          ${p}
+        </button>
+      `;
+    })
+    .join('');
+
+  return `
+    <div class="pagination-bar">
+      <div class="pagination-info">
+        Showing <strong>${startIndex}</strong> to <strong>${endIndex}</strong> of <strong>${totalItems}</strong> entries
+      </div>
+      <div class="pagination-controls">
+        <button type="button" class="pagination-btn" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled' : ''} aria-label="Previous page">
+          &larr; Prev
+        </button>
+        ${buttonsHtml}
+        <button type="button" class="pagination-btn" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled' : ''} aria-label="Next page">
+          Next &rarr;
+        </button>
+      </div>
+    </div>
+  `;
+}
+
