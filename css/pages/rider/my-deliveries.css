@@ -344,7 +344,7 @@
 .trip-manifest-title svg {
   width: 18px;
   height: 18px;
-  stroke: #0284c7;
+  stroke: var(--blue-app, #1d5bd6);
 }
 
 .trip-manifest-stats {
@@ -441,7 +441,7 @@
 }
 
 .rider-customer-name a:hover {
-  color: #0284c7;
+  color: var(--blue-app, #1d5bd6);
 }
 
 .rider-customer-address {
@@ -477,17 +477,17 @@
 .rider-action-chip:hover {
   background: #f1f5f9;
   border-color: #cbd5e1;
-  color: #0284c7;
+  color: var(--blue-app, #1d5bd6);
 }
 
 .rider-action-chip.is-primary {
-  background: #f0f9ff;
-  color: #0284c7;
-  border-color: #bae6fd;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
+  border-color: #d6e4ff;
 }
 
 .rider-action-chip.is-primary:hover {
-  background: #e0f2fe;
+  background: #dce8ff;
 }
 
 .rider-metrics-grid {
@@ -523,7 +523,7 @@
 }
 
 .rider-metric-value.is-amount {
-  color: #0284c7;
+  color: var(--blue-app, #1d5bd6);
 }
 
 .rider-primary-btn {
@@ -536,18 +536,18 @@
   border-radius: 10px;
   font-size: 15px;
   font-weight: 700;
-  background: #0284c7;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
   border: none;
   cursor: pointer;
   text-decoration: none;
   min-height: 48px;
-  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.22);
+  box-shadow: 0 4px 12px rgba(29, 91, 214, 0.28);
   transition: all 0.15s ease;
 }
 
 .rider-primary-btn:hover {
-  background: #0369a1;
+  background: var(--blue-app-hover, #1546b3);
   transform: translateY(-1px);
 }
 
@@ -564,8 +564,8 @@
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 6px;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: #dce8ff;
+  color: var(--blue-app, #1d5bd6);
 }
 
 .stop-sequence-badge.is-first {

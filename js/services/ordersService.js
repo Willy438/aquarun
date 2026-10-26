@@ -375,8 +375,8 @@ export function promptDeliveryTimingModal({
               ${presets
                 .map(
                   (p, idx) => `
-                <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; border: 1px solid ${idx === 0 ? '#0284c7' : '#e2e8f0'}; background: ${idx === 0 ? '#f0f9ff' : '#ffffff'}; font-size: 13px; cursor: pointer; color: #1e293b; transition: all 0.15s ease;">
-                  <input type="radio" name="timing-preset-choice" value="${escapeHtml(p)}" ${idx === 0 ? 'checked' : ''} style="margin: 0; accent-color: #0284c7;">
+                <label style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 6px; border: 1px solid ${idx === 0 ? 'var(--blue-app, #1d5bd6)' : '#e2e8f0'}; background: ${idx === 0 ? 'var(--brand-soft, #ebf2ff)' : '#ffffff'}; font-size: 13px; cursor: pointer; color: #1e293b; transition: all 0.15s ease;">
+                  <input type="radio" name="timing-preset-choice" value="${escapeHtml(p)}" ${idx === 0 ? 'checked' : ''} style="margin: 0; accent-color: var(--blue-app, #1d5bd6);">
                   <span>${escapeHtml(p)}</span>
                 </label>
               `
@@ -424,8 +424,8 @@ export function promptDeliveryTimingModal({
         });
         const parentLabel = e.target.closest('label');
         if (parentLabel) {
-          parentLabel.style.borderColor = '#0284c7';
-          parentLabel.style.background = '#f0f9ff';
+          parentLabel.style.borderColor = 'var(--blue-app, #1d5bd6)';
+          parentLabel.style.background = 'var(--brand-soft, #ebf2ff)';
         }
         if (e.target.value.includes('Other')) {
           textarea.value = '';
@@ -1427,7 +1427,7 @@ export function openRiderRemittanceProofModal(remittance, me = {}) {
       <div class="modal-card" role="dialog" aria-modal="true" style="max-width: 720px; width: 100%; border-radius: 12px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0; display:flex; flex-direction:column; max-height: 90vh;">
         <div style="padding: 18px 22px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
           <div>
-            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #0284c7;">
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--blue-app, #1d5bd6);">
               Rider Financial Ledger &amp; Proof
             </span>
             <h3 style="margin: 2px 0 0 0; font-size: 18px; font-weight: 800; color: #0f172a;">

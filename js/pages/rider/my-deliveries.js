@@ -257,7 +257,7 @@ export async function mount(initialMe) {
 
               <div class="trip-stat-block">
                 <span class="trip-stat-label">Total COD Cash to Collect</span>
-                <span class="trip-stat-val" style="color:#0284c7;">${formatPeso(totalCashToCollect)}</span>
+                <span class="trip-stat-val" style="color:var(--blue-app, #1d5bd6);">${formatPeso(totalCashToCollect)}</span>
                 <small style="font-size:11px;color:#64748b;margin-top:2px;">Cash on Delivery (COD)</small>
               </div>
 
@@ -487,7 +487,7 @@ export async function mount(initialMe) {
         <div class="card" style="border: 1px solid var(--border-color, #e2e8f0); background: #ffffff; padding: 14px 18px; margin-bottom: 14px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 14px;">
-              <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; color: var(--blue-app, #1d5bd6); display: flex; align-items: center; justify-content: center;">
                 ${ICONS.wallet}
               </div>
               <div>
