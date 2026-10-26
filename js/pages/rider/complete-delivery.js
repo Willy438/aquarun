@@ -4,6 +4,8 @@ import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../
 import {
   checkOrderDeliveryTiming,
   isOrderItemNewContainer,
+  promptDeliveryTimingModal,
+  recordDeliveryTimingNote,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
 import {
@@ -201,15 +203,22 @@ export async function mount(me) {
     content.querySelector('#submit-delivery-btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
 
-      const earlyPrompt = timing.isEarly
-        ? `\n\n⚠️ NOTE: This delivery is being completed ahead of the customer's scheduled delivery window (${timing.slotWindow}). Please confirm customer has accepted early receipt of items.`
-        : '';
+      let timingReason = null;
+      if (timing.isEarly || timing.isLate) {
+        const timingModalRes = await promptDeliveryTimingModal({
+          actionType: 'deliver',
+          timing,
+          order,
+        });
+        if (!timingModalRes.confirmed) return;
+        timingReason = timingModalRes.reason;
+      }
 
       const confirmed = await confirmModal({
         title: `Submit Delivery #${order.order_number}?`,
-        message: (paymentReceived
+        message: paymentReceived
           ? `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) and collection of ${formatPeso(order.total)} cash?`
-          : `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) with cash payment marked pending for station review?`) + earlyPrompt,
+          : `Record delivery of ${bottlesDelivered} ${bottlesDelivered === 1 ? 'gallon' : 'gallons'} (${emptiesCollected} empties collected) with cash payment marked pending for station review?`,
         confirmText: 'Yes, record delivery',
         cancelText: 'Back to review',
       });
@@ -219,6 +228,9 @@ export async function mount(me) {
       try {
         if (order.status === 'rider_assigned') {
           await riderStartDelivery(order.id);
+        }
+        if (timingReason) {
+          await recordDeliveryTimingNote(order.id, 'deliver', timingReason, timing);
         }
         await riderRecordDelivery({
           orderId: order.id,

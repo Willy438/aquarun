@@ -215,6 +215,17 @@ export async function mount(me) {
               </div>
             </div>
 
+            ${
+              order.slot_note
+                ? `
+                  <div style="margin: 10px 0; padding: 10px 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; font-size: 12.5px; color: #92400e;">
+                    <strong>Schedule &amp; Dispatch Notes:</strong>
+                    <div style="margin-top: 2px;">${escapeHtml(order.slot_note)}</div>
+                  </div>
+                `
+                : ''
+            }
+
             <div class="notice proc-ledger-notice">
               <strong>Bottle ledger:</strong> Delivered and collected counts are entered by the rider at delivery.
             </div>

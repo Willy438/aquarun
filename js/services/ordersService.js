@@ -167,7 +167,15 @@ export function checkOrderDeliveryTiming(order) {
       isPastDate,
       minutesDiff: 0,
       slotWindow,
-      warningText: isFutureDate ? `Scheduled for future date (${deliveryDate})` : '',
+      warningText: isFutureDate
+        ? `Scheduled for future date (${deliveryDate})`
+        : isPastDate
+          ? `Scheduled for past date (${deliveryDate})`
+          : '',
+      deliveryDate,
+      slotStartMinutes: 0,
+      slotEndMinutes: 0,
+      currentMinutes: 0,
     };
   }
 
@@ -180,22 +188,30 @@ export function checkOrderDeliveryTiming(order) {
   const [eH, eM] = slot.end_time.split(':').map(Number);
   const slotEndMinutes = eH * 60 + (eM || 0);
 
-  // Early if >20 minutes before slot start time (or future date)
-  const isEarly = isFutureDate || (isToday && currentMinutes < slotStartMinutes - 20);
-  const isLate = isPastDate || (isToday && currentMinutes > slotEndMinutes + 30);
+  // Strict check: early if before slot start, late if after slot end
+  const isEarly = isFutureDate || (isToday && currentMinutes < slotStartMinutes);
+  const isLate = isPastDate || (isToday && currentMinutes > slotEndMinutes);
   const isCurrentWindow = isToday && !isEarly && !isLate;
-  const minutesDiff = slotStartMinutes - currentMinutes;
 
+  let minutesDiff = 0;
   let warningText = '';
+
   if (isFutureDate) {
-    warningText = `Order is scheduled for ${deliveryDate} (${slotWindow}).`;
+    warningText = `Order is scheduled for future date ${deliveryDate} (${slotWindow}).`;
+  } else if (isPastDate) {
+    warningText = `Order was scheduled for past date ${deliveryDate} (${slotWindow}).`;
   } else if (isEarly) {
+    minutesDiff = slotStartMinutes - currentMinutes;
     const hoursEarly = Math.floor(minutesDiff / 60);
     const minsEarly = minutesDiff % 60;
     const diffStr = hoursEarly > 0 ? `${hoursEarly}h ${minsEarly}m` : `${minsEarly}m`;
-    warningText = `Order is scheduled for ${slotWindow} (currently ${diffStr} ahead of scheduled window).`;
+    warningText = `Scheduled for ${slotWindow} (currently ${diffStr} ahead of scheduled window).`;
   } else if (isLate) {
-    warningText = `Order is past scheduled window (${slotWindow}).`;
+    minutesDiff = currentMinutes - slotEndMinutes;
+    const hoursLate = Math.floor(minutesDiff / 60);
+    const minsLate = minutesDiff % 60;
+    const diffStr = hoursLate > 0 ? `${hoursLate}h ${minsLate}m` : `${minsLate}m`;
+    warningText = `Scheduled for ${slotWindow} (currently ${diffStr} past scheduled window).`;
   }
 
   return {
@@ -207,7 +223,262 @@ export function checkOrderDeliveryTiming(order) {
     minutesDiff,
     slotWindow,
     warningText,
+    deliveryDate,
+    slotStartMinutes,
+    slotEndMinutes,
+    currentMinutes,
   };
+}
+
+/**
+ * Interactive confirmation modal for Early or Late departure/delivery.
+ * Features scheduled window breakdown, quick reason selection presets, and a required custom reason field.
+ */
+export function promptDeliveryTimingModal({
+  actionType = 'depart', // 'depart' | 'deliver' | 'batch_depart'
+  timing,
+  order,
+  batchCount = 1,
+}) {
+  return new Promise((resolve) => {
+    const isEarly = timing?.isEarly;
+    const isLate = timing?.isLate;
+
+    let title = '';
+    let badgeLabel = '';
+    let themeColor = '';
+    let themeBg = '';
+    let themeBorder = '';
+
+    if (actionType === 'batch_depart') {
+      title = isEarly
+        ? 'Early Batch Departure Confirmation'
+        : 'Late Batch Departure Schedule Alert';
+      badgeLabel = isEarly ? 'Early Batch Departure' : 'Late Batch Departure';
+    } else if (actionType === 'depart') {
+      title = isEarly
+        ? 'Early Departure Confirmation'
+        : 'Late Departure Schedule Alert';
+      badgeLabel = isEarly ? 'Departing Ahead of Window' : 'Departing Past Window';
+    } else {
+      title = isEarly
+        ? 'Early Delivery Completion'
+        : 'Late Delivery Completion';
+      badgeLabel = isEarly ? 'Delivered Ahead of Window' : 'Delivered Past Window';
+    }
+
+    if (isEarly) {
+      themeColor = '#92400e';
+      themeBg = '#fef3c7';
+      themeBorder = '#fde68a';
+    } else {
+      themeColor = '#991b1b';
+      themeBg = '#fee2e2';
+      themeBorder = '#fecaca';
+    }
+
+    let presets = [];
+    if (actionType === 'depart' || actionType === 'batch_depart') {
+      if (isEarly) {
+        presets = [
+          'Customer requested early delivery',
+          'Batch route optimization (nearby customer)',
+          'Station early dispatch schedule',
+          'Other reason (specify below)',
+        ];
+      } else {
+        presets = [
+          'Refilling queue / station production delay',
+          'Vehicle inspection or maintenance delay',
+          'Heavy rain / adverse weather conditions',
+          'Other reason (specify below)',
+        ];
+      }
+    } else {
+      if (isEarly) {
+        presets = [
+          'Customer confirmed present and received early',
+          'Customer contacted station to deliver immediately',
+          'Customer requested drop-off ahead of schedule',
+          'Other reason (specify below)',
+        ];
+      } else {
+        presets = [
+          'Heavy road traffic / route congestion',
+          'Customer took time to answer gate or phone',
+          'Difficulty locating address / unit access delay',
+          'Other reason (specify below)',
+        ];
+      }
+    }
+
+    const defaultPreset = presets[0] || 'Schedule timing adjustment';
+    const orderNumberText = order?.order_number
+      ? `Order #${order.order_number}`
+      : `${batchCount} Orders in Batch`;
+    const customerText = order?.customer?.full_name ? ` · ${order.customer.full_name}` : '';
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'modal-backdrop';
+    backdrop.style.cssText =
+      'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+    backdrop.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true" style="max-width: 480px; width: 100%; border-radius: 12px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0; display:flex; flex-direction:column;">
+        <div style="padding: 16px 20px; background: ${themeBg}; border-bottom: 1px solid ${themeBorder}; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;">
+          <div>
+            <span style="display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 6px; background: #ffffff; color: ${themeColor}; border: 1px solid ${themeBorder}; margin-bottom: 6px;">
+              ${escapeHtml(badgeLabel)}
+            </span>
+            <h3 style="margin: 0; font-size: 17px; font-weight: 800; color: #0f172a; line-height: 1.3;">
+              ${escapeHtml(title)}
+            </h3>
+            <p style="margin: 3px 0 0 0; font-size: 12.5px; color: ${themeColor}; font-weight: 600;">
+              ${escapeHtml(orderNumberText)}${escapeHtml(customerText)}
+            </p>
+          </div>
+          <button type="button" class="modal-close" data-action="cancel" style="background: none; border: none; font-size: 22px; line-height: 1; cursor: pointer; color: ${themeColor}; padding: 0 4px;">&times;</button>
+        </div>
+
+        <div style="padding: 18px 20px; display: flex; flex-direction: column; gap: 14px; max-height: 75vh; overflow-y: auto;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px 14px; font-size: 13px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+              <span style="color: #64748b; font-weight: 600;">Scheduled Window:</span>
+              <span style="font-weight: 700; color: #0f172a;">${escapeHtml(timing?.slotWindow || 'Flexible')} (${escapeHtml(timing?.deliveryDate || 'Today')})</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+              <span style="color: #64748b; font-weight: 600;">Schedule Gap:</span>
+              <span style="font-weight: 700; color: ${themeColor};">${escapeHtml(timing?.warningText || 'Outside window')}</span>
+            </div>
+          </div>
+
+          <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+            ${
+              isEarly
+                ? 'Departing or delivering ahead of the scheduled window requires an operational reason note for station records and customer tracking.'
+                : 'Departing or delivering after the scheduled window requires a schedule delay reason for station quality assurance.'
+            }
+          </p>
+
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 6px;">
+              Select Reason
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 6px;" id="timing-presets-container">
+              ${presets
+                .map(
+                  (p, idx) => `
+                <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 6px; border: 1px solid ${idx === 0 ? '#3b82f6' : '#e2e8f0'}; background: ${idx === 0 ? '#eff6ff' : '#ffffff'}; font-size: 13px; cursor: pointer; color: #1e293b; transition: all 0.15s ease;">
+                  <input type="radio" name="timing-preset-choice" value="${escapeHtml(p)}" ${idx === 0 ? 'checked' : ''} style="margin: 0;">
+                  <span>${escapeHtml(p)}</span>
+                </label>
+              `
+                )
+                .join('')}
+            </div>
+          </div>
+
+          <div>
+            <label for="timing-custom-reason" style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569; margin-bottom: 4px;">
+              Reason Details / Dispatch Note <span style="color: #dc2626;">*</span>
+            </label>
+            <textarea id="timing-custom-reason" rows="2" class="form-input" style="width: 100%; box-sizing: border-box; font-size: 13px; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px;" placeholder="Provide specific reason or details...">${escapeHtml(defaultPreset)}</textarea>
+            <div id="timing-reason-err" style="display: none; font-size: 12px; color: #dc2626; margin-top: 4px; font-weight: 600;">
+              Please select or enter a reason before proceeding.
+            </div>
+          </div>
+        </div>
+
+        <div style="padding: 12px 20px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-light" data-action="cancel" style="font-size: 13px;">
+            Wait for Window / Cancel
+          </button>
+          <button type="button" class="btn btn-primary" id="btn-confirm-timing" style="font-size: 13px; font-weight: 700; background: ${isEarly ? '#d97706' : '#dc2626'}; border-color: ${isEarly ? '#d97706' : '#dc2626'};">
+            ${isEarly ? (actionType === 'deliver' ? 'Confirm Early Delivery' : 'Confirm Early Departure') : (actionType === 'deliver' ? 'Confirm Late Delivery' : 'Confirm Late Departure')}
+          </button>
+        </div>
+      </div>
+    `;
+
+    const close = (result) => {
+      backdrop.remove();
+      resolve(result);
+    };
+
+    const textarea = backdrop.querySelector('#timing-custom-reason');
+    const errBox = backdrop.querySelector('#timing-reason-err');
+
+    backdrop.querySelectorAll('input[name="timing-preset-choice"]').forEach((radio) => {
+      radio.addEventListener('change', (e) => {
+        backdrop.querySelectorAll('#timing-presets-container label').forEach((lbl) => {
+          lbl.style.borderColor = '#e2e8f0';
+          lbl.style.background = '#ffffff';
+        });
+        const parentLabel = e.target.closest('label');
+        if (parentLabel) {
+          parentLabel.style.borderColor = '#3b82f6';
+          parentLabel.style.background = '#eff6ff';
+        }
+        if (e.target.value.includes('Other')) {
+          textarea.value = '';
+          textarea.focus();
+        } else {
+          textarea.value = e.target.value;
+        }
+        errBox.style.display = 'none';
+      });
+    });
+
+    backdrop.querySelector('#btn-confirm-timing')?.addEventListener('click', () => {
+      const reasonVal = textarea.value.trim();
+      if (!reasonVal) {
+        errBox.style.display = 'block';
+        textarea.focus();
+        return;
+      }
+      close({ confirmed: true, reason: reasonVal });
+    });
+
+    backdrop.querySelectorAll('[data-action="cancel"]').forEach((b) => {
+      b.addEventListener('click', () => close({ confirmed: false }));
+    });
+
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) close({ confirmed: false });
+    });
+
+    document.body.appendChild(backdrop);
+    textarea.focus();
+  });
+}
+
+/**
+ * Records an early or late timing reason note into the order's slot_note.
+ */
+export async function recordDeliveryTimingNote(orderId, actionType, reason, timing) {
+  if (!orderId || !reason) return;
+  const isEarly = timing?.isEarly ?? true;
+  const tag = isEarly
+    ? (actionType === 'deliver' ? 'EARLY_DELIVERY' : 'EARLY_DEPART')
+    : (actionType === 'deliver' ? 'LATE_DELIVERY' : 'LATE_DEPART');
+
+  const formattedTag = `[${tag}: ${reason.trim()}]`;
+
+  try {
+    const { data } = await supabase
+      .from('orders')
+      .select('slot_note')
+      .eq('id', orderId)
+      .maybeSingle();
+
+    const existing = String(data?.slot_note || '').trim();
+    const updated = existing ? `${existing} ${formattedTag}` : formattedTag;
+
+    await supabase.from('orders').update({ slot_note: updated }).eq('id', orderId);
+    invalidateDataCache();
+  } catch (err) {
+    console.warn('Could not record delivery timing note:', err);
+  }
 }
 
 function getCustomerStepSubtitle(order) {
@@ -788,20 +1059,32 @@ export async function getRiderRemittanceSummary(riderId) {
   let { data: res, error } = await supabase
     .from('orders')
     .select(
-      'id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, rider_remitted, remitted_at, remittance_status, customer:profiles!customer_id(full_name)'
+      'id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, rider_remitted, remitted_at, remittance_status, remittance_submitted_at, customer:profiles!customer_id(full_name)'
     )
     .eq('rider_id', riderId)
-    .in('status', ['delivered', 'completed']);
+    .in('status', ['delivered', 'completed'])
+    .order('delivered_at', { ascending: false });
 
   if (error) {
     // If relation join fails or columns don't exist yet, fallback gracefully
     const fallback = await supabase
       .from('orders')
-      .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at')
+      .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, remitted_at, remittance_status, remittance_submitted_at')
       .eq('rider_id', riderId)
-      .in('status', ['delivered', 'completed']);
-    if (fallback.error) throw fallback.error;
-    data = fallback.data || [];
+      .in('status', ['delivered', 'completed'])
+      .order('delivered_at', { ascending: false });
+    if (fallback.error) {
+      const bareFallback = await supabase
+        .from('orders')
+        .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at')
+        .eq('rider_id', riderId)
+        .in('status', ['delivered', 'completed'])
+        .order('delivered_at', { ascending: false });
+      if (bareFallback.error) throw bareFallback.error;
+      data = bareFallback.data || [];
+    } else {
+      data = fallback.data || [];
+    }
   } else {
     data = res || [];
   }
@@ -810,6 +1093,7 @@ export async function getRiderRemittanceSummary(riderId) {
   const unremittedOrders = [];
   const submittedOrders = [];
   const unsubmittedOrders = [];
+  const settledOrders = [];
 
   for (const o of data) {
     const note = String(o.slot_note || '');
@@ -818,7 +1102,9 @@ export async function getRiderRemittanceSummary(riderId) {
       note.includes('[REMITTED]') ||
       o.remittance_status === 'approved';
 
-    if (!isSettled) {
+    if (isSettled) {
+      settledOrders.push(o);
+    } else {
       unremittedOrders.push(o);
       const isSubmitted =
         o.remittance_status === 'submitted' ||
@@ -831,20 +1117,35 @@ export async function getRiderRemittanceSummary(riderId) {
     }
   }
 
+  const today = getTodayManila();
   const totalCash = unremittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const submittedCash = submittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
   const unsubmittedCash = unsubmittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const settledCash = settledOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const todaySettledCash = settledOrders
+    .filter((o) => {
+      const d = String(o.remitted_at || o.delivered_at || '');
+      return d.startsWith(today);
+    })
+    .reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const totalLifetimeSales = totalCash + settledCash;
 
   return {
     unremittedOrders,
     submittedOrders,
     unsubmittedOrders,
+    settledOrders,
+    allOrders: data,
     totalCash,
     submittedCash,
     unsubmittedCash,
+    settledCash,
+    todaySettledCash,
+    totalLifetimeSales,
     count: unremittedOrders.length,
     submittedCount: submittedOrders.length,
     unsubmittedCount: unsubmittedOrders.length,
+    settledCount: settledOrders.length,
     hasSubmitted: submittedOrders.length > 0,
     allSettled: unremittedOrders.length === 0,
   };
@@ -1003,5 +1304,214 @@ export async function getRemittanceSalesHistory(limit = 40) {
   });
 
   return settled;
+}
+
+/**
+ * Interactive Rider Remittance & Sales Audit Record Modal.
+ * Shows official proof of all COD collections, turnovers, and station cashier reconciliations.
+ */
+export function openRiderRemittanceProofModal(remittance, me = {}) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'modal-backdrop';
+  backdrop.style.cssText =
+    'position:fixed;inset:0;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+
+  let currentTab = 'settled'; // 'settled' | 'submitted' | 'unsubmitted'
+
+  function renderModalContent() {
+    const riderName = me?.full_name || 'Rider';
+
+    const settledList = remittance?.settledOrders || [];
+    const submittedList = remittance?.submittedOrders || [];
+    const unsubmittedList = remittance?.unsubmittedOrders || [];
+
+    let activeList = [];
+    let emptyMessage = '';
+    let badgeClass = '';
+
+    if (currentTab === 'settled') {
+      activeList = settledList;
+      emptyMessage =
+        'No reconciled remittances yet. Completed orders approved by the station cashier will appear here.';
+      badgeClass = 'pill-green';
+    } else if (currentTab === 'submitted') {
+      activeList = submittedList;
+      emptyMessage = 'No remittances currently awaiting cashier review.';
+      badgeClass = 'pill-amber';
+    } else {
+      activeList = unsubmittedList;
+      emptyMessage = 'No unremitted cash in hand. All delivered orders have been turned over.';
+      badgeClass = 'pill-blue';
+    }
+
+    const rowsHtml = activeList.length
+      ? activeList
+          .map((o) => {
+            const custName = o.customer?.full_name || 'Customer';
+            const deliveredDate = o.delivered_at
+              ? `${formatDateShort(o.delivered_at)} ${formatTimeShort(o.delivered_at)}`
+              : 'Delivered';
+            const remittedDate = o.remitted_at
+              ? `${formatDateShort(o.remitted_at)} ${formatTimeShort(o.remitted_at)}`
+              : o.remittance_submitted_at
+                ? `${formatDateShort(o.remittance_submitted_at)} ${formatTimeShort(o.remittance_submitted_at)}`
+                : 'Pending';
+
+            const note = String(o.slot_note || '');
+            const hasEarlyDepart = note.includes('[EARLY_DEPART');
+            const hasEarlyDeliv = note.includes('[EARLY_DELIVERY');
+            const hasLateDepart = note.includes('[LATE_DEPART');
+            const hasLateDeliv = note.includes('[LATE_DELIVERY');
+
+            let noteTags = '';
+            if (hasEarlyDepart)
+              noteTags +=
+                '<span class="pill pill-amber" style="font-size:10px;margin-left:4px;">Early Depart</span>';
+            if (hasEarlyDeliv)
+              noteTags +=
+                '<span class="pill pill-amber" style="font-size:10px;margin-left:4px;">Early Deliv</span>';
+            if (hasLateDepart)
+              noteTags +=
+                '<span class="pill pill-rose" style="font-size:10px;margin-left:4px;">Late Depart</span>';
+            if (hasLateDeliv)
+              noteTags +=
+                '<span class="pill pill-rose" style="font-size:10px;margin-left:4px;">Late Deliv</span>';
+
+            let statusLabel = '';
+            if (currentTab === 'settled') {
+              statusLabel = 'Reconciled &amp; Settled';
+            } else if (currentTab === 'submitted') {
+              statusLabel = 'Awaiting Cashier';
+            } else {
+              statusLabel = 'Cash in Hand';
+            }
+
+            return `
+              <tr style="border-bottom: 1px solid #f1f5f9; font-size: 13px;">
+                <td style="padding: 10px 8px; font-weight: 700; color: var(--blue-app);">
+                  #${escapeHtml(o.order_number)}
+                  ${noteTags}
+                </td>
+                <td style="padding: 10px 8px;">${escapeHtml(custName)}</td>
+                <td style="padding: 10px 8px; color: #64748b; font-size: 12px;">${escapeHtml(deliveredDate)}</td>
+                <td style="padding: 10px 8px; color: #64748b; font-size: 12px;">${escapeHtml(remittedDate)}</td>
+                <td style="padding: 10px 8px;">
+                  <span class="pill ${badgeClass}" style="font-size: 11px;">
+                    ${statusLabel}
+                  </span>
+                </td>
+                <td style="padding: 10px 8px; text-align: right; font-weight: 700; color: #15803d;">
+                  ${escapeHtml(formatPeso(o.total))}
+                </td>
+              </tr>
+            `;
+          })
+          .join('')
+      : `
+        <tr>
+          <td colspan="6" style="padding: 32px 16px; text-align: center; color: #94a3b8; font-size: 13px;">
+            ${escapeHtml(emptyMessage)}
+          </td>
+        </tr>
+      `;
+
+    backdrop.innerHTML = `
+      <div class="modal-card" role="dialog" aria-modal="true" style="max-width: 720px; width: 100%; border-radius: 12px; background: #ffffff; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; border: 1px solid #e2e8f0; display:flex; flex-direction:column; max-height: 90vh;">
+        <div style="padding: 18px 22px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between;">
+          <div>
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: #0284c7;">
+              Rider Financial Ledger &amp; Proof
+            </span>
+            <h3 style="margin: 2px 0 0 0; font-size: 18px; font-weight: 800; color: #0f172a;">
+              Sales &amp; Cash Remittance Record
+            </h3>
+            <p style="margin: 2px 0 0 0; font-size: 12.5px; color: #64748b;">
+              Official delivery turnover records for ${escapeHtml(riderName)}
+            </p>
+          </div>
+          <button type="button" class="modal-close" data-action="close" style="background: none; border: none; font-size: 24px; line-height: 1; cursor: pointer; color: #64748b; padding: 0 6px;">&times;</button>
+        </div>
+
+        <div style="padding: 16px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #ffffff; border-bottom: 1px solid #f1f5f9;">
+          <div style="padding: 12px 14px; border-radius: 8px; background: #eff6ff; border: 1px solid #dbeafe;">
+            <p style="margin:0; font-size:11px; font-weight:700; text-transform:uppercase; color:#1d4ed8;">Cash in Hand to Remit</p>
+            <p style="margin:3px 0 0; font-size:17px; font-weight:800; color:#1e40af;">${formatPeso(remittance?.unsubmittedCash || 0)}</p>
+            <p style="margin:1px 0 0; font-size:11px; color:#3b82f6;">${remittance?.unsubmittedCount || 0} ${remittance?.unsubmittedCount === 1 ? 'order' : 'orders'} in pocket</p>
+          </div>
+          <div style="padding: 12px 14px; border-radius: 8px; background: #fffbeb; border: 1px solid #fef3c7;">
+            <p style="margin:0; font-size:11px; font-weight:700; text-transform:uppercase; color:#b45309;">Awaiting Cashier Check</p>
+            <p style="margin:3px 0 0; font-size:17px; font-weight:800; color:#92400e;">${formatPeso(remittance?.submittedCash || 0)}</p>
+            <p style="margin:1px 0 0; font-size:11px; color:#d97706;">${remittance?.submittedCount || 0} ${remittance?.submittedCount === 1 ? 'order' : 'orders'} turned over</p>
+          </div>
+          <div style="padding: 12px 14px; border-radius: 8px; background: #f0fdf4; border: 1px solid #dcfce7;">
+            <p style="margin:0; font-size:11px; font-weight:700; text-transform:uppercase; color:#15803d;">Settled &amp; Reconciled</p>
+            <p style="margin:3px 0 0; font-size:17px; font-weight:800; color:#14532d;">${formatPeso(remittance?.settledCash || 0)}</p>
+            <p style="margin:1px 0 0; font-size:11px; color:#16a34a;">${remittance?.settledCount || 0} ${remittance?.settledCount === 1 ? 'order' : 'orders'} verified</p>
+          </div>
+        </div>
+
+        <div style="padding: 10px 22px 0; background: #ffffff;">
+          <div style="display: flex; gap: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; flex-wrap: wrap;">
+            <button type="button" class="btn btn-sm ${currentTab === 'settled' ? 'btn-primary' : 'btn-light'}" data-tab="settled" style="font-size: 12px;">
+              Reconciled Proof (${settledList.length})
+            </button>
+            <button type="button" class="btn btn-sm ${currentTab === 'submitted' ? 'btn-primary' : 'btn-light'}" data-tab="submitted" style="font-size: 12px;">
+              Awaiting Cashier (${submittedList.length})
+            </button>
+            <button type="button" class="btn btn-sm ${currentTab === 'unsubmitted' ? 'btn-primary' : 'btn-light'}" data-tab="unsubmitted" style="font-size: 12px;">
+              Cash in Hand (${unsubmittedList.length})
+            </button>
+          </div>
+        </div>
+
+        <div style="padding: 12px 22px 18px; overflow-y: auto; flex: 1;">
+          <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
+            <table style="width: 100%; border-collapse: collapse; text-align: left;">
+              <thead style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0;">
+                <tr>
+                  <th style="padding: 9px 8px;">Order #</th>
+                  <th style="padding: 9px 8px;">Customer</th>
+                  <th style="padding: 9px 8px;">Delivered</th>
+                  <th style="padding: 9px 8px;">Turned Over</th>
+                  <th style="padding: 9px 8px;">Status</th>
+                  <th style="padding: 9px 8px; text-align: right;">Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div style="padding: 12px 22px; background: #f8fafc; border-top: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+          <span style="font-size: 12px; color: #64748b;">
+            Total rider collection history: <strong>${formatPeso(remittance?.totalLifetimeSales || 0)}</strong>
+          </span>
+          <button type="button" class="btn btn-primary" data-action="close" style="font-size: 13px;">
+            Close Record
+          </button>
+        </div>
+      </div>
+    `;
+
+    backdrop.querySelectorAll('[data-action="close"]').forEach((b) => {
+      b.addEventListener('click', () => backdrop.remove());
+    });
+
+    backdrop.querySelectorAll('[data-tab]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentTab = btn.dataset.tab;
+        renderModalContent();
+      });
+    });
+  }
+
+  backdrop.addEventListener('click', (e) => {
+    if (e.target === backdrop) backdrop.remove();
+  });
+
+  renderModalContent();
+  document.body.appendChild(backdrop);
 }
 

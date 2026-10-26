@@ -20,6 +20,9 @@ import {
   getEffectiveSlot,
   getRiderRemittanceSummary,
   isOrderItemNewContainer,
+  openRiderRemittanceProofModal,
+  promptDeliveryTimingModal,
+  recordDeliveryTimingNote,
   riderRemitCash,
   riderSubmitRemittance,
   summarizeOrderItems,
@@ -304,8 +307,10 @@ export async function mount(initialMe) {
                   <span>Order #${escapeHtml(nextDelivery.order_number)} · ${escapeHtml(STATUS_LABELS[nextDelivery.status] || nextDelivery.status)}</span>
                   ${
                     timing.isEarly
-                      ? `<span class="pill pill-amber" style="background:#fef3c7;color:#92400e;font-weight:700;font-size:11px;">⚠️ Ahead of window (${escapeHtml(timing.slotWindow)})</span>`
-                      : ''
+                      ? `<span class="pill pill-amber" style="background:#fef3c7;color:#92400e;font-weight:700;font-size:11px;">Ahead of window (${escapeHtml(timing.slotWindow)})</span>`
+                      : timing.isLate
+                        ? `<span class="pill pill-rose" style="background:#fee2e2;color:#991b1b;font-weight:700;font-size:11px;">Past window (${escapeHtml(timing.slotWindow)})</span>`
+                        : ''
                   }
                 </div>
                 <h2 class="hero-status-title">
@@ -459,33 +464,41 @@ export async function mount(initialMe) {
         <div class="card" style="border-left: 4px solid #10b981; background: #f0fdf4; padding: 14px 18px; margin-bottom: 14px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 12px;">
-              <div style="width: 36px; height: 36px; border-radius: 9px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
                 ₱
               </div>
               <div>
                 <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #15803d;">
-                  Cash in Hand (Unremitted COD)
+                  Cash in Hand &amp; Shift Sales
                 </p>
-                <p style="margin: 2px 0 0 0; font-size: 16px; font-weight: 800; color: #14532d;">
-                  ${formatPeso(remittance.totalCash)}
-                  <span style="font-size: 12px; font-weight: 500; color: #166534; margin-left: 6px;">
-                    (${remittance.count} completed ${remittance.count === 1 ? 'order' : 'orders'})
+                <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 2px;">
+                  <span style="font-size: 18px; font-weight: 800; color: #14532d;">
+                    ${formatPeso(remittance.unsubmittedCash)}
+                    <span style="font-size: 12px; font-weight: 500; color: #166534;">in pocket (${remittance.unsubmittedCount} ${remittance.unsubmittedCount === 1 ? 'order' : 'orders'})</span>
                   </span>
-                </p>
+                  ${
+                    remittance.submittedCash > 0
+                      ? `<span style="font-size: 12px; font-weight: 600; color: #b45309; background: #fffbeb; padding: 2px 8px; border-radius: 4px; border: 1px solid #fef3c7;">${formatPeso(remittance.submittedCash)} awaiting cashier</span>`
+                      : ''
+                  }
+                  ${
+                    remittance.settledCash > 0
+                      ? `<span style="font-size: 12px; color: #166534; font-weight: 600;">· ${formatPeso(remittance.settledCash)} verified</span>`
+                      : ''
+                  }
+                </div>
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              ${
-                remittance.hasSubmitted
-                  ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Submitted (${formatPeso(remittance.submittedCash)}) · Awaiting Cashier</span>`
-                  : ''
-              }
+              <button type="button" class="btn btn-light btn-sm" id="btn-view-remittance-proof" style="font-weight: 600; font-size: 12px;">
+                Sales &amp; Proof Log
+              </button>
               ${
                 remittance.unsubmittedCount > 0
-                  ? `<button type="button" class="btn btn-primary btn-sm" id="btn-rider-remit" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">Turn over &amp; remit cash (${formatPeso(remittance.totalCash)}) →</button>`
-                  : remittance.totalCash === 0
-                    ? `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash remitted to station</span>`
-                    : ''
+                  ? `<button type="button" class="btn btn-primary btn-sm" id="btn-rider-remit" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">Turn over cash (${formatPeso(remittance.unsubmittedCash)}) &rarr;</button>`
+                  : remittance.submittedCount > 0
+                    ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Turnover Submitted · Awaiting Cashier</span>`
+                    : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash reconciled</span>`
               }
             </div>
           </div>
@@ -541,21 +554,47 @@ export async function mount(initialMe) {
         const btn = e.currentTarget;
         if (!unstartedOrders.length) return;
 
-        const earlyOrders = unstartedOrders.filter((o) => checkOrderDeliveryTiming(o).isEarly);
-        const earlyWarning = earlyOrders.length > 0
-          ? `\n\n⚠️ Notice: ${earlyOrders.length} of ${unstartedOrders.length} orders are scheduled for later delivery windows. Confirm departure ahead of schedule?`
-          : '';
+        const timingResults = unstartedOrders.map((o) => ({
+          order: o,
+          timing: checkOrderDeliveryTiming(o),
+        }));
+        const earlyOrLate = timingResults.filter((x) => x.timing.isEarly || x.timing.isLate);
 
-        const confirmed = await confirmModal({
-          title: 'Depart Station with Batch?',
-          message: `Start delivery for all ${unstartedOrders.length} assigned orders? They will all transition to "Out for delivery".${earlyWarning}`,
-          confirmText: 'Yes, depart station',
-          cancelText: 'Cancel',
-        });
-        if (!confirmed) return;
+        let batchTimingReason = null;
+        let referenceTiming = null;
+
+        if (earlyOrLate.length > 0) {
+          referenceTiming = earlyOrLate[0].timing;
+          const res = await promptDeliveryTimingModal({
+            actionType: 'batch_depart',
+            timing: referenceTiming,
+            order: earlyOrLate[0].order,
+            batchCount: earlyOrLate.length,
+          });
+          if (!res.confirmed) return;
+          batchTimingReason = res.reason;
+        } else {
+          const confirmed = await confirmModal({
+            title: 'Depart Station with Batch?',
+            message: `Start delivery for all ${unstartedOrders.length} assigned orders? They will all transition to "Out for delivery".`,
+            confirmText: 'Yes, depart station',
+            cancelText: 'Cancel',
+          });
+          if (!confirmed) return;
+        }
 
         setBusy(btn, true, 'Starting...');
         try {
+          if (batchTimingReason && referenceTiming) {
+            for (const item of earlyOrLate) {
+              await recordDeliveryTimingNote(
+                item.order.id,
+                'depart',
+                batchTimingReason,
+                item.timing
+              );
+            }
+          }
           const orderIds = unstartedOrders.map((o) => o.id);
           await riderStartBatchDelivery(orderIds);
           showToast(`Trip started! ${orderIds.length} orders are now Out for delivery.`, 'success');
@@ -588,6 +627,10 @@ export async function mount(initialMe) {
         openRiderRemittanceModal(remittance);
       });
 
+      content.querySelector('#btn-view-remittance-proof')?.addEventListener('click', () => {
+        openRiderRemittanceProofModal(remittance, me);
+      });
+
       content.querySelector('#hero-shift-toggle-btn')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
         btn.disabled = true;
@@ -599,20 +642,26 @@ export async function mount(initialMe) {
         const btn = e.currentTarget;
         const orderId = btn.dataset.orderId;
         const targetOrder = allDeliveries.find((o) => o.id === orderId);
+        let timingReason = null;
+        let timing = null;
+
         if (targetOrder) {
-          const timing = checkOrderDeliveryTiming(targetOrder);
-          if (timing.isEarly) {
-            const confirmed = await confirmModal({
-              title: 'Start delivery ahead of schedule?',
-              message: `${timing.warningText} The customer requested delivery during ${timing.slotWindow}. Are you sure you want to depart and deliver early?`,
-              confirmText: 'Yes, start early',
-              cancelText: 'Wait for window',
+          timing = checkOrderDeliveryTiming(targetOrder);
+          if (timing.isEarly || timing.isLate) {
+            const res = await promptDeliveryTimingModal({
+              actionType: 'depart',
+              timing,
+              order: targetOrder,
             });
-            if (!confirmed) return;
+            if (!res.confirmed) return;
+            timingReason = res.reason;
           }
         }
         setBusy(btn, true, 'Starting...');
         try {
+          if (timingReason && timing) {
+            await recordDeliveryTimingNote(orderId, 'depart', timingReason, timing);
+          }
           await riderStartDelivery(orderId);
           showToast('Delivery started! Status is now Out for delivery.', 'success');
           navigateRiderSpa(`delivery-details.html?id=${encodeURIComponent(orderId)}`);
@@ -630,7 +679,10 @@ export async function mount(initialMe) {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
 
-    const ordersRows = (remittance.unremittedOrders || [])
+    const ordersToRemit = remittance.unsubmittedOrders || remittance.unremittedOrders || [];
+    const cashToRemit = remittance.unsubmittedCash || remittance.totalCash || 0;
+
+    const ordersRows = ordersToRemit
       .map((o) => {
         const custName = o.customer?.full_name || 'Customer';
         const orderDate = formatDateShort(o.delivered_at || o.paid_at || new Date());
@@ -658,9 +710,9 @@ export async function mount(initialMe) {
           <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <p style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.5px;">Total Cash to Turn Over</p>
-              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 800; color: #14532d;">${formatPeso(remittance.totalCash)}</p>
+              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 800; color: #14532d;">${formatPeso(cashToRemit)}</p>
             </div>
-            <span class="pill pill-green" style="font-weight: 700; font-size: 12px; padding: 6px 14px;">${remittance.count} ${remittance.count === 1 ? 'Order' : 'Orders'}</span>
+            <span class="pill pill-green" style="font-weight: 700; font-size: 12px; padding: 6px 14px;">${ordersToRemit.length} ${ordersToRemit.length === 1 ? 'Order' : 'Orders'}</span>
           </div>
 
           <div>
@@ -689,7 +741,7 @@ export async function mount(initialMe) {
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
           <button type="button" class="btn btn-light" data-action="cancel">Cancel</button>
           <button type="button" class="btn btn-primary" id="btn-confirm-remit-modal" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
-            Submit Cash Remittance (${formatPeso(remittance.totalCash)})
+            Submit Cash Remittance (${formatPeso(cashToRemit)})
           </button>
         </div>
       </div>
@@ -710,7 +762,7 @@ export async function mount(initialMe) {
       setBusy(btn, true, 'Submitting remittance...');
       try {
         await riderSubmitRemittance(me.id);
-        showToast(`Cash remittance of ${formatPeso(remittance.totalCash)} submitted to station! Cashier can now approve.`, 'success');
+        showToast(`Cash remittance of ${formatPeso(cashToRemit)} submitted to station! Cashier can now approve.`, 'success');
         close();
         await loadAndRender();
       } catch (err) {

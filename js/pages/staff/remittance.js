@@ -178,9 +178,31 @@ export async function mount(me) {
               o.remittance_status === 'submitted' ||
               note.includes('[REMITTANCE_SUBMITTED]');
 
+            const earlyDepartMatch = note.match(/\[EARLY_DEPART:\s*([^\]]+)\]/i);
+            const lateDepartMatch = note.match(/\[LATE_DEPART:\s*([^\]]+)\]/i);
+            const earlyDeliveryMatch = note.match(/\[EARLY_DELIVERY:\s*([^\]]+)\]/i);
+            const lateDeliveryMatch = note.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
+
+            let timingBadgesHtml = '';
+            if (earlyDepartMatch) {
+              timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart: ${escapeHtml(earlyDepartMatch[1])}</div>`;
+            }
+            if (lateDepartMatch) {
+              timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart: ${escapeHtml(lateDepartMatch[1])}</div>`;
+            }
+            if (earlyDeliveryMatch) {
+              timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv: ${escapeHtml(earlyDeliveryMatch[1])}</div>`;
+            }
+            if (lateDeliveryMatch) {
+              timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv: ${escapeHtml(lateDeliveryMatch[1])}</div>`;
+            }
+
             return `
               <tr style="border-bottom: 1px solid #f1f5f9; font-size: 13px;">
-                <td style="padding: 8px 6px; font-weight: 700; color: var(--blue-app);">#${escapeHtml(o.order_number)}</td>
+                <td style="padding: 8px 6px; font-weight: 700; color: var(--blue-app);">
+                  #${escapeHtml(o.order_number)}
+                  ${timingBadgesHtml}
+                </td>
                 <td style="padding: 8px 6px;">${escapeHtml(cust)}</td>
                 <td style="padding: 8px 6px; color: #64748b;">${escapeHtml(orderDate)}</td>
                 <td style="padding: 8px 6px;">
@@ -316,9 +338,32 @@ export async function mount(me) {
             ? formatTimeShort(o.delivered_at)
             : '';
 
+        const note = String(o.slot_note || '');
+        const earlyDepartMatch = note.match(/\[EARLY_DEPART:\s*([^\]]+)\]/i);
+        const lateDepartMatch = note.match(/\[LATE_DEPART:\s*([^\]]+)\]/i);
+        const earlyDeliveryMatch = note.match(/\[EARLY_DELIVERY:\s*([^\]]+)\]/i);
+        const lateDeliveryMatch = note.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
+
+        let timingBadgesHtml = '';
+        if (earlyDepartMatch) {
+          timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart: ${escapeHtml(earlyDepartMatch[1])}</div>`;
+        }
+        if (lateDepartMatch) {
+          timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart: ${escapeHtml(lateDepartMatch[1])}</div>`;
+        }
+        if (earlyDeliveryMatch) {
+          timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv: ${escapeHtml(earlyDeliveryMatch[1])}</div>`;
+        }
+        if (lateDeliveryMatch) {
+          timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv: ${escapeHtml(lateDeliveryMatch[1])}</div>`;
+        }
+
         return `
           <tr style="font-size: 13px;">
-            <td style="font-weight: 700; color: var(--blue-app);">#${escapeHtml(orderNum)}</td>
+            <td style="font-weight: 700; color: var(--blue-app);">
+              #${escapeHtml(orderNum)}
+              ${timingBadgesHtml}
+            </td>
             <td style="font-weight: 600;">${escapeHtml(riderName)}</td>
             <td>${escapeHtml(custName)}</td>
             <td style="color: #64748b;">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</td>

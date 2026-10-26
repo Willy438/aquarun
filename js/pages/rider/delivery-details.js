@@ -11,11 +11,14 @@ import {
   showToast,
 } from '../../core/ui.js';
 import {
+  checkOrderDeliveryTiming,
   formatAddressFull,
   formatSlotWindow,
   getEffectiveSlot,
   getOrderItemPricingTag,
   isSlotAdjusted,
+  promptDeliveryTimingModal,
+  recordDeliveryTimingNote,
 } from '../../services/ordersService.js';
 import {
   getRiderCurrentOrder,
@@ -253,8 +256,24 @@ export async function mount(me) {
 
       document.querySelector('#start-delivery-btn')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
+        const timing = checkOrderDeliveryTiming(order);
+        let timingReason = null;
+
+        if (timing.isEarly || timing.isLate) {
+          const res = await promptDeliveryTimingModal({
+            actionType: 'depart',
+            timing,
+            order,
+          });
+          if (!res.confirmed) return;
+          timingReason = res.reason;
+        }
+
         setBusy(btn, true, 'Starting delivery...');
         try {
+          if (timingReason) {
+            await recordDeliveryTimingNote(order.id, 'depart', timingReason, timing);
+          }
           await riderStartDelivery(order.id);
           showToast('Status updated to Out for delivery!', 'success');
           await renderNav(me, 'delivery-details');
