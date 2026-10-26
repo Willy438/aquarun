@@ -11,7 +11,7 @@ export async function getCustomerAddresses(customerId) {
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: true });
 
-    if (error && /latitude/i.test(error.message || '')) {
+    if (error && (/latitude|longitude|column|schema cache/i.test(error.message || '') || error.code === 'PGRST204')) {
       ({ data, error } = await supabase
         .from('addresses')
         .select('id, customer_id, label, street, barangay, city, landmark, is_default, created_at')
@@ -96,7 +96,7 @@ export async function saveCustomerAddress(
       .select()
       .single();
 
-    if (error && /latitude/i.test(error.message || '')) {
+    if (error && (/latitude|longitude|column|schema cache/i.test(error.message || '') || error.code === 'PGRST204')) {
       delete payload.latitude;
       delete payload.longitude;
       ({ data, error } = await supabase
@@ -130,7 +130,7 @@ export async function saveCustomerAddress(
     .select()
     .single();
 
-  if (error && /latitude/i.test(error.message || '')) {
+  if (error && (/latitude|longitude|column|schema cache/i.test(error.message || '') || error.code === 'PGRST204')) {
     delete payload.latitude;
     delete payload.longitude;
     ({ data, error } = await supabase

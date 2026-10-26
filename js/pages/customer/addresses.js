@@ -4,6 +4,7 @@ import {
   deleteCustomerAddress,
   getCustomerAddresses,
   saveCustomerAddress,
+  setDefaultCustomerAddress,
 } from '../../services/addressesService.js';
 import { formatAddressFull } from '../../services/ordersService.js';
 import { calculateDistanceKm, getStationLocationSettings } from '../../services/settingsService.js';
@@ -20,6 +21,7 @@ const ICONS = {
   expand: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`,
   collapse: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/></svg>`,
   store: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
+  x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
 };
 
 function getAddressIcon(label = '') {
@@ -55,6 +57,7 @@ export async function mount(me) {
   const content = document.querySelector('#content');
   let addresses = [];
   let editingId = null;
+  let isFormOpen = window.location.hash === '#add' || window.location.hash === '#new';
   let chosenLat = null;
   let chosenLng = null;
   let miniMap = null;
@@ -84,8 +87,13 @@ export async function mount(me) {
   function renderPage() {
     cleanupMap();
     const editingAddr = editingId ? addresses.find((a) => a.id === editingId) : null;
-    chosenLat = editingAddr?.latitude ? Number(editingAddr.latitude) : null;
-    chosenLng = editingAddr?.longitude ? Number(editingAddr.longitude) : null;
+    if (editingAddr) {
+      chosenLat = editingAddr?.latitude ? Number(editingAddr.latitude) : null;
+      chosenLng = editingAddr?.longitude ? Number(editingAddr.longitude) : null;
+    } else if (!isFormOpen) {
+      chosenLat = null;
+      chosenLng = null;
+    }
 
     const listHtml = addresses.length
       ? `<div class="address-list">
@@ -135,6 +143,13 @@ export async function mount(me) {
                     <button type="button" class="btn btn-outline-blue btn-sm" data-edit-id="${escapeHtml(addr.id)}">
                       ${isSelected ? 'Editing...' : 'Edit'}
                     </button>
+                    ${
+                      !addr.is_default
+                        ? `<button type="button" class="btn btn-light btn-sm" data-default-id="${escapeHtml(addr.id)}">
+                            Set default
+                          </button>`
+                        : ''
+                    }
                     <button type="button" class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(addr.id)}">
                       Delete
                     </button>
@@ -144,56 +159,22 @@ export async function mount(me) {
             })
             .join('')}
         </div>`
-      : `<div class="empty-state" style="padding: 18px 12px;">
-          <p style="font-size: 13px;">No saved addresses yet.</p>
-          <p class="text-muted" style="font-size: 12px; margin-top: 2px;">Add your delivery address using the form.</p>
+      : `<div class="empty-state" style="padding: 24px 14px; text-align: center;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+            ${ICONS.pin}
+          </div>
+          <p style="font-size: 13.5px; font-weight: 700; color: #1e293b; margin: 0;">No saved addresses yet</p>
+          <p class="text-muted" style="font-size: 12px; margin: 4px 0 12px;">Add your house location to confirm delivery coverage.</p>
+          <button type="button" class="btn btn-primary btn-sm" id="empty-add-addr-btn">
+            ${ICONS.plus} <span>Add delivery address</span>
+          </button>
         </div>`;
 
-    content.innerHTML = `
-      <div class="addresses-layout">
-        <!-- Left Column: Saved Addresses & Station Info -->
-        <div class="addresses-sidebar">
-          <div class="card">
-            <div class="card-header" style="padding-bottom: 12px;">
-              <div class="addresses-header-actions">
-                <div class="card-title-group">
-                  <span class="card-icon">${ICONS.bookmark}</span>
-                  <h2 class="card-title" style="font-size: 15px;">Saved addresses (${addresses.length})</h2>
-                </div>
-                ${
-                  editingAddr
-                    ? `<button type="button" class="btn btn-sm btn-outline-blue" id="add-new-addr-btn" style="font-size: 11.5px; padding: 3px 8px;">+ Add new</button>`
-                    : ''
-                }
-              </div>
-            </div>
-            ${listHtml}
-          </div>
+    // Right Column content: Form (when adding/editing) OR Welcome Card (when browsing)
+    const shouldShowForm = isFormOpen || Boolean(editingAddr);
 
-          <!-- Station Delivery Zone Reference Card -->
-          <div class="sidebar-coverage-card">
-            <div class="sidebar-coverage-title">
-              ${ICONS.store}
-              <span>Station Delivery Info</span>
-            </div>
-            <div class="sidebar-coverage-row">
-              <span>Hub:</span>
-              <strong style="max-width: 170px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(stationSettings.address || 'Station')}">
-                ${escapeHtml(stationSettings.address || 'Caloocan Station')}
-              </strong>
-            </div>
-            <div class="sidebar-coverage-row">
-              <span>Delivery Radius:</span>
-              <strong>${stationSettings.radiusKm} km zone</strong>
-            </div>
-            <div class="sidebar-coverage-row">
-              <span>Payment Mode:</span>
-              <strong>Cash on Delivery (COD)</strong>
-            </div>
-          </div>
-        </div>
-
-        <!-- Right Column: Add / Edit Address Form & Map -->
+    const rightColumnHtml = shouldShowForm
+      ? `
         <div class="card addresses-main">
           <div class="card-header" style="padding-bottom: 12px;">
             <div class="card-title-group">
@@ -202,11 +183,9 @@ export async function mount(me) {
                 ${editingAddr ? `Edit: ${escapeHtml(editingAddr.label)}` : 'Add delivery address'}
               </h2>
             </div>
-            ${
-              editingAddr
-                ? `<button type="button" class="btn btn-link btn-sm" id="cancel-edit-btn" style="font-size: 12px;">Cancel</button>`
-                : ''
-            }
+            <button type="button" class="btn btn-light btn-sm" id="close-form-btn" style="font-size: 12px; gap: 4px;">
+              ${ICONS.x} <span>Close</span>
+            </button>
           </div>
 
           <form class="form-stack" id="address-form" novalidate>
@@ -218,7 +197,7 @@ export async function mount(me) {
               </div>
               <div class="field">
                 <label class="field-label" for="addr-landmark">Landmark (optional)</label>
-                <input class="input" id="addr-landmark" name="landmark" type="text" placeholder="Nearby landmark" value="${escapeHtml(editingAddr?.landmark || '')}">
+                <input class="input" id="addr-landmark" name="landmark" type="text" placeholder="Nearby landmark, gate, corner" value="${escapeHtml(editingAddr?.landmark || '')}">
               </div>
             </div>
 
@@ -273,7 +252,7 @@ export async function mount(me) {
               <!-- Zone Status Banner -->
               <div class="zone-status-box is-idle" id="zone-status-box">
                 ${ICONS.info}
-                <div id="zone-status-text">
+                <div>
                   Tap on the map or drag the pin to your house. Station delivery zone is <strong>${stationSettings.radiusKm} km</strong>.
                 </div>
               </div>
@@ -284,282 +263,449 @@ export async function mount(me) {
               <span style="font-size: 13px;">Set as default delivery address</span>
             </label>
 
-            <button type="submit" class="btn btn-primary btn-block" id="save-address-btn" style="margin-top: 8px; padding: 10px;">
-              ${editingAddr ? 'Update address' : 'Save address'}
-            </button>
+            <div style="display: flex; gap: 8px; margin-top: 8px;">
+              <button type="button" class="btn btn-light" id="cancel-form-btn" style="flex: 1; padding: 10px;">
+                Cancel
+              </button>
+              <button type="submit" class="btn btn-primary" id="save-address-btn" style="flex: 2; padding: 10px;">
+                ${editingAddr ? 'Update address' : 'Save address'}
+              </button>
+            </div>
           </form>
         </div>
+      `
+      : `
+        <div class="card addresses-main addresses-placeholder-card">
+          <div class="addr-welcome-header">
+            <div class="addr-welcome-badge">
+              ${ICONS.pin}
+              <span>Caloocan Station Delivery Hub</span>
+            </div>
+            <h2 class="addr-welcome-title">Need water delivered?</h2>
+            <p class="addr-welcome-desc">
+              Add a delivery address to pinpoint your house on our interactive map and verify delivery coverage from our station.
+            </p>
+          </div>
+
+          <div class="addr-feature-grid">
+            <div class="addr-feature-item">
+              <div class="addr-feature-icon">${ICONS.pin}</div>
+              <div class="addr-feature-text">
+                <strong>Pinpoint House on Map</strong>
+                <span>Drop a precise pin right at your doorstep for fast, accurate rider delivery.</span>
+              </div>
+            </div>
+            <div class="addr-feature-item">
+              <div class="addr-feature-icon">${ICONS.check}</div>
+              <div class="addr-feature-text">
+                <strong>Instant Zone Verification</strong>
+                <span>Real-time coverage scan confirms if you are within our ${stationSettings.radiusKm} km delivery radius.</span>
+              </div>
+            </div>
+            <div class="addr-feature-item">
+              <div class="addr-feature-icon">${ICONS.home}</div>
+              <div class="addr-feature-text">
+                <strong>Saved Addresses</strong>
+                <span>Save Home, Office, or Apartment for seamless 1-click checkout.</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="addr-welcome-cta">
+            <button type="button" class="btn btn-primary btn-lg" id="trigger-add-addr-btn" style="padding: 10px 24px; font-weight: 700;">
+              ${ICONS.plus} <span>Add delivery address</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+    content.innerHTML = `
+      <div class="addresses-layout">
+        <!-- Left Column: Saved Addresses & Station Info -->
+        <div class="addresses-sidebar">
+          <div class="card">
+            <div class="card-header" style="padding-bottom: 12px;">
+              <div class="addresses-header-actions">
+                <div class="card-title-group">
+                  <span class="card-icon">${ICONS.bookmark}</span>
+                  <h2 class="card-title" style="font-size: 15px;">Saved addresses (${addresses.length})</h2>
+                </div>
+                <button type="button" class="btn btn-sm btn-primary" id="add-new-addr-btn" style="font-size: 12px; padding: 4px 10px;">
+                  ${ICONS.plus} <span>Add address</span>
+                </button>
+              </div>
+            </div>
+            ${listHtml}
+          </div>
+
+          <!-- Station Delivery Zone Reference Card -->
+          <div class="sidebar-coverage-card">
+            <div class="sidebar-coverage-title">
+              ${ICONS.store}
+              <span>Station Delivery Info</span>
+            </div>
+            <div class="sidebar-coverage-row">
+              <span>Hub:</span>
+              <strong style="max-width: 170px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(stationSettings.address || 'Station')}">
+                ${escapeHtml(stationSettings.address || 'Caloocan Station')}
+              </strong>
+            </div>
+            <div class="sidebar-coverage-row">
+              <span>Delivery Radius:</span>
+              <strong>${stationSettings.radiusKm} km zone</strong>
+            </div>
+            <div class="sidebar-coverage-row">
+              <span>Payment Mode:</span>
+              <strong>Cash on Delivery (COD)</strong>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Add / Edit Address Form & Map OR Guide Card -->
+        ${rightColumnHtml}
       </div>
     `;
 
-    // Initialize Map with station hub, delivery radius circle, and draggable customer marker
-    setTimeout(() => {
-      const mapEl = document.querySelector('#addr-pin-map');
-      if (!mapEl || typeof L === 'undefined') return;
-
-      const stLat = stationSettings.lat || 14.7565;
-      const stLng = stationSettings.lng || 121.0437;
-      const radiusKm = stationSettings.radiusKm || 3.5;
-
-      const initialCenterLat = chosenLat || stLat;
-      const initialCenterLng = chosenLng || stLng;
-
-      miniMap = L.map('addr-pin-map', {
-        zoomControl: true,
-        scrollWheelZoom: true,
-      }).setView([initialCenterLat, initialCenterLng], chosenLat ? 16 : 14);
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '© OpenStreetMap contributors',
-      }).addTo(miniMap);
-
-      // Station Hub Marker with compact bubble
-      const stationIcon = L.divIcon({
-        className: 'station-hub-leaflet-icon',
-        html: `<div class="station-hub-bubble" title="AquaRun Water Station">
-          <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
-          <span>Station</span>
-        </div>`,
-        iconSize: [64, 24],
-        iconAnchor: [32, 24],
-      });
-
-      const stationMarker = L.marker([stLat, stLng], {
-        icon: stationIcon,
-        zIndexOffset: 50,
-      }).addTo(miniMap);
-      stationMarker.bindPopup(
-        `<strong>AquaRun Station</strong><br>${escapeHtml(stationSettings.address || 'Station Hub')}<br><small>Radius: ${radiusKm} km</small>`
-      );
-
-      // Station Delivery Radius Circle
-      const deliveryCircle = L.circle([stLat, stLng], {
-        radius: radiusKm * 1000,
-        color: '#2563eb',
-        fillColor: '#3b82f6',
-        fillOpacity: 0.12,
-        weight: 2,
-        dashArray: '5, 5',
-      }).addTo(miniMap);
-
-      let customerMarker = null;
-      if (chosenLat && chosenLng) {
-        customerMarker = L.marker([chosenLat, chosenLng], {
-          draggable: true,
-          zIndexOffset: 100,
-        }).addTo(miniMap);
-        customerMarker.bindPopup('<strong>Your House</strong><br>Drag to adjust').openPopup();
-        updateZoneUI(chosenLat, chosenLng);
-      } else {
-        miniMap.fitBounds(deliveryCircle.getBounds(), { padding: [15, 15] });
-      }
-
+    // Initialize Map only when form container is in the DOM
+    if (shouldShowForm) {
       setTimeout(() => {
-        if (miniMap) miniMap.invalidateSize();
-      }, 150);
+        const mapEl = document.querySelector('#addr-pin-map');
+        if (!mapEl || typeof L === 'undefined') return;
 
-      function updateZoneUI(lat, lng) {
-        const statusBox = document.querySelector('#zone-status-box');
-        const statusText = document.querySelector('#zone-status-text');
-        if (!statusBox || !statusText) return;
+        const stLat = stationSettings.lat || 14.7565;
+        const stLng = stationSettings.lng || 121.0437;
+        const radiusKm = stationSettings.radiusKm || 3.5;
 
-        const dist = calculateDistanceKm(stLat, stLng, lat, lng);
-        if (dist === null) return;
+        const initialCenterLat = chosenLat || stLat;
+        const initialCenterLng = chosenLng || stLng;
 
-        const isOk = dist <= radiusKm;
-        statusBox.className = `zone-status-box ${isOk ? 'is-inside' : 'is-outside'}`;
-        if (isOk) {
-          statusBox.innerHTML = `
-            ${ICONS.check}
-            <div>
-              <strong>✓ Inside delivery zone (${dist} km from station)</strong> · Delivery available
-            </div>
-          `;
-        } else {
-          statusBox.innerHTML = `
-            ${ICONS.alert}
-            <div>
-              <strong>⚠️ Outside delivery radius (${dist} km from station)</strong> · Station max is ${radiusKm} km
-            </div>
-          `;
+        miniMap = L.map('addr-pin-map', {
+          zoomControl: true,
+          scrollWheelZoom: true,
+          closePopupOnClick: false,
+        }).setView([initialCenterLat, initialCenterLng], chosenLat ? 16 : 14);
+
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+          maxZoom: 19,
+          attribution: '© OpenStreetMap contributors',
+        }).addTo(miniMap);
+
+        // Station Hub Marker with compact bubble (interactive: false so clicks pass through to map)
+        const stationIcon = L.divIcon({
+          className: 'station-hub-leaflet-icon',
+          html: `<div class="station-hub-bubble" title="AquaRun Water Station">
+            <svg viewBox="0 0 24 24"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+            <span>Station</span>
+          </div>`,
+          iconSize: [64, 24],
+          iconAnchor: [32, 24],
+        });
+
+        const stationMarker = L.marker([stLat, stLng], {
+          icon: stationIcon,
+          zIndexOffset: 50,
+          interactive: false,
+        }).addTo(miniMap);
+
+        // Station Delivery Radius Circle (interactive: false so clicks pass through anywhere!)
+        const deliveryCircle = L.circle([stLat, stLng], {
+          radius: radiusKm * 1000,
+          color: '#2563eb',
+          fillColor: '#3b82f6',
+          fillOpacity: 0.12,
+          weight: 2,
+          dashArray: '5, 5',
+          interactive: false,
+        }).addTo(miniMap);
+
+        let customerMarker = null;
+
+        function updateZoneUI(lat, lng, showToastNotice = false) {
+          const statusBox = document.querySelector('#zone-status-box');
+          if (!statusBox) return;
+
+          const dist = calculateDistanceKm(stLat, stLng, lat, lng);
+          if (dist === null) return;
+
+          const isOk = dist <= radiusKm;
+          statusBox.className = `zone-status-box ${isOk ? 'is-inside' : 'is-outside'}`;
+
+          if (isOk) {
+            statusBox.innerHTML = `
+              ${ICONS.check}
+              <div>
+                <strong>✓ Inside delivery zone (${dist} km from station)</strong>
+                <span class="zone-subtext">Delivery is available to this address.</span>
+              </div>
+            `;
+            if (showToastNotice) {
+              showToast(`✓ Inside delivery zone (${dist} km from station). Delivery available!`, 'success');
+            }
+          } else {
+            statusBox.innerHTML = `
+              ${ICONS.alert}
+              <div>
+                <strong>⚠️ Outside delivery radius (${dist} km from station)</strong>
+                <span class="zone-subtext">Our station delivers up to ${radiusKm} km. Delivery is NOT available to this location.</span>
+              </div>
+            `;
+            if (showToastNotice) {
+              showToast(`⚠️ Outside delivery zone (${dist} km away — station max is ${radiusKm} km).`, 'warning');
+            }
+          }
+
+          // Use non-blocking tooltip so clicks are NEVER swallowed by Leaflet popups!
+          if (customerMarker) {
+            try {
+              customerMarker.unbindPopup();
+              customerMarker.unbindTooltip();
+              customerMarker.bindTooltip(
+                isOk ? `✓ Within zone (${dist} km)` : `⚠️ Outside zone (${dist} km)`,
+                {
+                  permanent: true,
+                  direction: 'top',
+                  offset: [0, -14],
+                  className: `map-zone-tip ${isOk ? 'is-inside' : 'is-outside'}`,
+                  interactive: false,
+                }
+              );
+            } catch {}
+          }
+
+          // Update save button state
+          const saveBtn = document.querySelector('#save-address-btn');
+          if (saveBtn) {
+            if (isOk) {
+              saveBtn.classList.remove('btn-outside-zone');
+              saveBtn.disabled = false;
+              saveBtn.innerHTML = editingAddr ? 'Update address' : 'Save address';
+            } else {
+              saveBtn.classList.add('btn-outside-zone');
+              saveBtn.disabled = true;
+              saveBtn.innerHTML = `⚠️ Outside delivery zone (${dist} km · Max ${radiusKm} km)`;
+            }
+          }
         }
-      }
 
-      async function onLocationSelected(lat, lng, shouldReverseGeocode = true) {
-        chosenLat = Number(Number(lat).toFixed(6));
-        chosenLng = Number(Number(lng).toFixed(6));
+        async function onLocationSelected(lat, lng, shouldReverseGeocode = true) {
+          chosenLat = Number(Number(lat).toFixed(6));
+          chosenLng = Number(Number(lng).toFixed(6));
 
-        if (!customerMarker) {
+          if (!customerMarker) {
+            customerMarker = L.marker([chosenLat, chosenLng], {
+              draggable: true,
+              zIndexOffset: 100,
+            }).addTo(miniMap);
+            customerMarker.on('click', (e) => {
+              if (e && e.originalEvent) e.originalEvent.stopPropagation();
+              onLocationSelected(chosenLat, chosenLng, true);
+            });
+            customerMarker.on('dragend', () => {
+              const pos = customerMarker.getLatLng();
+              onLocationSelected(pos.lat, pos.lng, true);
+            });
+          } else {
+            customerMarker.setLatLng([chosenLat, chosenLng]);
+          }
+
+          updateZoneUI(chosenLat, chosenLng, true);
+
+          if (shouldReverseGeocode) {
+            try {
+              const resp = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${chosenLat}&lon=${chosenLng}`
+              );
+              const data = await resp.json();
+              if (data && data.address) {
+                const streetInput = document.querySelector('#addr-street');
+                const brgyInput = document.querySelector('#addr-barangay');
+                const cityInput = document.querySelector('#addr-city');
+
+                if (streetInput && !streetInput.value && data.address.road) {
+                  streetInput.value = data.address.road;
+                }
+                if (brgyInput && !brgyInput.value) {
+                  brgyInput.value =
+                    data.address.suburb ||
+                    data.address.quarter ||
+                    data.address.neighbourhood ||
+                    data.address.village ||
+                    '';
+                }
+                if (cityInput && !cityInput.value) {
+                  cityInput.value = data.address.city || data.address.town || 'Caloocan';
+                }
+              }
+            } catch {}
+          }
+        }
+
+        if (chosenLat && chosenLng) {
           customerMarker = L.marker([chosenLat, chosenLng], {
             draggable: true,
             zIndexOffset: 100,
           }).addTo(miniMap);
-          customerMarker.bindPopup('<strong>Your House</strong><br>Drag to adjust');
+          customerMarker.on('click', (e) => {
+            if (e && e.originalEvent) e.originalEvent.stopPropagation();
+            onLocationSelected(chosenLat, chosenLng, true);
+          });
           customerMarker.on('dragend', () => {
             const pos = customerMarker.getLatLng();
             onLocationSelected(pos.lat, pos.lng, true);
           });
+          updateZoneUI(chosenLat, chosenLng, false);
         } else {
-          customerMarker.setLatLng([chosenLat, chosenLng]);
+          miniMap.fitBounds(deliveryCircle.getBounds(), { padding: [15, 15] });
         }
 
-        updateZoneUI(chosenLat, chosenLng);
-
-        if (shouldReverseGeocode) {
-          try {
-            const resp = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${chosenLat}&lon=${chosenLng}`
-            );
-            const data = await resp.json();
-            if (data && data.address) {
-              const streetInput = document.querySelector('#addr-street');
-              const brgyInput = document.querySelector('#addr-barangay');
-              const cityInput = document.querySelector('#addr-city');
-
-              if (streetInput && !streetInput.value && data.address.road) {
-                streetInput.value = data.address.road;
-              }
-              if (brgyInput && !brgyInput.value) {
-                brgyInput.value =
-                  data.address.suburb ||
-                  data.address.quarter ||
-                  data.address.neighbourhood ||
-                  data.address.village ||
-                  '';
-              }
-              if (cityInput && !cityInput.value) {
-                cityInput.value = data.address.city || data.address.town || 'Caloocan';
-              }
-            }
-          } catch {}
-        }
-      }
-
-      miniMap.on('click', (e) => {
-        onLocationSelected(e.latlng.lat, e.latlng.lng, true);
-      });
-
-      if (customerMarker) {
-        customerMarker.on('dragend', () => {
-          const pos = customerMarker.getLatLng();
-          onLocationSelected(pos.lat, pos.lng, true);
-        });
-      }
-
-      // Map Search Handler
-      async function handleMapSearch() {
-        const queryInput = document.querySelector('#map-search-input');
-        const searchBtn = document.querySelector('#map-search-btn');
-        const q = queryInput?.value.trim();
-        if (!q) return;
-
-        setBusy(searchBtn, true, 'Finding...');
-        try {
-          const resp = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-              q + ', Philippines'
-            )}&limit=1`
-          );
-          const results = await resp.json();
-          if (results && results.length > 0) {
-            const targetLat = parseFloat(results[0].lat);
-            const targetLng = parseFloat(results[0].lon);
-            miniMap.setView([targetLat, targetLng], 16);
-            await onLocationSelected(targetLat, targetLng, false);
-            showToast('Location pinned on map!', 'success');
-          } else {
-            showToast('Place not found. Try searching a specific street.', 'error');
-          }
-        } catch {
-          showToast('Search failed. Please try again.', 'error');
-        } finally {
-          setBusy(searchBtn, false);
-        }
-      }
-
-      document.querySelector('#map-search-btn')?.addEventListener('click', handleMapSearch);
-      document.querySelector('#map-search-input')?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          handleMapSearch();
-        }
-      });
-
-      // Locate Me (GPS) Handler
-      document.querySelector('#locate-me-btn')?.addEventListener('click', () => {
-        if (!navigator.geolocation) {
-          showToast('Geolocation is not supported by your browser.', 'error');
-          return;
-        }
-        const btn = document.querySelector('#locate-me-btn');
-        setBusy(btn, true, 'Locating...');
-        navigator.geolocation.getCurrentPosition(
-          async (pos) => {
-            setBusy(btn, false);
-            const userLat = pos.coords.latitude;
-            const userLng = pos.coords.longitude;
-            miniMap.setView([userLat, userLng], 16);
-            await onLocationSelected(userLat, userLng, true);
-            showToast('Location pinned via GPS!', 'success');
-          },
-          () => {
-            setBusy(btn, false);
-            showToast('Could not retrieve GPS location.', 'error');
-          },
-          { enableHighAccuracy: true, timeout: 8000 }
-        );
-      });
-
-      // Fullscreen / Expanded View Map Handler
-      const mapBox = document.querySelector('#addr-map-box');
-      const expandBtn = document.querySelector('#expand-map-btn');
-      const expandText = document.querySelector('#expand-btn-text');
-
-      function toggleMapExpand() {
-        isMapExpanded = !isMapExpanded;
-        if (isMapExpanded) {
-          mapBox.classList.add('is-expanded');
-          if (expandText) expandText.textContent = 'Close';
-          expandBtn.innerHTML = `${ICONS.collapse} <span id="expand-btn-text">Close</span>`;
-        } else {
-          mapBox.classList.remove('is-expanded');
-          if (expandText) expandText.textContent = 'Fullscreen';
-          expandBtn.innerHTML = `${ICONS.expand} <span id="expand-btn-text">Fullscreen</span>`;
-        }
         setTimeout(() => {
           if (miniMap) miniMap.invalidateSize();
         }, 150);
-      }
 
-      expandBtn?.addEventListener('click', toggleMapExpand);
+        miniMap.on('click', (e) => {
+          onLocationSelected(e.latlng.lat, e.latlng.lng, true);
+        });
 
-      window.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && isMapExpanded) {
-          toggleMapExpand();
+        // Map Search Handler
+        async function handleMapSearch() {
+          const queryInput = document.querySelector('#map-search-input');
+          const searchBtn = document.querySelector('#map-search-btn');
+          const q = queryInput?.value.trim();
+          if (!q) return;
+
+          setBusy(searchBtn, true, 'Finding...');
+          try {
+            const resp = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+                q + ', Philippines'
+              )}&limit=1`
+            );
+            const results = await resp.json();
+            if (results && results.length > 0) {
+              const targetLat = parseFloat(results[0].lat);
+              const targetLng = parseFloat(results[0].lon);
+              miniMap.setView([targetLat, targetLng], 16);
+              await onLocationSelected(targetLat, targetLng, false);
+              showToast('Location pinned on map!', 'success');
+            } else {
+              showToast('Place not found. Try searching a specific street.', 'error');
+            }
+          } catch {
+            showToast('Search failed. Please try again.', 'error');
+          } finally {
+            setBusy(searchBtn, false);
+          }
         }
-      });
-    }, 60);
 
-    // Event listeners
+        document.querySelector('#map-search-btn')?.addEventListener('click', handleMapSearch);
+        document.querySelector('#map-search-input')?.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleMapSearch();
+          }
+        });
+
+        // Locate Me (GPS) Handler
+        document.querySelector('#locate-me-btn')?.addEventListener('click', () => {
+          if (!navigator.geolocation) {
+            showToast('Geolocation is not supported by your browser.', 'error');
+            return;
+          }
+          const btn = document.querySelector('#locate-me-btn');
+          setBusy(btn, true, 'Locating...');
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+              setBusy(btn, false);
+              const userLat = pos.coords.latitude;
+              const userLng = pos.coords.longitude;
+              miniMap.setView([userLat, userLng], 16);
+              await onLocationSelected(userLat, userLng, true);
+              showToast('Location pinned via GPS!', 'success');
+            },
+            () => {
+              setBusy(btn, false);
+              showToast('Could not retrieve GPS location.', 'error');
+            },
+            { enableHighAccuracy: true, timeout: 8000 }
+          );
+        });
+
+        // Fullscreen / Expanded View Map Handler
+        const mapBox = document.querySelector('#addr-map-box');
+        const expandBtn = document.querySelector('#expand-map-btn');
+        const expandText = document.querySelector('#expand-btn-text');
+
+        function toggleMapExpand() {
+          isMapExpanded = !isMapExpanded;
+          if (isMapExpanded) {
+            mapBox.classList.add('is-expanded');
+            if (expandText) expandText.textContent = 'Close';
+            expandBtn.innerHTML = `${ICONS.collapse} <span id="expand-btn-text">Close</span>`;
+          } else {
+            mapBox.classList.remove('is-expanded');
+            if (expandText) expandText.textContent = 'Fullscreen';
+            expandBtn.innerHTML = `${ICONS.expand} <span id="expand-btn-text">Fullscreen</span>`;
+          }
+          setTimeout(() => {
+            if (miniMap) miniMap.invalidateSize();
+          }, 150);
+        }
+
+        expandBtn?.addEventListener('click', toggleMapExpand);
+
+        window.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && isMapExpanded) {
+            toggleMapExpand();
+          }
+        });
+      }, 60);
+    }
+
+    // Attach Event Listeners
+    function openAddAddress() {
+      editingId = null;
+      isFormOpen = true;
+      renderPage();
+      document.querySelector('#address-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      document.querySelector('#addr-label')?.focus();
+    }
+
+    function closeForm() {
+      editingId = null;
+      isFormOpen = false;
+      renderPage();
+    }
+
+    content.querySelector('#add-new-addr-btn')?.addEventListener('click', openAddAddress);
+    content.querySelector('#trigger-add-addr-btn')?.addEventListener('click', openAddAddress);
+    content.querySelector('#empty-add-addr-btn')?.addEventListener('click', openAddAddress);
+
+    content.querySelector('#close-form-btn')?.addEventListener('click', closeForm);
+    content.querySelector('#cancel-form-btn')?.addEventListener('click', closeForm);
+
     content.querySelectorAll('[data-edit-id]').forEach((btn) => {
       btn.addEventListener('click', () => {
         editingId = btn.dataset.editId;
+        isFormOpen = true;
         renderPage();
         document.querySelector('#address-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         document.querySelector('#addr-label')?.focus();
       });
     });
 
-    content.querySelector('#add-new-addr-btn')?.addEventListener('click', () => {
-      editingId = null;
-      renderPage();
-      document.querySelector('#addr-label')?.focus();
-    });
-
-    content.querySelector('#cancel-edit-btn')?.addEventListener('click', () => {
-      editingId = null;
-      renderPage();
+    content.querySelectorAll('[data-default-id]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.defaultId;
+        setBusy(btn, true, 'Updating...');
+        try {
+          await setDefaultCustomerAddress(me.id, id);
+          showToast('Default delivery address updated.', 'success');
+          await loadAddresses();
+        } catch (err) {
+          showToast(err.message || 'Could not set default address.', 'error');
+          setBusy(btn, false);
+        }
+      });
     });
 
     content.querySelectorAll('[data-delete-id]').forEach((btn) => {
@@ -578,7 +724,10 @@ export async function mount(me) {
         setBusy(btn, true, 'Deleting...');
         try {
           await deleteCustomerAddress(me.id, id);
-          if (editingId === id) editingId = null;
+          if (editingId === id) {
+            editingId = null;
+            isFormOpen = false;
+          }
           showToast('Address removed.', 'success');
           await loadAddresses();
         } catch (err) {
@@ -588,10 +737,33 @@ export async function mount(me) {
       });
     });
 
+    // Form submission validation & saving
     content.querySelector('#address-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget;
       const submitBtn = form.querySelector('#save-address-btn');
+
+      // 1. Validate that house is pinned on map
+      if (chosenLat === null || chosenLng === null) {
+        showToast('Please pinpoint your house location on the map before saving.', 'error');
+        document.querySelector('#addr-map-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return;
+      }
+
+      // 2. Validate that house is inside the station delivery zone
+      const dist = calculateDistanceKm(
+        stationSettings.lat,
+        stationSettings.lng,
+        chosenLat,
+        chosenLng
+      );
+      if (dist !== null && dist > stationSettings.radiusKm) {
+        showToast(
+          `Cannot save address: Location is ${dist} km away, which is outside our ${stationSettings.radiusKm} km delivery radius. Please choose a location inside the highlighted delivery zone.`,
+          'error'
+        );
+        return;
+      }
 
       setBusy(submitBtn, true, 'Saving...');
       try {
@@ -608,6 +780,7 @@ export async function mount(me) {
         });
         showToast(editingId ? 'Address updated.' : 'Address saved.', 'success');
         editingId = null;
+        isFormOpen = false;
         await loadAddresses();
       } catch (err) {
         showToast(err.message || 'Could not save address.', 'error');

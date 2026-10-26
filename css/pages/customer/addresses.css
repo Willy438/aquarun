@@ -372,6 +372,36 @@
   color: #1e40af;
 }
 
+/* Non-blocking Leaflet tooltips that never steal clicks */
+.map-zone-tip {
+  font-family: inherit !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 6px !important;
+  border: 1px solid transparent !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+  pointer-events: none !important;
+  user-select: none !important;
+  white-space: nowrap !important;
+}
+
+.map-zone-tip.is-inside {
+  background: #059669 !important;
+  color: #ffffff !important;
+  border-color: #047857 !important;
+}
+
+.map-zone-tip.is-outside {
+  background: #dc2626 !important;
+  color: #ffffff !important;
+  border-color: #b91c1c !important;
+}
+
+.map-zone-tip::before {
+  border-top-color: inherit !important;
+}
+
 /* Station Hub Leaflet Marker */
 .station-hub-leaflet-icon {
   background: none;
@@ -411,3 +441,128 @@
   border-style: solid;
   border-color: #1e3a8a transparent transparent transparent;
 }
+
+/* Addresses placeholder / welcome card when form is not triggered */
+.addresses-placeholder-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 36px 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.addr-welcome-header {
+  max-width: 440px;
+  margin: 0 auto 24px;
+}
+
+.addr-welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  background: #eff6ff;
+  color: #2563eb;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.addr-welcome-badge svg {
+  width: 14px;
+  height: 14px;
+}
+
+.addr-welcome-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px;
+}
+
+.addr-welcome-desc {
+  font-size: 13.5px;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.addr-feature-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 460px;
+  margin: 0 auto 24px;
+  text-align: left;
+}
+
+.addr-feature-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 10px;
+}
+
+.addr-feature-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.addr-feature-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.addr-feature-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addr-feature-text strong {
+  font-size: 13px;
+  color: #1e293b;
+}
+
+.addr-feature-text span {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.addr-welcome-cta {
+  margin-top: 8px;
+}
+
+.btn-outside-zone {
+  background: #fee2e2 !important;
+  color: #991b1b !important;
+  border-color: #fca5a5 !important;
+  cursor: not-allowed !important;
+  opacity: 0.9 !important;
+}
+
+.zone-subtext {
+  display: block;
+  font-size: 11px;
+  font-weight: normal;
+  margin-top: 2px;
+  opacity: 0.95;
+}
+
