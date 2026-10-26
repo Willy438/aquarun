@@ -28,17 +28,23 @@
         <form class="auth-form" id="signup-form" novalidate>
           <div class="field-row">
             <div class="field">
-              <label class="field-label" for="fullName">Full name</label>
-              <input class="input" id="fullName" name="fullName" type="text" autocomplete="name" placeholder="Juan Dela Cruz" required>
+              <label class="field-label" for="firstName">First name</label>
+              <input class="input" id="firstName" name="firstName" type="text" autocomplete="given-name" placeholder="Juan" required>
             </div>
+            <div class="field">
+              <label class="field-label" for="lastName">Last name</label>
+              <input class="input" id="lastName" name="lastName" type="text" autocomplete="family-name" placeholder="Dela Cruz" required>
+            </div>
+          </div>
+          <div class="field-row">
             <div class="field">
               <label class="field-label" for="phone">Mobile number</label>
               <input class="input" id="phone" name="phone" type="tel" autocomplete="tel" placeholder="09XX XXX XXXX" required>
             </div>
-          </div>
-          <div class="field">
-            <label class="field-label" for="email">Email address</label>
-            <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="you@email.com" required>
+            <div class="field">
+              <label class="field-label" for="email">Email address</label>
+              <input class="input" id="email" name="email" type="email" autocomplete="email" placeholder="you@email.com" required>
+            </div>
           </div>
           <div class="field-row">
             <div class="field">

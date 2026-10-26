@@ -17,12 +17,19 @@ form.addEventListener('submit', async (event) => {
   event.preventDefault();
   errorBox.textContent = '';
 
-  const fullName = form.fullName.value.trim();
-  if (!fullName) {
-    errorBox.textContent = 'Please enter your full name.';
-    form.fullName.focus();
+  const firstName = form.firstName.value.trim();
+  const lastName = form.lastName.value.trim();
+  if (!firstName) {
+    errorBox.textContent = 'Please enter your first name.';
+    form.firstName.focus();
     return;
   }
+  if (!lastName) {
+    errorBox.textContent = 'Please enter your last name.';
+    form.lastName.focus();
+    return;
+  }
+  const fullName = `${firstName} ${lastName}`.trim();
 
   // 1. Phone number validation (Philippine mobile + NTC carrier check)
   const phoneRes = verifyPhoneNumber(form.phone.value);
