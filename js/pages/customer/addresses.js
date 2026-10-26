@@ -173,6 +173,13 @@ export async function mount(me) {
     // Right Column content: Form (when adding/editing) OR Welcome Card (when browsing)
     const shouldShowForm = isFormOpen || Boolean(editingAddr);
 
+    let defaultLabel = '';
+    if (editingAddr) {
+      defaultLabel = editingAddr.label || '';
+    } else {
+      defaultLabel = addresses.some((a) => (a.label || '').trim().toLowerCase() === 'home') ? 'Work' : 'Home';
+    }
+
     const rightColumnHtml = shouldShowForm
       ? `
         <div class="card addresses-main">
@@ -192,8 +199,16 @@ export async function mount(me) {
             <!-- Label and Landmark in 2 columns -->
             <div class="field-row">
               <div class="field">
-                <label class="field-label" for="addr-label">Address label</label>
-                <input class="input" id="addr-label" name="label" type="text" placeholder="e.g. Home, Work, Apartment" value="${escapeHtml(editingAddr?.label || '')}" required>
+                <label class="field-label" for="addr-label">Address label <span style="color:#ef4444;">*</span></label>
+                <div class="addr-label-presets">
+                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Home' ? 'active' : ''}" data-preset="Home">Home</button>
+                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Work' ? 'active' : ''}" data-preset="Work">Work</button>
+                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Apartment' ? 'active' : ''}" data-preset="Apartment">Apartment</button>
+                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Parents' ? 'active' : ''}" data-preset="Parents">Parents</button>
+                  <button type="button" class="addr-preset-btn ${!['Home', 'Work', 'Apartment', 'Parents'].includes(defaultLabel) ? 'active' : ''}" data-preset="Other">Other</button>
+                </div>
+                <input class="input" id="addr-label" name="label" type="text" placeholder="e.g. Home, Work, Apartment" value="${escapeHtml(defaultLabel)}" required>
+                <div class="field-error-msg" id="addr-label-error"></div>
               </div>
               <div class="field">
                 <label class="field-label" for="addr-landmark">Landmark (optional)</label>
@@ -203,19 +218,22 @@ export async function mount(me) {
 
             <!-- Street Address -->
             <div class="field">
-              <label class="field-label" for="addr-street">Street address / House number</label>
+              <label class="field-label" for="addr-street">Street address / House number <span style="color:#ef4444;">*</span></label>
               <input class="input" id="addr-street" name="street" type="text" placeholder="House/Unit #, Street, Subdivision" value="${escapeHtml(editingAddr?.street || '')}" required>
+              <div class="field-error-msg" id="addr-street-error"></div>
             </div>
 
             <!-- Barangay & City in 2 columns -->
             <div class="field-row">
               <div class="field">
-                <label class="field-label" for="addr-barangay">Barangay</label>
-                <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : '')}" required>
+                <label class="field-label" for="addr-barangay">Barangay <span style="color:#ef4444;">*</span></label>
+                <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : 'Barangay 171')}" required>
+                <div class="field-error-msg" id="addr-barangay-error"></div>
               </div>
               <div class="field">
-                <label class="field-label" for="addr-city">City</label>
+                <label class="field-label" for="addr-city">City <span style="color:#ef4444;">*</span></label>
                 <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(editingAddr?.city || 'Caloocan')}" required>
+                <div class="field-error-msg" id="addr-city-error"></div>
               </div>
             </div>
 
@@ -520,20 +538,40 @@ export async function mount(me) {
                 const streetInput = document.querySelector('#addr-street');
                 const brgyInput = document.querySelector('#addr-barangay');
                 const cityInput = document.querySelector('#addr-city');
+                const labelInput = document.querySelector('#addr-label');
 
-                if (streetInput && !streetInput.value && data.address.road) {
-                  streetInput.value = data.address.road;
+                if (labelInput && !labelInput.value.trim()) {
+                  labelInput.value = 'Home';
+                  clearInputError(labelInput);
                 }
-                if (brgyInput && !brgyInput.value) {
-                  brgyInput.value =
+
+                if (streetInput && !streetInput.value.trim()) {
+                  const roadName =
+                    data.address.road ||
+                    data.address.pedestrian ||
+                    data.address.neighbourhood ||
+                    data.address.suburb ||
+                    (data.display_name ? data.display_name.split(',')[0].trim() : '');
+                  if (roadName) {
+                    streetInput.value = roadName;
+                    clearInputError(streetInput);
+                  }
+                }
+                if (brgyInput && !brgyInput.value.trim()) {
+                  const brgy =
                     data.address.suburb ||
                     data.address.quarter ||
                     data.address.neighbourhood ||
                     data.address.village ||
                     '';
+                  if (brgy) {
+                    brgyInput.value = brgy;
+                    clearInputError(brgyInput);
+                  }
                 }
-                if (cityInput && !cityInput.value) {
+                if (cityInput && !cityInput.value.trim()) {
                   cityInput.value = data.address.city || data.address.town || 'Caloocan';
+                  clearInputError(cityInput);
                 }
               }
             } catch {}
@@ -547,10 +585,12 @@ export async function mount(me) {
           }).addTo(miniMap);
           customerMarker.on('click', (e) => {
             if (e && e.originalEvent) e.originalEvent.stopPropagation();
+            document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
             onLocationSelected(chosenLat, chosenLng, true);
           });
           customerMarker.on('dragend', () => {
             const pos = customerMarker.getLatLng();
+            document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
             onLocationSelected(pos.lat, pos.lng, true);
           });
           updateZoneUI(chosenLat, chosenLng, false);
@@ -563,6 +603,7 @@ export async function mount(me) {
         }, 150);
 
         miniMap.on('click', (e) => {
+          document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
           onLocationSelected(e.latlng.lat, e.latlng.lng, true);
         });
 
@@ -575,6 +616,7 @@ export async function mount(me) {
 
           setBusy(searchBtn, true, 'Finding...');
           try {
+            document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
             const resp = await fetch(
               `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
                 q + ', Philippines'
@@ -737,20 +779,127 @@ export async function mount(me) {
       });
     });
 
+    // Quick Label Preset Buttons
+    content.querySelectorAll('.addr-preset-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const preset = btn.dataset.preset;
+        const labelInput = content.querySelector('#addr-label');
+        if (!labelInput) return;
+        content.querySelectorAll('.addr-preset-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        if (preset === 'Other') {
+          labelInput.value = '';
+          labelInput.focus();
+        } else {
+          labelInput.value = preset;
+          clearInputError(labelInput);
+        }
+      });
+    });
+
+    // Helper functions for in-form field validation
+    function markInputError(inputEl, msg) {
+      if (!inputEl) return;
+      inputEl.classList.add('is-invalid');
+      const parent = inputEl.closest('.field');
+      const errEl = parent?.querySelector('.field-error-msg');
+      if (errEl) {
+        errEl.textContent = msg;
+        errEl.style.display = 'block';
+      }
+    }
+
+    function clearInputError(inputEl) {
+      if (!inputEl) return;
+      inputEl.classList.remove('is-invalid');
+      const parent = inputEl.closest('.field');
+      const errEl = parent?.querySelector('.field-error-msg');
+      if (errEl) {
+        errEl.textContent = '';
+        errEl.style.display = 'none';
+      }
+    }
+
+    function clearAllFormErrors(form) {
+      form.querySelectorAll('.is-invalid').forEach((el) => el.classList.remove('is-invalid'));
+      form.querySelectorAll('.field-error-msg').forEach((el) => {
+        el.textContent = '';
+        el.style.display = 'none';
+      });
+      document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
+    }
+
+    // Clear error highlights as user types
+    ['#addr-label', '#addr-street', '#addr-barangay', '#addr-city'].forEach((sel) => {
+      const input = content.querySelector(sel);
+      input?.addEventListener('input', () => {
+        clearInputError(input);
+        if (sel === '#addr-label') {
+          const val = input.value.trim().toLowerCase();
+          content.querySelectorAll('.addr-preset-btn').forEach((btn) => {
+            const p = (btn.dataset.preset || '').toLowerCase();
+            if (p === val) {
+              btn.classList.add('active');
+            } else if (p !== 'other') {
+              btn.classList.remove('active');
+            }
+          });
+        }
+      });
+    });
+
     // Form submission validation & saving
     content.querySelector('#address-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget;
       const submitBtn = form.querySelector('#save-address-btn');
 
-      // 1. Validate that house is pinned on map
-      if (chosenLat === null || chosenLng === null) {
-        showToast('Please pinpoint your house location on the map before saving.', 'error');
-        document.querySelector('#addr-map-box')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      clearAllFormErrors(form);
+
+      const labelVal = form.label?.value.trim() || '';
+      const streetVal = form.street?.value.trim() || '';
+      const brgyVal = form.barangay?.value.trim() || '';
+      const cityVal = form.city?.value.trim() || 'Caloocan';
+
+      // 1. Validate Label
+      if (!labelVal) {
+        markInputError(form.label, 'Please enter an address label (e.g. Home, Work).');
+        showToast('Please enter an address label (e.g. Home, Work).', 'error');
+        form.label?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        form.label?.focus();
         return;
       }
 
-      // 2. Validate that house is inside the station delivery zone
+      // 2. Validate Street
+      if (!streetVal) {
+        markInputError(form.street, 'Please enter your street address or house number.');
+        showToast('Please enter your street address or house number.', 'error');
+        form.street?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        form.street?.focus();
+        return;
+      }
+
+      // 3. Validate Barangay
+      if (!brgyVal) {
+        markInputError(form.barangay, 'Please enter your barangay.');
+        showToast('Please enter your barangay.', 'error');
+        form.barangay?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        form.barangay?.focus();
+        return;
+      }
+
+      // 4. Validate that house is pinned on map
+      if (chosenLat === null || chosenLng === null) {
+        const mapBox = document.querySelector('#addr-map-box');
+        if (mapBox) {
+          mapBox.classList.add('is-invalid-box');
+          mapBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        showToast('Please pinpoint your house location on the map before saving.', 'error');
+        return;
+      }
+
+      // 5. Validate that house is inside the station delivery zone
       const dist = calculateDistanceKm(
         stationSettings.lat,
         stationSettings.lng,
@@ -765,20 +914,20 @@ export async function mount(me) {
         return;
       }
 
-      setBusy(submitBtn, true, 'Saving...');
+      setBusy(submitBtn, true, 'Saving address...');
       try {
         await saveCustomerAddress(me.id, {
           id: editingId,
-          label: form.label.value,
-          street: form.street.value,
-          barangay: form.barangay.value,
-          city: form.city.value,
-          landmark: form.landmark.value,
+          label: labelVal,
+          street: streetVal,
+          barangay: brgyVal,
+          city: cityVal,
+          landmark: form.landmark?.value.trim() || '',
           latitude: chosenLat,
           longitude: chosenLng,
-          isDefault: form.isDefault.checked,
+          isDefault: form.isDefault?.checked ?? false,
         });
-        showToast(editingId ? 'Address updated.' : 'Address saved.', 'success');
+        showToast(editingId ? 'Address updated.' : 'Address saved successfully.', 'success');
         editingId = null;
         isFormOpen = false;
         await loadAddresses();

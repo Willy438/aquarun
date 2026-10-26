@@ -52,16 +52,14 @@ export async function saveCustomerAddress(
 ) {
   const cleanLabel = String(label ?? '').trim();
   const cleanStreet = String(street ?? '').trim();
-  const cleanBarangay = String(barangay ?? '').trim();
-  const cleanCity = String(city ?? '').trim();
+  const cleanBarangay = String(barangay ?? '').trim() || 'Barangay 171';
+  const cleanCity = String(city ?? '').trim() || 'Caloocan';
   const cleanLandmark = String(landmark ?? '').trim() || null;
   const numLat = Number.isFinite(Number(latitude)) ? Number(latitude) : null;
   const numLng = Number.isFinite(Number(longitude)) ? Number(longitude) : null;
 
   if (!cleanLabel) throw new Error('Enter an address label (e.g. Home, Work).');
   if (!cleanStreet) throw new Error('Enter the house number and street.');
-  if (!cleanBarangay) throw new Error('Enter the barangay.');
-  if (!cleanCity) throw new Error('Enter the city.');
 
   const existing = await getCustomerAddresses(customerId);
   const shouldBeDefault = Boolean(isDefault) || existing.length === 0 || (existing.length === 1 && existing[0].id === id);
@@ -108,6 +106,20 @@ export async function saveCustomerAddress(
         .single());
     }
 
+    if (error && (/one_default_address|unique constraint/i.test(error.message || '') || error.code === '23505')) {
+      await supabase
+        .from('addresses')
+        .update({ is_default: false })
+        .eq('customer_id', customerId);
+      ({ data, error } = await supabase
+        .from('addresses')
+        .update(payload)
+        .eq('id', id)
+        .eq('customer_id', customerId)
+        .select()
+        .single());
+    }
+
     if (error) throw new Error(error.message || 'Could not update address.');
 
     // Save to localStorage fallback as well
@@ -133,6 +145,21 @@ export async function saveCustomerAddress(
   if (error && (/latitude|longitude|column|schema cache/i.test(error.message || '') || error.code === 'PGRST204')) {
     delete payload.latitude;
     delete payload.longitude;
+    ({ data, error } = await supabase
+      .from('addresses')
+      .insert({
+        customer_id: customerId,
+        ...payload,
+      })
+      .select()
+      .single());
+  }
+
+  if (error && (/one_default_address|unique constraint/i.test(error.message || '') || error.code === '23505')) {
+    await supabase
+      .from('addresses')
+      .update({ is_default: false })
+      .eq('customer_id', customerId);
     ({ data, error } = await supabase
       .from('addresses')
       .insert({
