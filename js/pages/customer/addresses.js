@@ -261,7 +261,7 @@ export async function mount(me) {
     if (editingAddr) {
       defaultLabel = editingAddr.label || '';
     } else {
-      defaultLabel = addresses.some((a) => (a.label || '').trim().toLowerCase() === 'home') ? 'Work' : 'Home';
+      defaultLabel = '';
     }
 
     const modalHtml = isModalOpen
@@ -287,9 +287,9 @@ export async function mount(me) {
                     <button type="button" class="addr-preset-btn ${defaultLabel === 'Work' ? 'active' : ''}" data-preset="Work">Work</button>
                     <button type="button" class="addr-preset-btn ${defaultLabel === 'Apartment' ? 'active' : ''}" data-preset="Apartment">Apartment</button>
                     <button type="button" class="addr-preset-btn ${defaultLabel === 'Parents' ? 'active' : ''}" data-preset="Parents">Parents</button>
-                    <button type="button" class="addr-preset-btn ${!['Home', 'Work', 'Apartment', 'Parents'].includes(defaultLabel) ? 'active' : ''}" data-preset="Other">Other</button>
+                    <button type="button" class="addr-preset-btn ${editingAddr && !['Home', 'Work', 'Apartment', 'Parents'].includes(defaultLabel) ? 'active' : ''}" data-preset="Other">Other</button>
                   </div>
-                  <input class="input" id="addr-label" name="label" type="text" placeholder="e.g. Home, Work, Apartment" value="${escapeHtml(defaultLabel)}" required>
+                  <input class="input" id="addr-label" name="label" type="text" placeholder="e.g. Home, Work, Apartment" value="${escapeHtml(editingAddr?.label || '')}" required>
                   <div class="field-error-msg" id="addr-label-error"></div>
                 </div>
 
@@ -310,12 +310,12 @@ export async function mount(me) {
                 <div class="addr-form-grid-2">
                   <div class="field">
                     <label class="field-label" for="addr-barangay">Barangay <span style="color:#ef4444;">*</span></label>
-                    <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : 'Barangay 171')}" required>
+                    <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : '')}" required>
                     <div class="field-error-msg" id="addr-barangay-error"></div>
                   </div>
                   <div class="field">
                     <label class="field-label" for="addr-city">City <span style="color:#ef4444;">*</span></label>
-                    <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(editingAddr?.city || 'Caloocan')}" required>
+                    <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(editingAddr?.city || '')}" required>
                     <div class="field-error-msg" id="addr-city-error"></div>
                   </div>
                 </div>
@@ -332,9 +332,12 @@ export async function mount(me) {
                     </button>
                   </div>
 
-                  <!-- Quick Search Row -->
+                  <!-- Quick Search Row with Autocomplete Suggestions -->
                   <div class="addr-map-search-row">
-                    <input type="text" id="map-search-input" placeholder="Search street, subdivision, or barangay...">
+                    <div class="location-search-wrap">
+                      <input type="text" id="map-search-input" placeholder="Search street, subdivision, or barangay..." autocomplete="off">
+                      <div class="location-suggestions-dropdown" id="map-suggestions-dropdown" hidden></div>
+                    </div>
                     <button type="button" class="btn btn-primary" id="map-search-btn">
                       Search
                     </button>
@@ -603,19 +606,111 @@ export async function mount(me) {
           onLocationSelected(e.latlng.lat, e.latlng.lng, true);
         });
 
-        // Search location via Nominatim
+        // Location Search with Real-time Autocomplete Suggestions API
+        const searchInput = document.querySelector('#map-search-input');
+        const suggestionsBox = document.querySelector('#map-suggestions-dropdown');
+        let searchDebounceTimer = null;
+
+        function hideSuggestions() {
+          if (suggestionsBox) {
+            suggestionsBox.hidden = true;
+            suggestionsBox.innerHTML = '';
+          }
+        }
+
+        async function fetchSuggestions(query) {
+          if (!query || query.length < 3) {
+            hideSuggestions();
+            return;
+          }
+          if (suggestionsBox) {
+            suggestionsBox.hidden = false;
+            suggestionsBox.innerHTML = '<div class="suggestion-loading">Searching locations...</div>';
+          }
+
+          try {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+            const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+            if (!resp.ok) throw new Error('API failed');
+            const data = await resp.json();
+
+            if (!data || data.length === 0) {
+              if (suggestionsBox) {
+                suggestionsBox.innerHTML = '<div class="suggestion-empty">No matching places found. Try typing a street or barangay.</div>';
+              }
+              return;
+            }
+
+            if (suggestionsBox) {
+              suggestionsBox.innerHTML = data
+                .map((item, idx) => {
+                  const parts = (item.display_name || '').split(',');
+                  const primary = parts[0]?.trim() || 'Location';
+                  const secondary = parts.slice(1, 4).join(',').trim();
+                  return `
+                    <div class="suggestion-item" data-idx="${idx}" data-lat="${item.lat}" data-lon="${item.lon}">
+                      <span class="suggestion-icon">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                      </span>
+                      <div class="suggestion-text">
+                        <span class="suggestion-primary">${escapeHtml(primary)}</span>
+                        <span class="suggestion-secondary">${escapeHtml(secondary)}</span>
+                      </div>
+                    </div>
+                  `;
+                })
+                .join('');
+
+              suggestionsBox.querySelectorAll('.suggestion-item').forEach((itemEl) => {
+                itemEl.addEventListener('click', async () => {
+                  const lat = parseFloat(itemEl.dataset.lat);
+                  const lon = parseFloat(itemEl.dataset.lon);
+                  const primaryText = itemEl.querySelector('.suggestion-primary')?.textContent || '';
+                  if (searchInput) searchInput.value = primaryText;
+                  hideSuggestions();
+
+                  miniMap.setView([lat, lon], 16);
+                  await onLocationSelected(lat, lon, true);
+                  showToast(`Pinned: ${primaryText}`, 'success');
+                });
+              });
+            }
+          } catch {
+            if (suggestionsBox) {
+              suggestionsBox.innerHTML = '<div class="suggestion-empty">Could not load suggestions. You can still press Search or click the map directly.</div>';
+            }
+          }
+        }
+
+        searchInput?.addEventListener('input', (e) => {
+          clearTimeout(searchDebounceTimer);
+          const q = e.target.value.trim();
+          if (q.length < 3) {
+            hideSuggestions();
+            return;
+          }
+          searchDebounceTimer = setTimeout(() => {
+            fetchSuggestions(q);
+          }, 280);
+        });
+
+        // Close suggestions when clicking outside
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('.location-search-wrap')) {
+            hideSuggestions();
+          }
+        });
+
         async function runMapSearch() {
-          const query = document.querySelector('#map-search-input')?.value.trim();
+          const query = searchInput?.value.trim();
           if (!query) return;
+          hideSuggestions();
           const searchBtn = document.querySelector('#map-search-btn');
           setBusy(searchBtn, true, 'Searching...');
 
           try {
-            const searchQuery = query.toLowerCase().includes('caloocan')
-              ? query
-              : `${query}, Caloocan, Philippines`;
             const resp = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
+              `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`
             );
             const results = await resp.json();
             if (results && results.length > 0) {
@@ -636,10 +731,12 @@ export async function mount(me) {
         }
 
         document.querySelector('#map-search-btn')?.addEventListener('click', runMapSearch);
-        document.querySelector('#map-search-input')?.addEventListener('keydown', (e) => {
+        searchInput?.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
             runMapSearch();
+          } else if (e.key === 'Escape') {
+            hideSuggestions();
           }
         });
 
@@ -701,6 +798,10 @@ export async function mount(me) {
     // Modal Control Functions
     function openModal(addrId = null) {
       editingId = addrId;
+      if (!addrId) {
+        chosenLat = null;
+        chosenLng = null;
+      }
       isModalOpen = true;
       renderPage();
       setTimeout(() => {

@@ -1,6 +1,7 @@
 import { bootRiderPage, renderNav } from '../../core/nav.js';
 import { setCachedProfile } from '../../core/auth.js';
 import { confirmModal, enablePasswordToggles, escapeHtml, setBusy, showToast } from '../../core/ui.js';
+import { validatePassword } from '../../services/verificationService.js';
 import {
   setRiderAvailability,
   updateOwnPassword,
@@ -120,8 +121,9 @@ export async function mount(initialMe) {
     const confirmPass = form.confirmPassword.value;
 
     if (newPass) {
-      if (newPass.length < 8) {
-        showToast('Use at least 8 characters for your new password.', 'error');
+      const passRes = validatePassword(newPass);
+      if (!passRes.valid) {
+        showToast(passRes.message, 'error');
         return;
       }
       if (newPass !== confirmPass) {

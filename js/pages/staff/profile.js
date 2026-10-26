@@ -2,6 +2,7 @@ import { bootStaffPage, renderNav } from '../../core/nav.js';
 import { setCachedProfile } from '../../core/auth.js';
 import { confirmModal, enablePasswordToggles, escapeHtml, setBusy, showToast } from '../../core/ui.js';
 import { updateOwnPassword, updateOwnProfile } from '../../services/usersService.js';
+import { validatePassword } from '../../services/verificationService.js';
 
 const ICONS = {
   user: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>`,
@@ -64,7 +65,7 @@ export async function mount(initialMe) {
           </div>
 
           <div class="notice">
-            Use at least 8 characters.
+            Must be at least 8 characters, with at least 1 letter, 1 number, and 1 special character.
           </div>
 
           <div>

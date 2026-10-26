@@ -90,7 +90,8 @@ export async function mount() {
             </div>
             <div class="field">
               <label class="label" for="new-user-password">Temporary password</label>
-              <input class="input" id="new-user-password" name="password" type="password" minlength="8" placeholder="At least 8 characters" required />
+              <input class="input" id="new-user-password" name="password" type="password" minlength="8" placeholder="At least 8 characters, 1 number, 1 special character" required />
+            <p style="font-size: 11.5px; color: #64748b; margin-top: 4px;">Must be at least 8 characters, with 1 letter, 1 number, and 1 special character.</p>
             </div>
           </div>
           <div class="modal-footer">

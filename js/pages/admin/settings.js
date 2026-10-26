@@ -96,13 +96,17 @@ export async function mount() {
               </div>
             </div>
 
-            <!-- Search Row Placed Cleanly Above Map -->
+            <!-- Search Row Placed Cleanly Above Map with Location Suggestions -->
             <div class="map-search-row">
-              <input
-                type="text"
-                id="station-search-input"
-                placeholder="Search landmark, university, street or barangay..."
-              />
+              <div class="location-search-wrap">
+                <input
+                  type="text"
+                  id="station-search-input"
+                  placeholder="Search landmark, university, street or barangay..."
+                  autocomplete="off"
+                />
+                <div class="location-suggestions-dropdown" id="station-suggestions-dropdown" hidden></div>
+              </div>
               <button type="button" class="btn btn-primary" id="station-search-btn">
                 Search
               </button>
@@ -381,17 +385,110 @@ export async function mount() {
         });
       }
 
-      // Nominatim search
+      // Nominatim search with Real-time Location Suggestions API
+      const stationInput = document.querySelector('#station-search-input');
+      const stationSuggestionsBox = document.querySelector('#station-suggestions-dropdown');
+      let stationDebounceTimer = null;
+
+      function hideStationSuggestions() {
+        if (stationSuggestionsBox) {
+          stationSuggestionsBox.hidden = true;
+          stationSuggestionsBox.innerHTML = '';
+        }
+      }
+
+      async function fetchStationSuggestions(query) {
+        if (!query || query.length < 3) {
+          hideStationSuggestions();
+          return;
+        }
+        if (stationSuggestionsBox) {
+          stationSuggestionsBox.hidden = false;
+          stationSuggestionsBox.innerHTML = '<div class="suggestion-loading">Searching locations...</div>';
+        }
+
+        try {
+          const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
+          if (!resp.ok) throw new Error('API failed');
+          const data = await resp.json();
+
+          if (!data || data.length === 0) {
+            if (stationSuggestionsBox) {
+              stationSuggestionsBox.innerHTML = '<div class="suggestion-empty">No matching places found. Try another landmark or street.</div>';
+            }
+            return;
+          }
+
+          if (stationSuggestionsBox) {
+            stationSuggestionsBox.innerHTML = data
+              .map((item) => {
+                const parts = (item.display_name || '').split(',');
+                const primary = parts[0]?.trim() || 'Location';
+                const secondary = parts.slice(1, 4).join(',').trim();
+                return `
+                  <div class="suggestion-item" data-lat="${item.lat}" data-lon="${item.lon}">
+                    <span class="suggestion-icon">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                    </span>
+                    <div class="suggestion-text">
+                      <span class="suggestion-primary">${escapeHtml(primary)}</span>
+                      <span class="suggestion-secondary">${escapeHtml(secondary)}</span>
+                    </div>
+                  </div>
+                `;
+              })
+              .join('');
+
+            stationSuggestionsBox.querySelectorAll('.suggestion-item').forEach((itemEl) => {
+              itemEl.addEventListener('click', () => {
+                const lat = parseFloat(itemEl.dataset.lat);
+                const lon = parseFloat(itemEl.dataset.lon);
+                const primaryText = itemEl.querySelector('.suggestion-primary')?.textContent || '';
+                if (stationInput) stationInput.value = primaryText;
+                hideStationSuggestions();
+
+                mapInstance.flyTo([lat, lon], 16);
+                onLocationChanged(lat, lon, primaryText);
+                showToast(`Station pinned: ${primaryText}`, 'success');
+              });
+            });
+          }
+        } catch {
+          if (stationSuggestionsBox) {
+            stationSuggestionsBox.innerHTML = '<div class="suggestion-empty">Could not load suggestions. You can still click Search or click the map directly.</div>';
+          }
+        }
+      }
+
+      stationInput?.addEventListener('input', (e) => {
+        clearTimeout(stationDebounceTimer);
+        const q = e.target.value.trim();
+        if (q.length < 3) {
+          hideStationSuggestions();
+          return;
+        }
+        stationDebounceTimer = setTimeout(() => {
+          fetchStationSuggestions(q);
+        }, 280);
+      });
+
+      document.addEventListener('click', (e) => {
+        if (!e.target.closest('.location-search-wrap')) {
+          hideStationSuggestions();
+        }
+      });
+
       async function doSearch() {
-        const input = document.querySelector('#station-search-input');
-        const q = input?.value.trim();
+        const q = stationInput?.value.trim();
         if (!q) return;
+        hideStationSuggestions();
         const searchBtn = document.querySelector('#station-search-btn');
         if (searchBtn) setBusy(searchBtn, true, 'Searching...');
 
         try {
           const resp = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(q)}`
+            `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(q)}&limit=1&addressdetails=1`
           );
           const results = await resp.json();
           if (results && results.length > 0) {
@@ -415,10 +512,12 @@ export async function mount() {
       }
 
       document.querySelector('#station-search-btn')?.addEventListener('click', doSearch);
-      document.querySelector('#station-search-input')?.addEventListener('keydown', (e) => {
+      stationInput?.addEventListener('keydown', (e) => {
         if (e.key === 'Enter') {
           e.preventDefault();
           doSearch();
+        } else if (e.key === 'Escape') {
+          hideStationSuggestions();
         }
       });
 

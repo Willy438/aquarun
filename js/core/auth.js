@@ -115,7 +115,7 @@ export async function logIn(email, password) {
   return profile.role;
 }
 
-export async function signUpCustomer({ fullName, phone, email, address, password }) {
+export async function signUpCustomer({ fullName, phone, email, address = null, password }) {
   const cleanEmail = email.trim().toLowerCase();
   if (!EMAIL_PATTERN.test(cleanEmail)) throw new Error('Enter a valid email address.');
   const normalized = normalizePhone(phone);
@@ -125,7 +125,7 @@ export async function signUpCustomer({ fullName, phone, email, address, password
     email: cleanEmail,
     password,
     // The role is never sent from the browser. New accounts are customers by default in the database.
-    options: { data: { full_name: fullName, phone: normalized, address } },
+    options: { data: { full_name: fullName, phone: normalized, ...(address ? { address } : {}) } },
   });
   if (error) {
     if (/registered|already/i.test(error.message)) throw new Error('This email already has an account. Try logging in.');
