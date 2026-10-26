@@ -490,15 +490,15 @@ export async function mount(initialMe) {
               </div>
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-              <button type="button" class="btn btn-light btn-sm" id="btn-view-remittance-proof" style="font-weight: 600; font-size: 12px;">
-                Sales &amp; Proof Log
-              </button>
+              <a href="remittance.html" class="btn btn-light btn-sm" style="font-weight: 600; font-size: 12px;">
+                Cash Record &rarr;
+              </a>
               ${
                 remittance.unsubmittedCount > 0
                   ? `<button type="button" class="btn btn-primary btn-sm" id="btn-rider-remit" style="font-weight: 700;">Turn over cash (${formatPeso(remittance.unsubmittedCash)}) &rarr;</button>`
                   : remittance.submittedCount > 0
-                    ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Turnover Submitted · Awaiting Cashier</span>`
-                    : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash reconciled</span>`
+                    ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Turnover Submitted · Waiting for cashier</span>`
+                    : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash approved</span>`
               }
             </div>
           </div>

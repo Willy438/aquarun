@@ -79,6 +79,7 @@ const NAV_SECTIONS = {
         { key: 'my-deliveries', label: 'My deliveries', icon: 'truck' },
         { key: 'delivery-details', label: 'Current delivery', icon: 'cube', badgeId: 'nav-rider-current-badge' },
         { key: 'delivery-history', label: 'Delivery history', icon: 'clock' },
+        { key: 'remittance', label: 'Cash record', icon: 'cash' },
       ],
     },
     {
@@ -202,6 +203,11 @@ const RIDER_PAGE_META = {
     title: 'Delivery history',
     docTitle: 'Delivery history | AquaRun',
     sub: 'Your past deliveries with counts and payment',
+  },
+  remittance: {
+    title: 'Cash record',
+    docTitle: 'Cash record | AquaRun',
+    sub: 'Track your collected cash, submitted turnovers, and approved records',
   },
   profile: {
     title: 'Profile',
