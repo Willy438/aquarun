@@ -35,10 +35,10 @@
 }
 
 .prod-type-tab.is-active {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--blue-app, #1d5bd6);
+  border-color: var(--blue-app, #1d5bd6);
   color: #ffffff;
-  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+  box-shadow: 0 2px 8px rgba(29, 91, 214, 0.28);
 }
 
 /* 3-Way Connected Pricing Grid */
@@ -84,15 +84,15 @@
   padding: 3px 9px;
   border-radius: 6px;
   border: 1px dashed #93c5fd;
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .prod-preset-chip:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--blue-app, #1d5bd6);
+  border-color: var(--blue-app, #1d5bd6);
   color: #ffffff;
 }
 
@@ -233,7 +233,7 @@
 }
 
 .prod-fit-btn.is-active {
-  background: #2563eb;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
 }
 

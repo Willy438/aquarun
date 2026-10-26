@@ -116,9 +116,9 @@
 }
 
 .notice-info {
-  background: #eff6ff;
-  border: 1px solid #dbeafe;
-  color: #1e40af;
+  background: var(--brand-soft, #ebf2ff);
+  border: 1px solid #d6e4ff;
+  color: var(--blue-app, #1d5bd6);
   font-weight: 500;
 }
 

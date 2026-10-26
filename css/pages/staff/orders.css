@@ -31,9 +31,9 @@
 }
 
 .orders-view-tab.is-active {
-  background: var(--blue-app, #2563eb);
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 6px rgba(29, 91, 214, 0.25);
 }
 
 .orders-view-tab .badge {
@@ -101,7 +101,7 @@
 .batch-area-title svg {
   width: 16px;
   height: 16px;
-  color: var(--blue-app, #2563eb);
+  color: var(--blue-app, #1d5bd6);
 }
 
 .batch-stats-strip {
@@ -121,8 +121,8 @@
 }
 
 .batch-stat-pill.is-gallons {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
   font-weight: 700;
 }
 
@@ -316,8 +316,8 @@
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 5px;
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
 }
 
 .stop-sequence-badge.is-first {

@@ -123,10 +123,10 @@
 }
 
 .category-tab.is-active {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: var(--blue-app, #1d5bd6);
+  border-color: var(--blue-app, #1d5bd6);
   color: #fff;
-  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.25);
+  box-shadow: 0 2px 6px rgba(29, 91, 214, 0.25);
 }
 
 .category-tab .tab-count {
@@ -155,8 +155,8 @@
 }
 
 .badge-water {
-  background: #e0f2fe;
-  color: #0369a1;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
 }
 
 .badge-empty {
@@ -192,7 +192,7 @@
 }
 
 .qty-btn:hover {
-  background: #2563eb;
+  background: var(--blue-app, #1d5bd6);
   color: #fff;
 }
 

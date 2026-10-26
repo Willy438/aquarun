@@ -1441,10 +1441,10 @@ export function openRiderRemittanceProofModal(remittance, me = {}) {
         </div>
 
         <div style="padding: 16px 22px; display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; background: #ffffff; border-bottom: 1px solid #f1f5f9;">
-          <div style="padding: 12px 14px; border-radius: 8px; background: #eff6ff; border: 1px solid #dbeafe;">
-            <p style="margin:0; font-size:11px; font-weight:700; text-transform:uppercase; color:#1d4ed8;">Cash in Hand to Remit</p>
-            <p style="margin:3px 0 0; font-size:17px; font-weight:800; color:#1e40af;">${formatPeso(remittance?.unsubmittedCash || 0)}</p>
-            <p style="margin:1px 0 0; font-size:11px; color:#3b82f6;">${remittance?.unsubmittedCount || 0} ${remittance?.unsubmittedCount === 1 ? 'order' : 'orders'} in pocket</p>
+          <div style="padding: 12px 14px; border-radius: 8px; background: var(--brand-soft, #ebf2ff); border: 1px solid #d6e4ff;">
+            <p style="margin:0; font-size:11px; font-weight:700; text-transform:uppercase; color:var(--blue-app, #1d5bd6);">Cash in Hand to Remit</p>
+            <p style="margin:3px 0 0; font-size:17px; font-weight:800; color:var(--ink-navy, #122444);">${formatPeso(remittance?.unsubmittedCash || 0)}</p>
+            <p style="margin:1px 0 0; font-size:11px; color:var(--muted-blue, #64748b);">${remittance?.unsubmittedCount || 0} ${remittance?.unsubmittedCount === 1 ? 'order' : 'orders'} in pocket</p>
           </div>
           <div style="padding: 12px 14px; border-radius: 8px; background: #fffbeb; border: 1px solid #fef3c7;">
             <p style="margin:0; font-size:11px; font-weight:700; text-transform:uppercase; color:#b45309;">Awaiting Cashier Check</p>

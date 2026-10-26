@@ -42,8 +42,8 @@
   width: 40px;
   height: 40px;
   border-radius: 11px;
-  background: var(--tint-blue, #eff6ff);
-  color: var(--blue-app, #2563eb);
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -145,7 +145,7 @@
 }
 
 .map-search-bar input:focus {
-  border-color: var(--blue-app, #2563eb);
+  border-color: var(--blue-app, #1d5bd6);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
@@ -197,7 +197,7 @@
 
 .radius-slider {
   flex: 1;
-  accent-color: var(--blue-app, #2563eb);
+  accent-color: var(--blue-app, #1d5bd6);
   cursor: pointer;
   height: 6px;
 }
@@ -205,9 +205,9 @@
 .radius-value-pill {
   font-weight: 700;
   font-size: 13px;
-  color: var(--blue-app, #2563eb);
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
+  color: var(--blue-app, #1d5bd6);
+  background: var(--brand-soft, #ebf2ff);
+  border: 1px solid #d6e4ff;
   padding: 5px 12px;
   border-radius: 8px;
   min-width: 65px;

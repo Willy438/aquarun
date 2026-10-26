@@ -66,12 +66,12 @@ function buildSmoothSvgOverlay(values, maxVal) {
     <svg class="modern-chart-svg-overlay" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" aria-hidden="true">
       <defs>
         <linearGradient id="aquaDashAreaGrad" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#2563eb" stop-opacity="0.18" />
-          <stop offset="100%" stop-color="#2563eb" stop-opacity="0.0" />
+          <stop offset="0%" stop-color="#1d5bd6" stop-opacity="0.18" />
+          <stop offset="100%" stop-color="#1d5bd6" stop-opacity="0.0" />
         </linearGradient>
       </defs>
       <path d="${areaD}" fill="url(#aquaDashAreaGrad)" />
-      <path d="${d}" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-opacity="0.55" stroke-linecap="round" />
+      <path d="${d}" fill="none" stroke="#1d5bd6" stroke-width="2.2" stroke-opacity="0.55" stroke-linecap="round" />
     </svg>
   `;
 }

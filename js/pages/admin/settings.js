@@ -333,7 +333,7 @@ export async function mount() {
 
       const circle = L.circle([currentLat, currentLng], {
         radius: currentRadiusKm * 1000,
-        color: '#2563eb',
+        color: '#1d5bd6',
         fillColor: '#3b82f6',
         fillOpacity: 0.12,
         weight: 2,
@@ -490,7 +490,7 @@ export async function mount() {
       currentOpen = willBeOpen;
       const slider = toggleEl.nextElementSibling;
       if (slider) {
-        slider.style.backgroundColor = currentOpen ? 'var(--blue-app, #2563eb)' : '#cbd5e1';
+        slider.style.backgroundColor = currentOpen ? 'var(--blue-app, #1d5bd6)' : '#cbd5e1';
       }
       if (toggleDesc) {
         toggleDesc.textContent = currentOpen

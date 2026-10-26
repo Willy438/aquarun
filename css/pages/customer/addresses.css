@@ -56,9 +56,9 @@
 }
 
 .address-card.is-active-editing {
-  border-color: var(--blue-app, #2563eb);
+  border-color: var(--blue-app, #1d5bd6);
   background: #f0f7ff;
-  box-shadow: 0 0 0 1.5px var(--blue-app, #2563eb);
+  box-shadow: 0 0 0 1.5px var(--blue-app, #1d5bd6);
 }
 
 .address-card-top {
@@ -79,8 +79,8 @@
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: var(--tint-blue, #eff6ff);
-  color: var(--blue-app, #2563eb);
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -221,7 +221,7 @@
   height: 16px !important;
   max-width: 16px !important;
   max-height: 16px !important;
-  color: var(--blue-app, #2563eb);
+  color: var(--blue-app, #1d5bd6);
   flex-shrink: 0;
 }
 
@@ -266,8 +266,8 @@
 }
 
 .addr-map-search-row input:focus {
-  border-color: var(--blue-app, #2563eb);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.12);
+  border-color: var(--blue-app, #1d5bd6);
+  box-shadow: 0 0 0 2px rgba(29, 91, 214, 0.18);
 }
 
 .addr-map-search-row .btn {
@@ -465,8 +465,8 @@
   align-items: center;
   gap: 6px;
   padding: 4px 12px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
   border-radius: 999px;
   font-size: 12px;
   font-weight: 600;
@@ -516,8 +516,8 @@
   width: 32px;
   height: 32px;
   border-radius: 8px;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -595,10 +595,10 @@
 }
 
 .addr-preset-btn.active {
-  background: #2563eb;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
-  border-color: #2563eb;
-  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.25);
+  border-color: var(--blue-app, #1d5bd6);
+  box-shadow: 0 1px 3px rgba(29, 91, 214, 0.25);
 }
 
 /* In-form Validation Cues */

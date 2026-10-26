@@ -829,7 +829,7 @@ export async function mount() {
                 <p class="field-hint">Net value of container only (New Gallon − Refill).</p>
               </div>
 
-              <div class="notice" style="font-size: 12px; line-height: 1.5; padding: 10px 12px; background: #f0f7ff; border-left: 3px solid #2563eb;">
+              <div class="notice" style="font-size: 12px; line-height: 1.5; padding: 10px 12px; background: #f0f7ff; border-left: 3px solid var(--blue-app, #1d5bd6);">
                 <strong>Live Pricing Summary:</strong>
                 <br>• Swap Refill: <strong>₱<span id="qp-live-swap">${currentSwapPrice}</span></strong> (customer has empty bottle)
                 <br>• New Gallon + Water: <strong>₱<span id="qp-live-new">${currentNewPrice}</span></strong> (filled new bottle)

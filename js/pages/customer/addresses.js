@@ -160,7 +160,7 @@ export async function mount(me) {
             .join('')}
         </div>`
       : `<div class="empty-state" style="padding: 24px 14px; text-align: center;">
-          <div style="width: 44px; height: 44px; border-radius: 50%; background: #eff6ff; color: #2563eb; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px;">
+          <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--brand-soft, #ebf2ff); color: var(--blue-app, #1d5bd6); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px;">
             ${ICONS.pin}
           </div>
           <p style="font-size: 13.5px; font-weight: 700; color: #1e293b; margin: 0;">No saved addresses yet</p>
@@ -428,7 +428,7 @@ export async function mount(me) {
         // Station Delivery Radius Circle (interactive: false so clicks pass through anywhere!)
         const deliveryCircle = L.circle([stLat, stLng], {
           radius: radiusKm * 1000,
-          color: '#2563eb',
+          color: '#1d5bd6',
           fillColor: '#3b82f6',
           fillOpacity: 0.12,
           weight: 2,

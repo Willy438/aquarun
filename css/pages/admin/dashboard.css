@@ -253,7 +253,7 @@
   width: 16px;
   height: 2.5px;
   border-radius: 999px;
-  background: #2563eb;
+  background: var(--blue-app, #1d5bd6);
   position: relative;
 }
 
@@ -597,7 +597,7 @@
 }
 
 .pipeline-fill.is-sky {
-  background: #0284c7;
+  background: var(--blue-app, #1d5bd6);
 }
 
 /* Dashboard bottom 3-column lists */

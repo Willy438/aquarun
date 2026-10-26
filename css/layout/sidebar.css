@@ -42,7 +42,7 @@ body.is-drawer-open {
   width: 36px;
   height: 36px;
   border-radius: 11px;
-  background: #256eff;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
   display: inline-flex;
   align-items: center;
@@ -208,10 +208,10 @@ body.is-drawer-open {
 }
 
 .sidebar-link.is-active {
-  background: #2563eb;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
   font-weight: 600;
-  box-shadow: 0 4px 12px rgba(17, 67, 178, 0.35);
+  box-shadow: 0 4px 12px rgba(29, 91, 214, 0.35);
 }
 
 .sidebar-icon {
@@ -238,7 +238,7 @@ body.is-drawer-open {
 }
 
 .sidebar-badge {
-  background: #4e8cff;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
   font-size: 11px;
   font-weight: 700;
@@ -280,7 +280,7 @@ body.is-drawer-open {
   width: 36px;
   height: 36px;
   border-radius: 999px;
-  background: #2d74ff;
+  background: var(--blue-app, #1d5bd6);
   color: #ffffff;
   font-size: 12px;
   font-weight: 700;
