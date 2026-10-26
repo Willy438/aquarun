@@ -22,7 +22,7 @@ export async function mount(me) {
   let activeRiders = [];
   let riderSummaries = [];
   let salesHistory = [];
-  let activeTab = 'active'; // 'active' | 'history'
+  let activeTab = 'awaiting'; // 'awaiting' | 'holding' | 'history'
 
   async function loadData() {
     try {
@@ -53,6 +53,16 @@ export async function mount(me) {
         })
       );
 
+      // Default tab auto-selection if initial
+      const awaitingRiders = riderSummaries.filter((s) => s.submittedCash > 0);
+      const holdingRiders = riderSummaries.filter(
+        (s) => s.submittedCash === 0 && s.unsubmittedCash > 0
+      );
+
+      if (activeTab === 'awaiting' && awaitingRiders.length === 0 && holdingRiders.length > 0) {
+        // Keep awaiting as default or let user explore
+      }
+
       renderView();
     } catch (err) {
       showToast(err.message || 'Could not load remittance data.', 'error');
@@ -73,68 +83,81 @@ export async function mount(me) {
       0
     );
 
-    const totalCashInCirculation = riderSummaries.reduce(
-      (sum, s) => sum + Number(s.totalCash || 0),
+    const holdingCashTotal = riderSummaries.reduce(
+      (sum, s) => sum + Number(s.unsubmittedCash || 0),
       0
     );
 
-    const ridersWithCash = riderSummaries.filter((s) => s.totalCash > 0);
+    const awaitingRiders = riderSummaries.filter((s) => s.submittedCash > 0);
+    const holdingRiders = riderSummaries.filter(
+      (s) => s.submittedCash === 0 && s.unsubmittedCash > 0
+    );
 
     content.innerHTML = `
-      <div class="grid-3" style="margin-bottom: 16px;">
-        <div class="stat-card stat-card-between" style="border-left: 4px solid #f59e0b;">
+      <div class="remittance-stat-grid">
+        <div class="remittance-stat-card">
           <div>
-            <p class="stat-label-top">Awaiting Approval</p>
-            <p class="stat-value" style="color: #b45309;">${formatPeso(pendingApprovalTotal)}</p>
-            <p class="stat-sub" style="font-size: 12px; color: #78350f; margin-top: 2px;">
-              Submitted by riders awaiting cash check
+            <p class="remittance-stat-label">Awaiting Approval</p>
+            <p class="remittance-stat-value">${formatPeso(pendingApprovalTotal)}</p>
+            <p class="remittance-stat-sub">
+              ${awaitingRiders.length} ${awaitingRiders.length === 1 ? 'turnover' : 'turnovers'} submitted by riders
             </p>
           </div>
-          <span class="stat-icon" style="color: #d97706;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </span>
+          <div class="remittance-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
         </div>
 
-        <div class="stat-card stat-card-between" style="border-left: 4px solid #3b82f6;">
+        <div class="remittance-stat-card">
           <div>
-            <p class="stat-label-top">Total Cash on Hand</p>
-            <p class="stat-value" style="color: #1d4ed8;">${formatPeso(totalCashInCirculation)}</p>
-            <p class="stat-sub" style="font-size: 12px; color: #1e40af; margin-top: 2px;">
-              Across ${ridersWithCash.length} active ${ridersWithCash.length === 1 ? 'rider' : 'riders'}
+            <p class="remittance-stat-label">On-Duty Cash in Pocket</p>
+            <p class="remittance-stat-value">${formatPeso(holdingCashTotal)}</p>
+            <p class="remittance-stat-sub">
+              With ${holdingRiders.length} active ${holdingRiders.length === 1 ? 'rider' : 'riders'} on the road
             </p>
           </div>
-          <span class="stat-icon" style="color: #2563eb;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>
-          </span>
+          <div class="remittance-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>
+          </div>
         </div>
 
-        <div class="stat-card stat-card-between" style="border-left: 4px solid #10b981;">
+        <div class="remittance-stat-card">
           <div>
-            <p class="stat-label-top">Settled Today</p>
-            <p class="stat-value" style="color: #047857;">${formatPeso(todaySettledTotal)}</p>
-            <p class="stat-sub" style="font-size: 12px; color: #065f46; margin-top: 2px;">
-              Reconciled &amp; verified sales
+            <p class="remittance-stat-label">Settled Today</p>
+            <p class="remittance-stat-value">${formatPeso(todaySettledTotal)}</p>
+            <p class="remittance-stat-sub">
+              Reconciled station revenue
             </p>
           </div>
-          <span class="stat-icon" style="color: #059669;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-          </span>
+          <div class="remittance-stat-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
         </div>
       </div>
 
-      <div class="card" style="margin-bottom: 16px;">
-        <div class="filter-pills" style="margin-bottom: 0;">
-          <button type="button" class="filter-pill ${activeTab === 'active' ? 'is-active' : ''}" data-tab="active">
-            Active Turnovers &amp; Approval (${ridersWithCash.length})
-          </button>
-          <button type="button" class="filter-pill ${activeTab === 'history' ? 'is-active' : ''}" data-tab="history">
-            Settled Sales History (${salesHistory.length})
-          </button>
-        </div>
+      <div class="remittance-tabs-bar">
+        <button type="button" class="remittance-tab-btn ${activeTab === 'awaiting' ? 'is-active' : ''}" data-tab="awaiting">
+          Awaiting Cashier Check
+          <span class="remittance-tab-badge">${awaitingRiders.length}</span>
+        </button>
+        <button type="button" class="remittance-tab-btn ${activeTab === 'holding' ? 'is-active' : ''}" data-tab="holding">
+          On-Duty in Pocket (Unsubmitted)
+          <span class="remittance-tab-badge">${holdingRiders.length}</span>
+        </button>
+        <button type="button" class="remittance-tab-btn ${activeTab === 'history' ? 'is-active' : ''}" data-tab="history">
+          Settled Sales History
+          <span class="remittance-tab-badge">${salesHistory.length}</span>
+        </button>
       </div>
 
       <div id="remittance-tab-content">
-        ${activeTab === 'active' ? renderActiveRidersHtml(riderSummaries) : renderHistoryHtml(salesHistory)}
+        ${
+          activeTab === 'awaiting'
+            ? renderAwaitingHtml(awaitingRiders)
+            : activeTab === 'holding'
+              ? renderHoldingHtml(holdingRiders)
+              : renderHistoryHtml(salesHistory)
+        }
       </div>
     `;
 
@@ -148,170 +171,217 @@ export async function mount(me) {
     attachActionListeners();
   }
 
-  function renderActiveRidersHtml(summaries) {
-    if (!summaries.length) {
+  function renderOrderRow(o) {
+    const cust = o.customer?.full_name || 'Customer';
+    const orderDate = o.delivered_at
+      ? `${formatDateShort(o.delivered_at)} · ${formatTimeShort(o.delivered_at)}`
+      : 'Delivered';
+    const note = String(o.slot_note || '');
+    const isSub =
+      o.remittance_status === 'submitted' || note.includes('[REMITTANCE_SUBMITTED]');
+
+    const earlyDepartMatch = note.match(/\[EARLY_DEPART:\s*([^\]]+)\]/i);
+    const lateDepartMatch = note.match(/\[LATE_DEPART:\s*([^\]]+)\]/i);
+    const earlyDeliveryMatch = note.match(/\[EARLY_DELIVERY:\s*([^\]]+)\]/i);
+    const lateDeliveryMatch = note.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
+
+    let timingBadgesHtml = '';
+    if (earlyDepartMatch) {
+      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart: ${escapeHtml(earlyDepartMatch[1])}</span>`;
+    }
+    if (lateDepartMatch) {
+      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart: ${escapeHtml(lateDepartMatch[1])}</span>`;
+    }
+    if (earlyDeliveryMatch) {
+      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv: ${escapeHtml(earlyDeliveryMatch[1])}</span>`;
+    }
+    if (lateDeliveryMatch) {
+      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv: ${escapeHtml(lateDeliveryMatch[1])}</span>`;
+    }
+
+    return `
+      <div class="remittance-order-row">
+        <div class="remittance-order-info">
+          <div class="remittance-order-headline">
+            <span class="remittance-order-id">#${escapeHtml(o.order_number)}</span>
+            <span class="remittance-order-dot">·</span>
+            <span class="remittance-order-customer">${escapeHtml(cust)}</span>
+          </div>
+          <div class="remittance-order-meta">
+            <span>${escapeHtml(orderDate)}</span>
+            ${timingBadgesHtml}
+          </div>
+        </div>
+        <div class="remittance-order-end">
+          <span class="remittance-order-amount">${escapeHtml(formatPeso(o.total))}</span>
+          <span class="pill ${isSub ? 'pill-amber' : 'pill-neutral'}" style="font-size: 11px;">
+            ${isSub ? 'Submitted' : 'In Pocket'}
+          </span>
+        </div>
+      </div>
+    `;
+  }
+
+  function renderAwaitingHtml(awaitingRiders) {
+    if (!awaitingRiders.length) {
       return `
-        <div class="card empty-state" style="padding: 40px; text-align: center;">
-          <p>No active delivery riders found in the station roster.</p>
+        <div class="card empty-state" style="padding: 48px 24px; text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a;">All cash turnovers cleared</h3>
+          <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 400px; margin: 0 auto;">
+            No cash remittances awaiting cashier verification right now. Any rider turnover will appear here when submitted.
+          </p>
         </div>
       `;
     }
 
-    const cardsHtml = summaries
+    const cardsHtml = awaitingRiders
       .map((s) => {
-        const isSettled = s.totalCash === 0;
-        const hasSubmitted = s.hasSubmitted;
-        const borderStyle = isSettled
-          ? 'border-top: 4px solid #cbd5e1;'
-          : hasSubmitted
-            ? 'border-top: 4px solid #f59e0b; background: #fffdf5;'
-            : 'border-top: 4px solid #10b981;';
-
-        const orderRows = (s.unremittedOrders || [])
-          .map((o) => {
-            const cust = o.customer?.full_name || 'Customer';
-            const orderDate = o.delivered_at
-              ? `${formatDateShort(o.delivered_at)} ${formatTimeShort(o.delivered_at)}`
-              : 'Delivered';
-            const note = String(o.slot_note || '');
-            const isSub =
-              o.remittance_status === 'submitted' ||
-              note.includes('[REMITTANCE_SUBMITTED]');
-
-            const earlyDepartMatch = note.match(/\[EARLY_DEPART:\s*([^\]]+)\]/i);
-            const lateDepartMatch = note.match(/\[LATE_DEPART:\s*([^\]]+)\]/i);
-            const earlyDeliveryMatch = note.match(/\[EARLY_DELIVERY:\s*([^\]]+)\]/i);
-            const lateDeliveryMatch = note.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
-
-            let timingBadgesHtml = '';
-            if (earlyDepartMatch) {
-              timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart: ${escapeHtml(earlyDepartMatch[1])}</div>`;
-            }
-            if (lateDepartMatch) {
-              timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart: ${escapeHtml(lateDepartMatch[1])}</div>`;
-            }
-            if (earlyDeliveryMatch) {
-              timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv: ${escapeHtml(earlyDeliveryMatch[1])}</div>`;
-            }
-            if (lateDeliveryMatch) {
-              timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv: ${escapeHtml(lateDeliveryMatch[1])}</div>`;
-            }
-
-            return `
-              <tr style="border-bottom: 1px solid #f1f5f9; font-size: 13px;">
-                <td style="padding: 8px 6px; font-weight: 700; color: var(--blue-app);">
-                  #${escapeHtml(o.order_number)}
-                  ${timingBadgesHtml}
-                </td>
-                <td style="padding: 8px 6px;">${escapeHtml(cust)}</td>
-                <td style="padding: 8px 6px; color: #64748b;">${escapeHtml(orderDate)}</td>
-                <td style="padding: 8px 6px;">
-                  <span class="pill ${isSub ? 'pill-amber' : 'pill-blue'}" style="font-size: 11px;">
-                    ${isSub ? 'Submitted' : 'Delivered'}
-                  </span>
-                </td>
-                <td style="padding: 8px 6px; text-align: right; font-weight: 700; color: #15803d;">
-                  ${escapeHtml(formatPeso(o.total))}
-                </td>
-              </tr>
-            `;
-          })
+        const ordersHtml = (s.submittedOrders || s.unremittedOrders || [])
+          .map(renderOrderRow)
           .join('');
 
         return `
-          <div class="batch-cluster-card" style="${borderStyle}">
-            <div class="batch-cluster-header">
+          <div class="remittance-rider-card is-submitted">
+            <div class="remittance-rider-header">
               <div>
-                <span class="batch-cluster-title" style="font-size: 15px; font-weight: 700; color: #0f172a;">
-                  ${escapeHtml(s.rider.full_name)}
-                </span>
-                <span class="batch-cluster-meta" style="font-size: 12px; color: #64748b;">
-                  ${escapeHtml(s.rider.phone || 'No phone')} · Rider
-                </span>
+                <h3 class="remittance-rider-name">${escapeHtml(s.rider.full_name)}</h3>
+                <p class="remittance-rider-meta">${escapeHtml(s.rider.phone || 'No phone')} · Delivery Rider</p>
               </div>
-              <span class="pill ${
-                isSettled
-                  ? 'pill-neutral'
-                  : hasSubmitted
-                    ? 'pill-amber'
-                    : 'pill-green'
-              }">
-                ${
-                  isSettled
-                    ? 'Settled'
-                    : hasSubmitted
-                      ? 'Awaiting Approval'
-                      : 'Cash on Hand'
-                }
+              <span class="pill pill-amber" style="font-weight: 700;">
+                Awaiting Approval
               </span>
             </div>
 
-            <div class="batch-stats-row" style="margin: 12px 0;">
-              <span class="batch-stat-pill is-cash" style="font-size: 15px; font-weight: 800;">
-                ${formatPeso(s.totalCash)} Cash Held
-              </span>
-              <span class="batch-stat-pill">
-                ${s.count} ${s.count === 1 ? 'order' : 'orders'}
-              </span>
+            <div class="remittance-metrics-strip">
+              <div class="remittance-metric-item">
+                <span class="remittance-metric-label">Cash to Receive</span>
+                <span class="remittance-metric-val is-highlight">${formatPeso(s.submittedCash)}</span>
+              </div>
+              <div class="remittance-metric-item">
+                <span class="remittance-metric-label">Orders Submitted</span>
+                <span class="remittance-metric-val">${s.submittedCount} ${s.submittedCount === 1 ? 'order' : 'orders'}</span>
+              </div>
               ${
-                hasSubmitted
-                  ? `<span class="batch-stat-pill" style="background: #fef3c7; color: #92400e; font-weight: 700;">
-                      ${formatPeso(s.submittedCash)} Submitted for Check
-                    </span>`
+                s.unsubmittedCash > 0
+                  ? `<div class="remittance-metric-item">
+                      <span class="remittance-metric-label">Still in Pocket</span>
+                      <span class="remittance-metric-val" style="color: #64748b;">${formatPeso(s.unsubmittedCash)}</span>
+                    </div>`
                   : ''
               }
             </div>
 
-            ${
-              !isSettled
-                ? `
-                  <div style="margin: 10px 0; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden;">
-                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
-                      <thead style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0;">
-                        <tr>
-                          <th style="padding: 6px;">Order</th>
-                          <th style="padding: 6px;">Customer</th>
-                          <th style="padding: 6px;">Time</th>
-                          <th style="padding: 6px;">Status</th>
-                          <th style="padding: 6px; text-align: right;">Cash</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        ${orderRows}
-                      </tbody>
-                    </table>
-                  </div>
+            <div class="remittance-orders-box">
+              <div class="remittance-orders-header">
+                <span class="remittance-orders-title">Orders for Verification</span>
+                <span class="remittance-orders-total">${formatPeso(s.submittedCash)}</span>
+              </div>
+              <div class="remittance-orders-list">
+                ${ordersHtml}
+              </div>
+            </div>
 
-                  <div style="margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
-                    <button
-                      type="button"
-                      class="btn btn-primary btn-block"
-                      data-approve-remittance="${escapeHtml(s.rider.id)}"
-                      data-rider-name="${escapeHtml(s.rider.full_name)}"
-                      data-amount="${s.totalCash}"
-                      style="font-weight: 700; background: #16a34a; border-color: #16a34a;"
-                    >
-                      ${
-                        hasSubmitted
-                          ? `Approve &amp; Accept Cash (${formatPeso(s.totalCash)})`
-                          : `Receive &amp; Settle Cash (${formatPeso(s.totalCash)})`
-                      }
-                    </button>
-                  </div>
-                `
-                : `
-                  <div style="margin-top: 12px; font-size: 12.5px; color: #64748b; text-align: center; padding: 10px 0; background: #f8fafc; border-radius: 6px;">
-                    All delivery collections for this rider are fully reconciled and settled.
-                  </div>
-                `
-            }
+            <div class="remittance-action-box">
+              <button
+                type="button"
+                class="btn btn-primary btn-block"
+                data-approve-remittance="${escapeHtml(s.rider.id)}"
+                data-rider-name="${escapeHtml(s.rider.full_name)}"
+                data-amount="${s.submittedCash}"
+                style="font-weight: 700; font-size: 14px; padding: 10px 16px;"
+              >
+                Verify &amp; Accept Cash (${formatPeso(s.submittedCash)})
+              </button>
+            </div>
           </div>
         `;
       })
       .join('');
 
     return `
-      <div class="batch-clusters-grid">
+      <div class="remittance-grid">
+        ${cardsHtml}
+      </div>
+    `;
+  }
+
+  function renderHoldingHtml(holdingRiders) {
+    if (!holdingRiders.length) {
+      return `
+        <div class="card empty-state" style="padding: 48px 24px; text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a;">No unsubmitted cash on duty</h3>
+          <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 400px; margin: 0 auto;">
+            All delivery collections have either been turned over to the station cashier or no active cash orders are out.
+          </p>
+        </div>
+      `;
+    }
+
+    const cardsHtml = holdingRiders
+      .map((s) => {
+        const ordersHtml = (s.unsubmittedOrders || s.unremittedOrders || [])
+          .map(renderOrderRow)
+          .join('');
+
+        return `
+          <div class="remittance-rider-card">
+            <div class="remittance-rider-header">
+              <div>
+                <h3 class="remittance-rider-name">${escapeHtml(s.rider.full_name)}</h3>
+                <p class="remittance-rider-meta">${escapeHtml(s.rider.phone || 'No phone')} · Delivery Rider</p>
+              </div>
+              <span class="pill pill-neutral">
+                In Rider's Pocket
+              </span>
+            </div>
+
+            <div class="remittance-metrics-strip">
+              <div class="remittance-metric-item">
+                <span class="remittance-metric-label">Cash on Hand</span>
+                <span class="remittance-metric-val">${formatPeso(s.unsubmittedCash)}</span>
+              </div>
+              <div class="remittance-metric-item">
+                <span class="remittance-metric-label">Delivered Orders</span>
+                <span class="remittance-metric-val">${s.unsubmittedCount} ${s.unsubmittedCount === 1 ? 'order' : 'orders'}</span>
+              </div>
+              <div class="remittance-metric-item">
+                <span class="remittance-metric-label">Status</span>
+                <span class="remittance-metric-val" style="font-size: 13px; color: #64748b; font-weight: 600;">Shift in progress</span>
+              </div>
+            </div>
+
+            <div class="remittance-orders-box">
+              <div class="remittance-orders-header">
+                <span class="remittance-orders-title">Delivered Orders (Cash Held)</span>
+                <span class="remittance-orders-total">${formatPeso(s.unsubmittedCash)}</span>
+              </div>
+              <div class="remittance-orders-list">
+                ${ordersHtml}
+              </div>
+            </div>
+
+            <div class="remittance-action-box">
+              <div class="remittance-waiting-notice">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <div>
+                  <span style="font-weight: 600; color: #334155;">Cash not turned over yet.</span>
+                  <span style="color: #64748b;"> Rider is carrying collections. Settlement unlocks once rider submits turnover.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    return `
+      <div class="remittance-grid">
         ${cardsHtml}
       </div>
     `;
@@ -320,8 +390,12 @@ export async function mount(me) {
   function renderHistoryHtml(history) {
     if (!history.length) {
       return `
-        <div class="card empty-state" style="padding: 40px; text-align: center;">
-          <p>No settled cash remittance transactions found yet.</p>
+        <div class="card empty-state" style="padding: 48px 24px; text-align: center;">
+          <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          </div>
+          <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a;">No settled sales history</h3>
+          <p style="margin: 0; font-size: 13px; color: #64748b;">No settled cash remittance transactions recorded yet.</p>
         </div>
       `;
     }
@@ -346,16 +420,16 @@ export async function mount(me) {
 
         let timingBadgesHtml = '';
         if (earlyDepartMatch) {
-          timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart: ${escapeHtml(earlyDepartMatch[1])}</div>`;
+          timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; padding: 2px 6px; display:inline-block; margin-top:2px;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart</span>`;
         }
         if (lateDepartMatch) {
-          timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart: ${escapeHtml(lateDepartMatch[1])}</div>`;
+          timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; padding: 2px 6px; display:inline-block; margin-top:2px;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart</span>`;
         }
         if (earlyDeliveryMatch) {
-          timingBadgesHtml += `<div class="pill pill-amber" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv: ${escapeHtml(earlyDeliveryMatch[1])}</div>`;
+          timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; padding: 2px 6px; display:inline-block; margin-top:2px;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv</span>`;
         }
         if (lateDeliveryMatch) {
-          timingBadgesHtml += `<div class="pill pill-rose" style="font-size:10px;margin-top:3px;display:inline-block;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv: ${escapeHtml(lateDeliveryMatch[1])}</div>`;
+          timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; padding: 2px 6px; display:inline-block; margin-top:2px;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv</span>`;
         }
 
         return `
@@ -364,13 +438,13 @@ export async function mount(me) {
               #${escapeHtml(orderNum)}
               ${timingBadgesHtml}
             </td>
-            <td style="font-weight: 600;">${escapeHtml(riderName)}</td>
+            <td style="font-weight: 600; color: #0f172a;">${escapeHtml(riderName)}</td>
             <td>${escapeHtml(custName)}</td>
             <td style="color: #64748b;">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</td>
             <td>
-              <span class="pill pill-green" style="font-size: 11px;">Settled &amp; Paid</span>
+              <span class="pill pill-green" style="font-size: 11px;">Settled &amp; Reconciled</span>
             </td>
-            <td style="text-align: right; font-weight: 800; color: #15803d;">
+            <td style="text-align: right; font-weight: 800; color: #0f172a;">
               ${escapeHtml(formatPeso(o.total))}
             </td>
           </tr>
@@ -379,10 +453,10 @@ export async function mount(me) {
       .join('');
 
     return `
-      <div class="card">
-        <div class="card-header">
-          <h2 class="card-title">Settled Remittances &amp; Sales Log</h2>
-          <span class="pill pill-neutral">Past 50 records</span>
+      <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
+        <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+          <h2 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">Settled Remittances &amp; Sales Log</h2>
+          <span class="pill pill-neutral" style="font-size: 11px;">Past 50 records</span>
         </div>
         <div class="table-wrap">
           <table class="table">
@@ -413,19 +487,19 @@ export async function mount(me) {
         const amount = Number(btn.dataset.amount || 0);
 
         const confirmed = await confirmModal({
-          title: `Approve Cash Remittance from ${riderName}?`,
-          message: `Confirm that ${riderName} has physically handed over ${formatPeso(
+          title: `Confirm Cash Acceptance from ${riderName}?`,
+          message: `Have you physically counted and received ${formatPeso(
             amount
-          )} in cash to the station cashier? This will clear the rider's pending balance and record the sale as settled.`,
-          confirmText: 'Yes, approve remittance',
+          )} in cash from ${riderName}? This action will record the cash in the station register and clear the rider's pending remittance.`,
+          confirmText: 'Yes, verify & accept cash',
           cancelText: 'Cancel',
         });
         if (!confirmed) return;
 
-        setBusy(btn, true, 'Approving...');
+        setBusy(btn, true, 'Accepting cash...');
         try {
           await staffApproveRemittance(riderId);
-          showToast(`Cash remittance of ${formatPeso(amount)} from ${riderName} approved and settled!`, 'success');
+          showToast(`Cash remittance of ${formatPeso(amount)} from ${riderName} verified and settled!`, 'success');
           await loadData();
         } catch (err) {
           showToast(err.message || 'Could not approve remittance.', 'error');

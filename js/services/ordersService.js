@@ -1223,12 +1223,15 @@ export async function staffApproveRemittance(riderId) {
 
   // 2. Direct table fallback
   const summary = await getRiderRemittanceSummary(riderId);
-  if (!summary.unremittedOrders.length) return 0;
+  const targetOrders = summary.submittedOrders.length
+    ? summary.submittedOrders
+    : summary.unremittedOrders;
+  if (!targetOrders.length) return 0;
 
   let anyUpdated = false;
   let lastErr = null;
 
-  for (const o of summary.unremittedOrders) {
+  for (const o of targetOrders) {
     const rawNote = String(o.slot_note || '');
     const cleanNote = rawNote
       .replace(/\[REMITTANCE_SUBMITTED\]/g, '')

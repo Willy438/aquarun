@@ -1,0 +1,340 @@
+/* Cash Remittance & Sales Reconciliation Styles */
+
+.remittance-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.remittance-stat-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.remittance-stat-label {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin: 0 0 4px;
+}
+
+.remittance-stat-value {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+  margin: 0;
+  line-height: 1.2;
+}
+
+.remittance-stat-sub {
+  font-size: 12px;
+  color: #64748b;
+  margin: 4px 0 0;
+}
+
+.remittance-stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: var(--blue-app, #1d5bd6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.remittance-stat-icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+/* Nav Pills / Filter Tabs */
+.remittance-tabs-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.remittance-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.remittance-tab-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.remittance-tab-btn.is-active {
+  background: var(--blue-app, #1d5bd6);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(29, 91, 214, 0.25);
+}
+
+.remittance-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.1);
+  color: inherit;
+}
+
+.remittance-tab-btn.is-active .remittance-tab-badge {
+  background: rgba(255, 255, 255, 0.28);
+  color: #ffffff;
+}
+
+/* Rider Cards Grid */
+.remittance-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 960px) {
+  .remittance-grid {
+    grid-template-columns: repeat(auto-fill, minmax(460px, 1fr));
+    gap: 20px;
+  }
+}
+
+.remittance-rider-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  display: flex;
+  flex-direction: column;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.remittance-rider-card.is-submitted {
+  border-color: #cbd5e1;
+  background: #ffffff;
+}
+
+.remittance-rider-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.remittance-rider-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+  margin: 0;
+}
+
+.remittance-rider-meta {
+  font-size: 12.5px;
+  color: #64748b;
+  margin: 2px 0 0;
+}
+
+/* Metrics strip inside rider card */
+.remittance-metrics-strip {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.remittance-metric-item {
+  display: flex;
+  flex-direction: column;
+}
+
+.remittance-metric-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #64748b;
+  margin: 0 0 2px;
+}
+
+.remittance-metric-val {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+  margin: 0;
+}
+
+.remittance-metric-val.is-highlight {
+  color: var(--blue-app, #1d5bd6);
+}
+
+/* Structured Orders Breakdown List */
+.remittance-orders-box {
+  border: 1px solid #e2e8f0;
+  border-radius: 9px;
+  overflow: hidden;
+  margin-bottom: 14px;
+}
+
+.remittance-orders-header {
+  padding: 9px 14px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.remittance-orders-title {
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #64748b;
+}
+
+.remittance-orders-total {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+}
+
+.remittance-orders-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.remittance-order-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  background: #ffffff;
+  transition: background-color 0.1s ease;
+}
+
+.remittance-order-row:last-child {
+  border-bottom: none;
+}
+
+.remittance-order-row:hover {
+  background: #fafafa;
+}
+
+.remittance-order-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 2px;
+}
+
+.remittance-order-headline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+}
+
+.remittance-order-id {
+  font-weight: 800;
+  color: var(--blue-app, #1d5bd6);
+}
+
+.remittance-order-dot {
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+.remittance-order-customer {
+  font-weight: 600;
+  color: var(--ink-navy, #0f172a);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.remittance-order-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 12px;
+  color: #64748b;
+}
+
+.remittance-order-end {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.remittance-order-amount {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+}
+
+/* Action Area */
+.remittance-action-box {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.remittance-waiting-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.remittance-waiting-notice svg {
+  width: 16px;
+  height: 16px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}

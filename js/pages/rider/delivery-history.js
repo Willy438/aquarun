@@ -168,29 +168,29 @@ export async function mount(me) {
       `;
 
     content.innerHTML = `
-      <div class="card" style="border-left: 4px solid #10b981; background: #f0fdf4; padding: 14px 18px; margin-bottom: 14px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
-          <div style="display: flex; align-items: center; gap: 12px;">
-            <div style="width: 40px; height: 40px; border-radius: 10px; background: #dcfce7; color: #16a34a; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
+      <div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; color: var(--ink-navy); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
               ₱
             </div>
             <div>
-              <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #15803d;">
-                Cash in Hand &amp; Turnovers
+              <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted-blue);">
+                Cash on Hand &amp; Turnovers
               </p>
-              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 2px;">
-                <span style="font-size: 18px; font-weight: 800; color: #14532d;">
+              <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 3px;">
+                <span style="font-size: 19px; font-weight: 800; color: var(--ink-navy);">
                   ${formatPeso(remittance.unsubmittedCash || 0)}
-                  <span style="font-size: 12px; font-weight: 500; color: #166534;">in pocket (${remittance.unsubmittedCount || 0} ${remittance.unsubmittedCount === 1 ? 'order' : 'orders'})</span>
+                  <span style="font-size: 12.5px; font-weight: 500; color: var(--muted-blue);">in pocket (${remittance.unsubmittedCount || 0} ${remittance.unsubmittedCount === 1 ? 'order' : 'orders'})</span>
                 </span>
                 ${
                   remittance.submittedCash > 0
-                    ? `<span style="font-size: 12px; font-weight: 600; color: #b45309; background: #fffbeb; padding: 2px 8px; border-radius: 4px; border: 1px solid #fef3c7;">${formatPeso(remittance.submittedCash)} awaiting cashier</span>`
+                    ? `<span class="pill pill-amber" style="font-size: 11px; font-weight: 700;">${formatPeso(remittance.submittedCash)} awaiting cashier</span>`
                     : ''
                 }
                 ${
                   remittance.settledCash > 0
-                    ? `<span style="font-size: 12px; color: #166534; font-weight: 600;">· ${formatPeso(remittance.settledCash)} verified</span>`
+                    ? `<span style="font-size: 12.5px; color: #166534; font-weight: 600;">· ${formatPeso(remittance.settledCash)} settled</span>`
                     : ''
                 }
               </div>
@@ -202,7 +202,7 @@ export async function mount(me) {
             </button>
             ${
               remittance.unsubmittedCount > 0
-                ? `<button type="button" class="btn btn-primary btn-sm" id="btn-history-remit" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">Turn over cash (${formatPeso(remittance.unsubmittedCash)}) &rarr;</button>`
+                ? `<button type="button" class="btn btn-primary btn-sm" id="btn-history-remit" style="font-weight: 700;">Turn over cash (${formatPeso(remittance.unsubmittedCash)}) &rarr;</button>`
                 : remittance.submittedCount > 0
                   ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Turnover Submitted · Awaiting Cashier</span>`
                   : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash reconciled</span>`
@@ -211,7 +211,7 @@ export async function mount(me) {
         </div>
       </div>
 
-      <div class="grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 14px;">
+      <div class="grid-4" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 16px;">
         <div class="stat-card stat-card-between">
           <div>
             <p class="stat-label-top">Deliveries Completed</p>
@@ -223,9 +223,9 @@ export async function mount(me) {
         <div class="stat-card stat-card-between">
           <div>
             <p class="stat-label-top">Reconciled Sales</p>
-            <p class="stat-value" style="color: #15803d; font-size: 20px;">${formatPeso(remittance.settledCash || 0)}</p>
+            <p class="stat-value" style="color: var(--ink-navy); font-size: 20px;">${formatPeso(remittance.settledCash || 0)}</p>
           </div>
-          <span class="stat-icon" style="color: #16a34a; font-size: 18px; font-weight: 800;">₱</span>
+          <span class="stat-icon" style="font-size: 18px; font-weight: 800; color: var(--muted-blue);">₱</span>
         </div>
 
         <div class="stat-card stat-card-between">
@@ -235,15 +235,6 @@ export async function mount(me) {
           </div>
           <span class="stat-icon">${ICONS.drop}</span>
         </div>
-
-        <div class="stat-card stat-card-between">
-          <div>
-            <p class="stat-label-top">Empties collected</p>
-            <p class="stat-value">${escapeHtml(totalEmpties)}</p>
-          </div>
-          <span class="stat-icon">${ICONS.cube}</span>
-        </div>
-      </div>
 
         <div class="stat-card stat-card-between">
           <div>
@@ -347,12 +338,12 @@ export async function mount(me) {
           <button type="button" class="modal-close" data-action="cancel" style="border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #94a3b8; padding: 4px;">×</button>
         </div>
         <div class="modal-body stack" style="gap: 14px; padding: 18px 22px;">
-          <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <p style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: #166534; letter-spacing: 0.5px;">Total Cash to Turn Over</p>
-              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 800; color: #14532d;">${formatPeso(cashToRemit)}</p>
+              <p style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--muted-blue); letter-spacing: 0.5px;">Total Cash to Turn Over</p>
+              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 800; color: var(--ink-navy);">${formatPeso(cashToRemit)}</p>
             </div>
-            <span class="pill pill-green" style="font-weight: 700; font-size: 12px; padding: 6px 14px;">${ordersToRemit.length} ${ordersToRemit.length === 1 ? 'Order' : 'Orders'}</span>
+            <span class="pill pill-blue" style="font-weight: 700; font-size: 12px; padding: 6px 14px;">${ordersToRemit.length} ${ordersToRemit.length === 1 ? 'Order' : 'Orders'}</span>
           </div>
 
           <div>
@@ -380,7 +371,7 @@ export async function mount(me) {
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
           <button type="button" class="btn btn-light" data-action="cancel">Cancel</button>
-          <button type="button" class="btn btn-primary" id="btn-confirm-remit-modal" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
+          <button type="button" class="btn btn-primary" id="btn-confirm-remit-modal" style="font-weight: 700;">
             Submit Cash Remittance (${formatPeso(cashToRemit)})
           </button>
         </div>

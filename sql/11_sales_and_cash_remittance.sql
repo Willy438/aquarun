@@ -98,26 +98,54 @@ begin
     raise exception 'Only station staff or admin can approve cash remittances.';
   end if;
 
-  -- Calculate total unremitted COD cash
-  select coalesce(sum(total), 0)
-    into v_total
-    from public.orders
-   where rider_id = p_rider_id
-     and status in ('delivered', 'completed')
-     and (rider_remitted is false or rider_remitted is null);
+  -- Settle submitted orders first if present; otherwise settle unremitted orders
+  if exists (
+    select 1 from public.orders
+     where rider_id = p_rider_id
+       and status in ('delivered', 'completed')
+       and (rider_remitted is false or rider_remitted is null)
+       and (remittance_status = 'submitted' or coalesce(slot_note, '') like '%[REMITTANCE_SUBMITTED]%')
+  ) then
+    select coalesce(sum(total), 0)
+      into v_total
+      from public.orders
+     where rider_id = p_rider_id
+       and status in ('delivered', 'completed')
+       and (rider_remitted is false or rider_remitted is null)
+       and (remittance_status = 'submitted' or coalesce(slot_note, '') like '%[REMITTANCE_SUBMITTED]%');
 
-  -- Mark orders as approved and settled
-  update public.orders
-     set rider_remitted = true,
-         remitted_at = now(),
-         remitted_by = auth.uid(),
-         remittance_status = 'approved',
-         status = 'completed',
-         payment_status = 'paid',
-         slot_note = trim(replace(replace(coalesce(slot_note, ''), '[REMITTANCE_SUBMITTED]', ''), '[REMITTED]', '')) || ' [REMITTED]'
-   where rider_id = p_rider_id
-     and status in ('delivered', 'completed')
-     and (rider_remitted is false or rider_remitted is null);
+    update public.orders
+       set rider_remitted = true,
+           remitted_at = now(),
+           remitted_by = auth.uid(),
+           remittance_status = 'approved',
+           status = 'completed',
+           payment_status = 'paid',
+           slot_note = trim(replace(replace(coalesce(slot_note, ''), '[REMITTANCE_SUBMITTED]', ''), '[REMITTED]', '')) || ' [REMITTED]'
+     where rider_id = p_rider_id
+       and status in ('delivered', 'completed')
+       and (rider_remitted is false or rider_remitted is null)
+       and (remittance_status = 'submitted' or coalesce(slot_note, '') like '%[REMITTANCE_SUBMITTED]%');
+  else
+    select coalesce(sum(total), 0)
+      into v_total
+      from public.orders
+     where rider_id = p_rider_id
+       and status in ('delivered', 'completed')
+       and (rider_remitted is false or rider_remitted is null);
+
+    update public.orders
+       set rider_remitted = true,
+           remitted_at = now(),
+           remitted_by = auth.uid(),
+           remittance_status = 'approved',
+           status = 'completed',
+           payment_status = 'paid',
+           slot_note = trim(replace(replace(coalesce(slot_note, ''), '[REMITTANCE_SUBMITTED]', ''), '[REMITTED]', '')) || ' [REMITTED]'
+     where rider_id = p_rider_id
+       and status in ('delivered', 'completed')
+       and (rider_remitted is false or rider_remitted is null);
+  end if;
 
   return v_total;
 end;

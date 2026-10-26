@@ -80,10 +80,10 @@ export async function mount() {
           <span>Smart Batch Dispatch</span>
           ${batchReadyCount > 0 ? `<span class="badge" style="background:#22c55e;color:#fff;font-weight:700;">${batchReadyCount} ready</span>` : ''}
         </button>
-        <button type="button" class="orders-view-tab ${currentTab === 'remittance' ? 'is-active' : ''}" id="tab-rider-remittance">
+        <a class="orders-view-tab" href="remittance.html" id="tab-rider-remittance">
           ${ICONS.money}
-          <span>Rider Remittances</span>
-        </button>
+          <span>Cash Remittance &amp; Sales</span>
+        </a>
       </div>
 
       <div id="orders-tab-body"></div>
@@ -99,18 +99,11 @@ export async function mount() {
       renderView();
     });
 
-    document.querySelector('#tab-rider-remittance')?.addEventListener('click', () => {
-      currentTab = 'remittance';
-      renderView();
-    });
-
     const bodyContainer = document.querySelector('#orders-tab-body');
     if (currentTab === 'all') {
       renderAllOrdersTab(bodyContainer);
-    } else if (currentTab === 'batch') {
-      renderBatchDispatchTab(bodyContainer);
     } else {
-      renderRiderRemittanceTab(bodyContainer);
+      renderBatchDispatchTab(bodyContainer);
     }
   }
 
@@ -487,7 +480,7 @@ export async function mount() {
                         </div>
 
                         ${
-                          !isSettled
+                          !isSettled && s.hasSubmitted
                             ? `
                               <div style="margin-top: 14px; border-top: 1px solid #f1f5f9; padding-top: 12px;">
                                 <button
@@ -495,18 +488,24 @@ export async function mount() {
                                   class="btn btn-primary btn-block"
                                   data-accept-remittance="${escapeHtml(s.rider.id)}"
                                   data-rider-name="${escapeHtml(s.rider.full_name)}"
-                                  data-amount="${s.totalCash}"
+                                  data-amount="${s.submittedCash || s.totalCash}"
                                   style="font-weight: 700;"
                                 >
-                                  Acknowledge & Accept Cash (${formatPeso(s.totalCash)})
+                                  Verify &amp; Accept Cash (${formatPeso(s.submittedCash || s.totalCash)})
                                 </button>
                               </div>
                             `
-                            : `
-                              <div style="margin-top: 12px; font-size: 12.5px; color: #64748b; text-align: center; padding: 6px 0;">
-                                No pending cash collection for this rider.
-                              </div>
-                            `
+                            : !isSettled
+                              ? `
+                                <div style="margin-top: 12px; font-size: 12px; color: #64748b; text-align: center; padding: 6px 0; background: #f8fafc; border-radius: 6px;">
+                                  Cash on duty in pocket. Waiting for rider turnover.
+                                </div>
+                              `
+                              : `
+                                <div style="margin-top: 12px; font-size: 12.5px; color: #64748b; text-align: center; padding: 6px 0;">
+                                  No pending cash collection for this rider.
+                                </div>
+                              `
                         }
                       </div>
                     `;
