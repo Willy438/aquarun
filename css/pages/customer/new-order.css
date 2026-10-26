@@ -328,3 +328,117 @@
     top: 24px;
   }
 }
+
+
+/* Mobile Responsive Enhancements (< 1024px) */
+.mobile-checkout-bar {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .qty-counter {
+    gap: 8px;
+    padding: 4px 8px;
+  }
+  .qty-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 16px;
+    border-radius: 8px;
+  }
+  .qty-num {
+    font-size: 15px;
+    min-width: 24px;
+  }
+  .category-tabs {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+  }
+  .category-tabs::-webkit-scrollbar {
+    display: none;
+  }
+  .category-tab {
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 1023px) {
+  .mobile-checkout-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border-top: 1px solid var(--line-app, #e2e8f0);
+    padding: 12px 18px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    box-shadow: 0 -4px 18px rgba(15, 36, 84, 0.12);
+    z-index: 55;
+    animation: barSlideUp 0.2s ease-out;
+  }
+
+  .mobile-checkout-bar[hidden] {
+    display: none !important;
+  }
+
+  .mobile-checkout-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .mobile-checkout-count {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted-blue, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .mobile-checkout-total {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--ink-navy, #0f172a);
+    line-height: 1.1;
+  }
+
+  .mobile-checkout-btn {
+    min-height: 44px;
+    padding: 10px 18px;
+    font-size: 13.5px;
+    font-weight: 700;
+    border-radius: 11px;
+    white-space: nowrap;
+    background: var(--blue-app, #1d5bd6);
+    color: #ffffff;
+    box-shadow: 0 2px 8px rgba(29, 91, 214, 0.28);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  /* Ensure content on mobile does not get obscured behind the sticky checkout bar */
+  body:has(#mobile-checkout-bar:not([hidden])) .main {
+    padding-bottom: 96px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .mobile-checkout-bar {
+    display: none !important;
+  }
+}
+
+@keyframes barSlideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}

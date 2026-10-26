@@ -183,6 +183,50 @@ export async function mount(me) {
 
     const paged = paginateList(filtered, ordersPage, ordersPageSize);
 
+    const cardsHtml = paged.items.length
+      ? paged.items
+          .map((order) => {
+            const slotWindow = formatSlotWindow(getEffectiveSlot(order));
+            const isActive = isActiveOrder(order);
+
+            return `
+              <div class="customer-order-card is-clickable" data-order-id="${escapeHtml(order.id)}" data-is-active="${isActive}">
+                <div class="customer-order-card-header">
+                  <span class="customer-order-card-num">#${escapeHtml(order.order_number)}</span>
+                  <span class="pill status-${escapeHtml(order.status)}">
+                    ${escapeHtml(STATUS_LABELS[order.status] || order.status)}
+                  </span>
+                </div>
+                <div class="customer-order-card-items">
+                  ${escapeHtml(summarizeOrderItems(order.items))}
+                </div>
+                <div class="customer-order-card-meta">
+                  <div class="customer-order-meta-col">
+                    <span class="customer-order-meta-label">Delivery Date & Slot</span>
+                    <span class="customer-order-meta-val">${escapeHtml(formatDateShort(order.delivery_date || order.created_at))} · ${escapeHtml(slotWindow)}</span>
+                  </div>
+                  <div class="customer-order-meta-col" style="text-align: right;">
+                    <span class="customer-order-meta-label">Total</span>
+                    <span class="customer-order-card-total">${escapeHtml(formatPeso(order.total))}</span>
+                  </div>
+                </div>
+                <div class="customer-order-card-actions">
+                  ${
+                    isActive
+                      ? `<a class="btn btn-sm btn-primary" href="track-order.html?id=${encodeURIComponent(order.id)}" onclick="event.stopPropagation();">Track order →</a>`
+                      : `<button type="button" class="btn btn-sm btn-light" data-open-receipt="${escapeHtml(order.id)}" onclick="event.stopPropagation();">View receipt</button>`
+                  }
+                </div>
+              </div>
+            `;
+          })
+          .join('')
+      : `
+        <div class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+          No orders match your current filters.
+        </div>
+      `;
+
     const rowsHtml = paged.items.length
       ? paged.items
           .map((order) => {

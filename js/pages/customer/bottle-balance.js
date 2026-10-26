@@ -23,6 +23,46 @@ export async function mount(me) {
         getCustomerLedgerActivity(me.id),
       ]);
 
+      const cardsHtml = activity.length
+        ? activity
+            .map((entry) => {
+              const delivered = Number(entry.bottles_delivered || 0);
+              const empties = Number(entry.empties_collected || 0);
+              const diff = delivered - empties;
+              const changeStr = diff > 0 ? `+${diff}` : String(diff);
+              const dateVal = entry.order?.delivered_at || entry.created_at;
+              const orderNum = entry.order?.order_number || '—';
+
+              return `
+                <div class="bottle-card-item">
+                  <div class="bottle-card-head">
+                    <span class="bottle-card-date">${escapeHtml(formatDateShort(dateVal))}</span>
+                    <span class="bottle-card-order">Order #${escapeHtml(orderNum)}</span>
+                  </div>
+                  <div class="bottle-card-body">
+                    <div class="bottle-card-stat">
+                      <span class="bottle-card-label">Delivered</span>
+                      <span class="bottle-card-val">${escapeHtml(delivered)}</span>
+                    </div>
+                    <div class="bottle-card-stat">
+                      <span class="bottle-card-label">Returned</span>
+                      <span class="bottle-card-val">${escapeHtml(empties)}</span>
+                    </div>
+                    <div class="bottle-card-stat">
+                      <span class="bottle-card-label">Net change</span>
+                      <span class="bottle-card-val ${diff !== 0 ? 'balance-change-pos' : ''}">${escapeHtml(changeStr)}</span>
+                    </div>
+                  </div>
+                </div>
+              `;
+            })
+            .join('')
+        : `
+          <div class="empty-state" style="padding: 24px 14px; text-align: center; color: #64748b;">
+            No bottle activity yet. Records appear after your first delivery.
+          </div>
+        `;
+
       const rowsHtml = activity.length
         ? activity
             .map((entry) => {

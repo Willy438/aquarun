@@ -106,6 +106,30 @@ export async function mount(me) {
           </div>
         `;
 
+      const recentCardsHtml = recentOrders.length
+        ? recentOrders
+            .map(
+              (order) => `
+              <div class="recent-order-card is-clickable" data-order-id="${escapeHtml(order.id)}">
+                <div class="recent-order-card-head">
+                  <span class="recent-order-num">#${escapeHtml(order.order_number)}</span>
+                  <span class="pill status-${escapeHtml(order.status)}">${escapeHtml(STATUS_LABELS[order.status] || order.status)}</span>
+                </div>
+                <div class="recent-order-card-items">${escapeHtml(summarizeOrderItems(order.items))}</div>
+                <div class="recent-order-card-foot">
+                  <span class="recent-order-date">${escapeHtml(formatDateShort(order.delivery_date || order.created_at))}</span>
+                  <span class="recent-order-total">${escapeHtml(formatPeso(order.total))}</span>
+                </div>
+              </div>
+            `
+            )
+            .join('')
+        : `
+          <div class="empty-state" style="padding: 24px 14px; text-align: center; color: #64748b;">
+            No orders yet. Your refill orders will appear here.
+          </div>
+        `;
+
       const recentRowsHtml = recentOrders.length
         ? recentOrders
             .map(
@@ -211,7 +235,7 @@ export async function mount(me) {
         });
       });
 
-      content.querySelectorAll('tr[data-order-id]').forEach((row) => {
+      content.querySelectorAll('[data-order-id]').forEach((row) => {
         row.addEventListener('click', () => {
           const id = row.dataset.orderId;
           const target = allOrders.find((o) => o.id === id);

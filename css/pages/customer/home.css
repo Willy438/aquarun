@@ -53,3 +53,89 @@
     gap: 12px;
   }
 }
+
+
+/* Recent Orders Responsive Layout (Mobile Cards on < 768px, Desktop Table on >= 768px) */
+.mobile-only-cards {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .desktop-only-table {
+    display: none !important;
+  }
+
+  .mobile-only-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f8fafc;
+  }
+
+  .recent-order-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--line-app, #e2e8f0);
+    border-radius: 12px;
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    box-shadow: 0 1px 4px rgba(15, 36, 84, 0.04);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .recent-order-card:active {
+    background: #f8faff;
+    border-color: #bfdbfe;
+  }
+
+  .recent-order-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .recent-order-num {
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--ink-navy, #0f172a);
+  }
+
+  .recent-order-card-items {
+    font-size: 13px;
+    color: var(--ink-navy, #0f172a);
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .recent-order-card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 12px;
+    padding-top: 8px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .recent-order-date {
+    color: var(--muted-blue, #64748b);
+  }
+
+  .recent-order-total {
+    font-weight: 800;
+    color: var(--blue-app, #1d5bd6);
+    font-size: 14px;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-only-table {
+    display: block !important;
+  }
+  .mobile-only-cards {
+    display: none !important;
+  }
+}

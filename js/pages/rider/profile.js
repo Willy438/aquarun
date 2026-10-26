@@ -1,6 +1,6 @@
 import { bootRiderPage, renderNav } from '../../core/nav.js';
 import { setCachedProfile } from '../../core/auth.js';
-import { enablePasswordToggles, escapeHtml, setBusy, showToast } from '../../core/ui.js';
+import { confirmModal, enablePasswordToggles, escapeHtml, setBusy, showToast } from '../../core/ui.js';
 import {
   setRiderAvailability,
   updateOwnPassword,
@@ -128,6 +128,13 @@ export async function mount(initialMe) {
         showToast('The two passwords do not match.', 'error');
         return;
       }
+      const confirmed = await confirmModal({
+        title: 'Change password?',
+        message: 'Are you sure you want to update your password? You will need to use this new password next time you sign in.',
+        confirmText: 'Update password',
+        cancelText: 'Cancel',
+      });
+      if (!confirmed) return;
     }
 
     setBusy(btn, true, 'Saving...');

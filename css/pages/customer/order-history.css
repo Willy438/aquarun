@@ -1,0 +1,162 @@
+/* Customer Order History Styles (Mobile-first with mobile cards vs desktop table) */
+
+.customer-order-cards {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  /* On mobile phones and small screens, hide horizontal-scrolling table and show native cards */
+  .desktop-only-table {
+    display: none !important;
+  }
+
+  .customer-order-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8fafc;
+  }
+
+  .customer-order-card {
+    background: var(--surface, #ffffff);
+    border: 1px solid var(--line-app, #e2e8f0);
+    border-radius: 14px;
+    padding: 15px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    box-shadow: 0 2px 6px rgba(15, 36, 84, 0.04);
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .customer-order-card:active {
+    background: #f8faff;
+    border-color: #bfdbfe;
+  }
+
+  .customer-order-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .customer-order-card-num {
+    font-weight: 800;
+    font-size: 14.5px;
+    color: var(--ink-navy, #0f172a);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .customer-order-card-items {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--ink-navy, #0f172a);
+    line-height: 1.4;
+  }
+
+  .customer-order-card-meta {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+    padding: 10px 0;
+    border-top: 1px solid #f1f5f9;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .customer-order-meta-col {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .customer-order-meta-label {
+    font-size: 10.5px;
+    color: var(--muted-blue, #64748b);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 700;
+  }
+
+  .customer-order-meta-val {
+    font-size: 12.5px;
+    color: #334155;
+    font-weight: 500;
+  }
+
+  .customer-order-card-total {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--blue-app, #1d5bd6);
+  }
+
+  .customer-order-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 2px;
+  }
+
+  .customer-order-card-actions .btn {
+    width: 100%;
+    min-height: 42px;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  .card-header {
+    padding: 12px 14px !important;
+  }
+
+  .table-filter-toolbar {
+    padding: 10px 14px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .table-search-box {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .table-filter-group {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .table-filter-select {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .filter-pills {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    flex-wrap: nowrap;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .filter-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .filter-pill {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+}
+
+@media (min-width: 768px) {
+  .desktop-only-table {
+    display: block !important;
+  }
+  .customer-order-cards {
+    display: none !important;
+  }
+}

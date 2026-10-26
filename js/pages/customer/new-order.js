@@ -490,6 +490,23 @@ export async function mount(me) {
       cartCountEl.textContent = `${totalOrderItems} ${totalOrderItems === 1 ? 'item' : 'items'}`;
     }
 
+    const mobileBarEl = document.querySelector('#mobile-checkout-bar');
+    const mobileBarCountEl = document.querySelector('#mobile-bar-count');
+    const mobileBarTotalEl = document.querySelector('#mobile-bar-total');
+    if (mobileBarEl) {
+      if (totalOrderItems > 0 && isStationOpen) {
+        mobileBarEl.hidden = false;
+        if (mobileBarCountEl) {
+          mobileBarCountEl.textContent = `${totalOrderItems} ${totalOrderItems === 1 ? 'item' : 'items'}`;
+        }
+        if (mobileBarTotalEl) {
+          mobileBarTotalEl.textContent = formatPeso(grandTotal);
+        }
+      } else {
+        mobileBarEl.hidden = true;
+      }
+    }
+
     if (cartItemsEl) {
       if (!activeEntries.length) {
         cartItemsEl.innerHTML = `
@@ -764,6 +781,17 @@ export async function mount(me) {
           </button>
         </div>
       </div>
+
+      <!-- Mobile Sticky Checkout Bar (< 1024px) -->
+      <div class="mobile-checkout-bar" id="mobile-checkout-bar" hidden>
+        <div class="mobile-checkout-info">
+          <span class="mobile-checkout-count" id="mobile-bar-count">0 items</span>
+          <span class="mobile-checkout-total" id="mobile-bar-total">₱0</span>
+        </div>
+        <button type="button" class="btn btn-primary mobile-checkout-btn" id="mobile-bar-review-btn">
+          Review & Order →
+        </button>
+      </div>
     `;
 
     let addressDistanceCheck = null;
@@ -853,7 +881,14 @@ export async function mount(me) {
       deliveryNote = e.target.value;
     });
 
-    document.querySelector('#place-order-btn')?.addEventListener('click', async (e) => {
+    document.querySelector('#mobile-bar-review-btn')?.addEventListener('click', () => {
+    const cartCard = document.querySelector('.cart-card') || document.querySelector('#place-order-btn');
+    if (cartCard) {
+      cartCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+
+  document.querySelector('#place-order-btn')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       if (!isStationOpen) {
         showToast('The station is currently closed for new orders.', 'error');

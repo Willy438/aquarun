@@ -1,3 +1,11 @@
+/* Suppress Microsoft Edge native password reveal and clear buttons to avoid double eye icons */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
 /* Mobile-first forms with >=44px tap targets */
 .field { display: flex; flex-direction: column; gap: 7px; min-width: 0; flex: 1; }
 .field-label { font-size: 13px; font-weight: 700; color: var(--ink-navy); }
