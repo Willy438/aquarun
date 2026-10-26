@@ -115,7 +115,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
           </div>
         </div>
 
@@ -184,18 +184,27 @@ export async function mount(me) {
     const lateDeliveryMatch = note.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
 
     let timingBadgesHtml = '';
+    const reasons = [];
     if (earlyDepartMatch) {
-      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(earlyDepartMatch[1])}">Early Depart: ${escapeHtml(earlyDepartMatch[1])}</span>`;
+      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; font-weight:700; padding: 2px 7px;">Early Depart</span>`;
+      reasons.push(`Early departure: ${earlyDepartMatch[1]}`);
     }
     if (lateDepartMatch) {
-      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(lateDepartMatch[1])}">Late Depart: ${escapeHtml(lateDepartMatch[1])}</span>`;
+      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; font-weight:700; padding: 2px 7px;">Late Depart</span>`;
+      reasons.push(`Late departure: ${lateDepartMatch[1]}`);
     }
     if (earlyDeliveryMatch) {
-      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(earlyDeliveryMatch[1])}">Early Deliv: ${escapeHtml(earlyDeliveryMatch[1])}</span>`;
+      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; font-weight:700; padding: 2px 7px;">Early Deliv</span>`;
+      reasons.push(`Early delivery: ${earlyDeliveryMatch[1]}`);
     }
     if (lateDeliveryMatch) {
-      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; padding: 2px 6px;" title="${escapeHtml(lateDeliveryMatch[1])}">Late Deliv: ${escapeHtml(lateDeliveryMatch[1])}</span>`;
+      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; font-weight:700; padding: 2px 7px;">Late Deliv</span>`;
+      reasons.push(`Late delivery: ${lateDeliveryMatch[1]}`);
     }
+
+    const reasonsHtml = reasons.length
+      ? `<div style="margin-top: 4px; font-size: 11px; color: #64748b; line-height: 1.4;">${reasons.map((r) => escapeHtml(r)).join(' · ')}</div>`
+      : '';
 
     return `
       <div class="remittance-order-row">
@@ -209,6 +218,7 @@ export async function mount(me) {
             <span>${escapeHtml(orderDate)}</span>
             ${timingBadgesHtml}
           </div>
+          ${reasonsHtml}
         </div>
         <div class="remittance-order-end">
           <span class="remittance-order-amount">${escapeHtml(formatPeso(o.total))}</span>
@@ -311,7 +321,7 @@ export async function mount(me) {
       return `
         <div class="card empty-state" style="padding: 48px 24px; text-align: center;">
           <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
           </div>
           <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a;">No unsubmitted cash on duty</h3>
           <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 400px; margin: 0 auto;">

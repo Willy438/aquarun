@@ -24,7 +24,7 @@ const ICONS = {
   chart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>`,
   list: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>`,
   tag: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82Z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
-  cash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>`,
+  cash: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>`,
   gear: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>`,
   logout: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>`,
   menu: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>`,
@@ -277,28 +277,8 @@ let currentSpaRole = null;
 let currentActivePageKey = null;
 
 const MODULE_CACHE = new Map();
-const PAGE_SNAPSHOT_CACHE = new Map();
 
 function normalizeNavKey(rawKey) {
-  const clean = String(rawKey || '').replace(/\.html$/i, '');
-  return clean === 'complete-delivery' ? 'delivery-details' : clean;
-}
-
-function captureCurrentPageSnapshot(role, pageKey) {
-  if (!role || !pageKey) return;
-  const content = document.querySelector('#content');
-  if (!content || !content.innerHTML.trim()) return;
-  const titleEl = document.querySelector('#page-title');
-  const subEl = document.querySelector('#page-sub');
-  const rightEl = document.querySelector('#topbar-right');
-  const key = `${role}:${pageKey}:${window.location.search || ''}`;
-  PAGE_SNAPSHOT_CACHE.set(key, {
-    contentHtml: content.innerHTML,
-    titleText: titleEl ? titleEl.textContent : '',
-    subText: subEl ? subEl.textContent : '',
-    rightHtml: rightEl ? rightEl.innerHTML : '',
-  });
-}
 
 function preloadRoleModules(role, me = null) {
   const metaMap = getPageMetaMap(role);
@@ -874,7 +854,7 @@ function getRolePageKeyFromUrl(urlObj, role) {
   return null;
 }
 
-function updateTopbarForRolePage(role, pageKey, snapshot = null) {
+function updateTopbarForRolePage(role, pageKey) {
   const meta = getPageMetaMap(role)[pageKey];
   if (!meta) return;
   document.title = meta.docTitle;
@@ -888,15 +868,15 @@ function updateTopbarForRolePage(role, pageKey, snapshot = null) {
   if (!titleEl || !subEl || !rightEl) {
     topbar.innerHTML = `
       <div class="topbar-left">
-        <h1 id="page-title">${escapeHtml(snapshot?.titleText || meta.title)}</h1>
-        <p class="topbar-sub text-muted" id="page-sub">${escapeHtml(snapshot?.subText ?? meta.sub)}</p>
+        <h1 id="page-title">${escapeHtml(meta.title)}</h1>
+        <p class="topbar-sub text-muted" id="page-sub">${escapeHtml(meta.sub || '')}</p>
       </div>
-      <div class="topbar-right" id="topbar-right">${snapshot?.rightHtml || ''}</div>
+      <div class="topbar-right" id="topbar-right"></div>
     `;
   } else {
-    titleEl.textContent = snapshot?.titleText || meta.title;
-    subEl.textContent = snapshot?.subText ?? meta.sub;
-    rightEl.innerHTML = snapshot?.rightHtml || '';
+    titleEl.textContent = meta.title;
+    subEl.textContent = meta.sub || '';
+    rightEl.innerHTML = '';
   }
 }
 
@@ -916,11 +896,6 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
     return;
   }
 
-  // Save snapshot of current page before switching
-  if (currentActivePageKey) {
-    captureCurrentPageSnapshot(role, currentActivePageKey);
-  }
-
   if (push && resolved.href !== window.location.href) {
     window.history.pushState({ role, pageKey }, '', resolved.href);
   }
@@ -937,15 +912,7 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
   currentProfile = profile;
 
   setActiveNavKey(pageKey);
-
-  const snapshotKey = `${role}:${pageKey}:${resolved.search || ''}`;
-  const snapshot = PAGE_SNAPSHOT_CACHE.get(snapshotKey) || null;
-  updateTopbarForRolePage(role, pageKey, snapshot);
-
-  const content = document.querySelector('#content');
-  if (snapshot && content) {
-    content.innerHTML = snapshot.contentHtml;
-  }
+  updateTopbarForRolePage(role, pageKey);
   triggerSmoothContentEnter();
 
   const moduleKey = `${role}/${pageKey}`;
@@ -957,7 +924,6 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
 
   if (typeof mod.mount === 'function') {
     activeCleanup = await mod.mount(profile);
-    captureCurrentPageSnapshot(role, pageKey);
   }
   if (role === 'customer' && profile?.id) {
     updateCustomerActiveOrderBadge(profile.id).catch(() => {});

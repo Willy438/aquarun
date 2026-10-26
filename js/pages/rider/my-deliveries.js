@@ -46,6 +46,7 @@ const ICONS = {
   check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   pin: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
   map: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>`,
+  wallet: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>`,
 };
 
 const CHECKLIST_ITEMS = [
@@ -351,6 +352,27 @@ export async function mount(initialMe) {
             </div>
           </div>
         `;
+      } else if (completedToday > 0) {
+        heroHtml = `
+          <div class="hero-banner">
+            <div class="hero-top">
+              <div>
+                <div class="hero-meta-line">
+                  <span class="hero-pill-tag" style="background:rgba(255,255,255,0.22);color:#ffffff;">Shift status</span>
+                  <span>${escapeHtml(completedToday)} ${completedToday === 1 ? 'delivery' : 'deliveries'} completed today</span>
+                </div>
+                <h2 class="hero-status-title">All assigned deliveries completed today</h2>
+                <p class="hero-status-sub">You have completed all scheduled deliveries for now. Stay available for incoming dispatch or review and submit collected cash.</p>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                <a class="btn btn-white btn-sm" href="remittance.html">Cash record</a>
+                <button type="button" class="btn btn-white btn-sm" id="hero-shift-toggle-btn">
+                  ${me.is_available ? 'Go off shift' : 'Go on shift'}
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
       } else {
         heroHtml = `
           <div class="hero-banner">
@@ -462,20 +484,20 @@ export async function mount(initialMe) {
           </div>
         </div>
 
-        <div class="card" style="border-left: 4px solid #10b981; background: #f0fdf4; padding: 14px 18px; margin-bottom: 14px;">
+        <div class="card" style="border: 1px solid var(--border-color, #e2e8f0); background: #ffffff; padding: 14px 18px; margin-bottom: 14px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
             <div style="display: flex; align-items: center; gap: 14px;">
-              <div style="width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; color: var(--ink-navy); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
-                ₱
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: #f8fafc; border: 1px solid #e2e8f0; color: #0284c7; display: flex; align-items: center; justify-content: center;">
+                ${ICONS.wallet}
               </div>
               <div>
-                <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted-blue);">
-                  Cash on Hand &amp; Shift Sales
+                <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">
+                  Cash on Hand &amp; Shift Turnover
                 </p>
                 <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 3px;">
-                  <span style="font-size: 19px; font-weight: 800; color: var(--ink-navy);">
+                  <span style="font-size: 19px; font-weight: 800; color: #0f172a;">
                     ${formatPeso(remittance.unsubmittedCash || 0)}
-                    <span style="font-size: 12.5px; font-weight: 500; color: var(--muted-blue);">in pocket (${remittance.unsubmittedCount || 0} ${remittance.unsubmittedCount === 1 ? 'order' : 'orders'})</span>
+                    <span style="font-size: 12.5px; font-weight: 500; color: #64748b;">in pocket (${remittance.unsubmittedCount || 0} ${remittance.unsubmittedCount === 1 ? 'order' : 'orders'})</span>
                   </span>
                   ${
                     remittance.submittedCash > 0
@@ -492,11 +514,11 @@ export async function mount(initialMe) {
             </div>
             <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               <a href="remittance.html" class="btn btn-light btn-sm" style="font-weight: 600; font-size: 12px;">
-                Cash Record &rarr;
+                Cash Record
               </a>
               ${
                 remittance.unsubmittedCount > 0
-                  ? `<button type="button" class="btn btn-primary btn-sm" id="btn-rider-remit" style="font-weight: 700;">Turn over cash (${formatPeso(remittance.unsubmittedCash)}) &rarr;</button>`
+                  ? `<button type="button" class="btn btn-primary btn-sm" id="btn-rider-remit" style="font-weight: 700;">Turn over cash (${formatPeso(remittance.unsubmittedCash)})</button>`
                   : remittance.submittedCount > 0
                     ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Turnover Submitted · Waiting for cashier</span>`
                     : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash approved</span>`
@@ -514,25 +536,41 @@ export async function mount(initialMe) {
             <div class="card">
               <div class="card-header">
                 <h2 class="card-title">Route sequence (Up next)</h2>
-                <a class="card-link" href="delivery-history.html">View all</a>
+                <a class="card-link" href="delivery-history.html">Delivery history</a>
               </div>
-              <div class="table-wrap">
-                <table class="table">
-                  <thead>
-                    <tr>
-                      <th>Stop</th>
-                      <th>Time slot</th>
-                      <th>Customer</th>
-                      <th>Items</th>
-                      <th>Order</th>
-                      <th>Cash</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    ${upNextRowsHtml}
-                  </tbody>
-                </table>
-              </div>
+              ${
+                upNextList.length > 0
+                  ? `
+                    <div class="table-wrap">
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Stop</th>
+                            <th>Time slot</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Order</th>
+                            <th>Cash</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${upNextRowsHtml}
+                        </tbody>
+                      </table>
+                    </div>
+                  `
+                  : `
+                    <div class="empty-state" style="padding: 28px 20px; text-align: center;">
+                      <p style="margin: 0; font-size: 13.5px; color: #64748b;">
+                        ${
+                          nextDelivery
+                            ? 'You are currently on your final assigned stop for this run.'
+                            : 'No deliveries queued right now. New dispatch stops will appear here once assigned.'
+                        }
+                      </p>
+                    </div>
+                  `
+              }
             </div>
           </div>
 

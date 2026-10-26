@@ -24,6 +24,71 @@ const ICONS = {
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
 };
 
+function formatSlotNotes(rawNote) {
+  if (!rawNote) return '';
+  const str = String(rawNote).trim();
+  if (!str) return '';
+
+  const notes = [];
+  const earlyDepartMatch = str.match(/\[EARLY_DEPART:\s*([^\]]+)\]/i);
+  const lateDepartMatch = str.match(/\[LATE_DEPART:\s*([^\]]+)\]/i);
+  const earlyDeliveryMatch = str.match(/\[EARLY_DELIVERY:\s*([^\]]+)\]/i);
+  const lateDeliveryMatch = str.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
+  const isRemitSubmitted = /\[REMITTANCE_SUBMITTED\]/i.test(str);
+
+  if (earlyDepartMatch) {
+    notes.push({ label: 'Early departure', text: earlyDepartMatch[1], type: 'amber' });
+  }
+  if (lateDepartMatch) {
+    notes.push({ label: 'Late departure', text: lateDepartMatch[1], type: 'rose' });
+  }
+  if (earlyDeliveryMatch) {
+    notes.push({ label: 'Early delivery', text: earlyDeliveryMatch[1], type: 'amber' });
+  }
+  if (lateDeliveryMatch) {
+    notes.push({ label: 'Late delivery', text: lateDeliveryMatch[1], type: 'rose' });
+  }
+  if (isRemitSubmitted) {
+    notes.push({ label: 'Remittance', text: 'Cash remittance submitted by rider', type: 'neutral' });
+  }
+
+  const cleaned = str
+    .replace(/\[EARLY_DEPART:[^\]]+\]/gi, '')
+    .replace(/\[LATE_DEPART:[^\]]+\]/gi, '')
+    .replace(/\[EARLY_DELIVERY:[^\]]+\]/gi, '')
+    .replace(/\[LATE_DELIVERY:[^\]]+\]/gi, '')
+    .replace(/\[REMITTANCE_SUBMITTED\]/gi, '')
+    .trim();
+
+  if (cleaned) {
+    notes.push({ label: 'Customer note', text: cleaned, type: 'neutral' });
+  }
+
+  if (notes.length === 0) return '';
+
+  return `
+    <div style="margin: 12px 0; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;">
+      <p style="margin: 0 0 8px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #475569;">
+        Schedule &amp; Dispatch Audit
+      </p>
+      <div style="display: flex; flex-direction: column; gap: 6px;">
+        ${notes
+          .map(
+            (n) => `
+          <div style="font-size: 12px; line-height: 1.4; color: #1e293b; display: flex; align-items: baseline; gap: 6px;">
+            <span class="pill pill-${n.type === 'amber' ? 'amber' : n.type === 'rose' ? 'rose' : 'neutral'}" style="font-size: 10px; font-weight: 700; padding: 1px 6px;">
+              ${escapeHtml(n.label)}
+            </span>
+            <span>${escapeHtml(n.text)}</span>
+          </div>
+        `
+          )
+          .join('')}
+      </div>
+    </div>
+  `;
+}
+
 function getPrimaryActionMeta(order, availableRidersCount = 0) {
   switch (order.status) {
     case 'submitted':
@@ -215,16 +280,7 @@ export async function mount(me) {
               </div>
             </div>
 
-            ${
-              order.slot_note
-                ? `
-                  <div style="margin: 10px 0; padding: 10px 12px; background: #fffbeb; border: 1px solid #fef3c7; border-radius: 8px; font-size: 12.5px; color: #92400e;">
-                    <strong>Schedule &amp; Dispatch Notes:</strong>
-                    <div style="margin-top: 2px;">${escapeHtml(order.slot_note)}</div>
-                  </div>
-                `
-                : ''
-            }
+            ${formatSlotNotes(order.slot_note)}
 
             <div class="notice proc-ledger-notice">
               <strong>Bottle ledger:</strong> Delivered and collected counts are entered by the rider at delivery.
@@ -250,12 +306,18 @@ export async function mount(me) {
               </button>
               <p class="proc-action-hint">${escapeHtml(actionMeta.hint)}</p>
 
-              <div class="field">
-                <label class="field-label" for="adjust-slot-select">Adjust delivery window</label>
-                <select class="select" id="adjust-slot-select" ${canAdjustSlot ? '' : 'disabled'}>
-                  ${slotOptionsHtml}
-                </select>
-              </div>
+              ${
+                canAdjustSlot
+                  ? `
+                    <div class="field">
+                      <label class="field-label" for="adjust-slot-select">Adjust delivery window</label>
+                      <select class="select" id="adjust-slot-select">
+                        ${slotOptionsHtml}
+                      </select>
+                    </div>
+                  `
+                  : ''
+              }
 
               ${riderControlHtml}
             </div>
