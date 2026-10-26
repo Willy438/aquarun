@@ -51,11 +51,15 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .remittance-stat-icon svg {
   width: 20px;
   height: 20px;
+  max-width: 20px;
+  max-height: 20px;
+  display: block;
 }
 
 /* Nav Pills / Filter Tabs */

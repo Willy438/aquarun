@@ -58,6 +58,7 @@ export function subscribeStaffWorkspace(onUpdate) {
   const handle = (p) => {
     invalidateDataCache();
     triggerNavBadgeUpdate('updateStaffOrdersBadge');
+    triggerNavBadgeUpdate('updateStaffRemittanceBadge');
     onUpdate(p);
   };
   const channelName = `staff-workspace-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -80,6 +81,7 @@ export function subscribeRiderWorkspace(riderId, onUpdate) {
   const handle = (p) => {
     invalidateDataCache();
     triggerNavBadgeUpdate('updateRiderCurrentBadge', riderId);
+    triggerNavBadgeUpdate('updateRiderRemittanceBadge', riderId);
     onUpdate(p);
   };
   // Listen without restrictive SQL filter on orders so assignment transitions from null -> riderId fire immediately

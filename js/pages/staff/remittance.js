@@ -1,4 +1,4 @@
-import { bootStaffPage } from '../../core/nav.js';
+import { bootStaffPage, updateStaffRemittanceBadge } from '../../core/nav.js';
 import { subscribeStaffWorkspace } from '../../core/realtime.js';
 import {
   confirmModal,
@@ -64,6 +64,7 @@ export async function mount(me) {
       );
 
       renderView();
+      updateStaffRemittanceBadge().catch(() => {});
     } catch (err) {
       showToast(err.message || 'Could not load remittance data.', 'error');
     }
@@ -101,7 +102,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
         </div>
 
@@ -114,7 +115,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>
           </div>
         </div>
 
@@ -127,7 +128,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
         </div>
       </div>
@@ -365,7 +366,7 @@ export async function mount(me) {
 
             <div class="remittance-action-box">
               <div class="remittance-waiting-notice">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 <div>
                   <span style="font-weight: 600; color: #334155;">Cash not turned over yet.</span>
                   <span style="color: #64748b;"> Rider is carrying collections. Settlement unlocks once rider submits turnover.</span>
@@ -488,7 +489,7 @@ export async function mount(me) {
         <div class="table-filter-toolbar">
           <div class="table-search-box">
             <span class="table-search-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </span>
             <input type="search" id="history-search-input" placeholder="Search order #, rider, customer..." value="${escapeHtml(historySearch)}">
           </div>
@@ -632,7 +633,17 @@ export async function mount(me) {
   }
 
   await loadData();
-  return subscribeStaffWorkspace(loadData);
+  const unsub = subscribeStaffWorkspace(loadData);
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadData();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootStaffPage('remittance', mount);

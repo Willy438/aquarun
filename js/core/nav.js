@@ -5,7 +5,9 @@ import { supabase } from '../config/supabaseClient.js';
 
 const BADGE_CACHE_KEY = 'aquarun_active_badge';
 const STAFF_BADGE_CACHE_KEY = 'aquarun_staff_orders_badge';
+const STAFF_REMITTANCE_BADGE_CACHE_KEY = 'aquarun_staff_remittance_badge';
 const RIDER_BADGE_CACHE_KEY = 'aquarun_rider_current_badge';
+const RIDER_REMITTANCE_BADGE_CACHE_KEY = 'aquarun_rider_remittance_badge';
 
 const ICONS = {
   home: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4.5v-6h3v6H18a1 1 0 0 0 1-1V9.5"/></svg>`,
@@ -62,7 +64,7 @@ const NAV_SECTIONS = {
         { key: 'dashboard', label: 'Dashboard', icon: 'home' },
         { key: 'orders', label: 'Orders', icon: 'cart', badgeId: 'nav-staff-orders-badge' },
         { key: 'order-processing', label: 'Order processing', icon: 'check' },
-        { key: 'remittance', label: 'Cash remittance', icon: 'cash' },
+        { key: 'remittance', label: 'Cash remittance', icon: 'cash', badgeId: 'nav-staff-remittance-badge' },
         { key: 'bottle-ledger', label: 'Bottle ledger', icon: 'bookmark' },
         { key: 'customers', label: 'Customers', icon: 'user' },
       ],
@@ -79,7 +81,7 @@ const NAV_SECTIONS = {
         { key: 'my-deliveries', label: 'My deliveries', icon: 'truck' },
         { key: 'delivery-details', label: 'Current delivery', icon: 'cube', badgeId: 'nav-rider-current-badge' },
         { key: 'delivery-history', label: 'Delivery history', icon: 'clock' },
-        { key: 'remittance', label: 'Cash record', icon: 'cash' },
+        { key: 'remittance', label: 'Cash record', icon: 'cash', badgeId: 'nav-rider-remittance-badge' },
       ],
     },
     {
@@ -445,6 +447,96 @@ export async function updateRiderCurrentBadge(riderId) {
   }
 }
 
+export async function updateStaffRemittanceBadge() {
+  const badge = document.querySelector('#nav-staff-remittance-badge');
+  if (!badge) return;
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, rider_id, remittance_status, slot_note, rider_remitted')
+      .eq('status', 'delivered')
+      .is('rider_remitted', false);
+
+    if (error) return;
+
+    const awaitingRiderIds = new Set();
+    for (const o of data || []) {
+      const note = String(o.slot_note || '');
+      const isSettled =
+        Boolean(o.rider_remitted) ||
+        note.includes('[REMITTED]') ||
+        o.remittance_status === 'approved';
+      const isSubmitted =
+        !isSettled &&
+        (o.remittance_status === 'submitted' || note.includes('[REMITTANCE_SUBMITTED]'));
+
+      if (isSubmitted && o.rider_id) {
+        awaitingRiderIds.add(o.rider_id);
+      }
+    }
+
+    const num = awaitingRiderIds.size;
+    try {
+      sessionStorage.setItem(STAFF_REMITTANCE_BADGE_CACHE_KEY, String(num));
+    } catch {}
+
+    if (num > 0) {
+      badge.textContent = String(num);
+      badge.hidden = false;
+      badge.removeAttribute('hidden');
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.textContent = '';
+      badge.hidden = true;
+      badge.setAttribute('hidden', '');
+      badge.style.display = 'none';
+    }
+  } catch {}
+}
+
+export async function updateRiderRemittanceBadge(riderId) {
+  const badge = document.querySelector('#nav-rider-remittance-badge');
+  if (!badge || !riderId) return;
+  try {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('id, remittance_status, slot_note, rider_remitted')
+      .eq('rider_id', riderId)
+      .eq('status', 'delivered')
+      .is('rider_remitted', false);
+
+    if (error) return;
+
+    let count = 0;
+    for (const o of data || []) {
+      const note = String(o.slot_note || '');
+      const isSettled =
+        Boolean(o.rider_remitted) ||
+        note.includes('[REMITTED]') ||
+        o.remittance_status === 'approved';
+      if (!isSettled) {
+        count++;
+      }
+    }
+
+    try {
+      sessionStorage.setItem(RIDER_REMITTANCE_BADGE_CACHE_KEY, String(count));
+    } catch {}
+
+    if (count > 0) {
+      badge.textContent = String(count);
+      badge.hidden = false;
+      badge.removeAttribute('hidden');
+      badge.style.display = 'inline-flex';
+    } else {
+      badge.textContent = '';
+      badge.hidden = true;
+      badge.setAttribute('hidden', '');
+      badge.style.display = 'none';
+    }
+  } catch {}
+}
+
 let shellRealtimeSub = null;
 let shellHeartbeatTimer = null;
 
@@ -457,11 +549,13 @@ export function startShellRealtimeSync(role, profile) {
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         updateStaffOrdersBadge().catch(() => {});
+        updateStaffRemittanceBadge().catch(() => {});
       })
       .subscribe();
     shellHeartbeatTimer = setInterval(() => {
       if (document.visibilityState === 'visible') {
         updateStaffOrdersBadge().catch(() => {});
+        updateStaffRemittanceBadge().catch(() => {});
       }
     }, 4000);
   } else if (role === 'rider' && profile?.id) {
@@ -469,11 +563,13 @@ export function startShellRealtimeSync(role, profile) {
       .channel(channelName)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
         updateRiderCurrentBadge(profile.id).catch(() => {});
+        updateRiderRemittanceBadge(profile.id).catch(() => {});
       })
       .subscribe();
     shellHeartbeatTimer = setInterval(() => {
       if (document.visibilityState === 'visible') {
         updateRiderCurrentBadge(profile.id).catch(() => {});
+        updateRiderRemittanceBadge(profile.id).catch(() => {});
       }
     }, 4000);
   } else if (role === 'customer' && profile?.id) {
@@ -571,8 +667,10 @@ export async function renderNav(profileOrRole, activeKey) {
       updateCustomerActiveOrderBadge(profile.id).catch(() => {});
     } else if (role === 'staff') {
       updateStaffOrdersBadge().catch(() => {});
+      updateStaffRemittanceBadge().catch(() => {});
     } else if (role === 'rider' && profile?.id) {
       updateRiderCurrentBadge(profile.id).catch(() => {});
+      updateRiderRemittanceBadge(profile.id).catch(() => {});
     }
     return;
   }
@@ -580,7 +678,9 @@ export async function renderNav(profileOrRole, activeKey) {
   const sections = NAV_SECTIONS[role] ?? NAV_SECTIONS.customer;
   const cachedCustomerBadge = Number(sessionStorage.getItem(BADGE_CACHE_KEY) || 0);
   const cachedStaffBadge = Number(sessionStorage.getItem(STAFF_BADGE_CACHE_KEY) || 0);
+  const cachedStaffRemittanceBadge = Number(sessionStorage.getItem(STAFF_REMITTANCE_BADGE_CACHE_KEY) || 0);
   const cachedRiderBadge = Number(sessionStorage.getItem(RIDER_BADGE_CACHE_KEY) || 0);
+  const cachedRiderRemittanceBadge = Number(sessionStorage.getItem(RIDER_REMITTANCE_BADGE_CACHE_KEY) || 0);
   const normalizedKey = normalizeNavKey(activeKey);
 
   const sectionsHtml = sections
@@ -594,7 +694,9 @@ export async function renderNav(profileOrRole, activeKey) {
           let badgeVal = 0;
           if (item.badgeId === 'nav-track-badge') badgeVal = cachedCustomerBadge;
           if (item.badgeId === 'nav-staff-orders-badge') badgeVal = cachedStaffBadge;
+          if (item.badgeId === 'nav-staff-remittance-badge') badgeVal = cachedStaffRemittanceBadge;
           if (item.badgeId === 'nav-rider-current-badge') badgeVal = cachedRiderBadge;
+          if (item.badgeId === 'nav-rider-remittance-badge') badgeVal = cachedRiderRemittanceBadge;
           const badgeHtml = item.badgeId
             ? `<span class="sidebar-badge" id="${item.badgeId}" ${badgeVal > 0 ? '' : 'hidden'}>${badgeVal > 0 ? badgeVal : ''}</span>`
             : '';
@@ -747,8 +849,10 @@ export async function renderNav(profileOrRole, activeKey) {
     updateCustomerActiveOrderBadge(profile.id).catch(() => {});
   } else if (role === 'staff') {
     updateStaffOrdersBadge().catch(() => {});
+    updateStaffRemittanceBadge().catch(() => {});
   } else if (role === 'rider' && profile?.id) {
     updateRiderCurrentBadge(profile.id).catch(() => {});
+    updateRiderRemittanceBadge(profile.id).catch(() => {});
   }
 }
 
@@ -859,8 +963,10 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
     updateCustomerActiveOrderBadge(profile.id).catch(() => {});
   } else if (role === 'staff') {
     updateStaffOrdersBadge().catch(() => {});
+    updateStaffRemittanceBadge().catch(() => {});
   } else if (role === 'rider' && profile?.id) {
     updateRiderCurrentBadge(profile.id).catch(() => {});
+    updateRiderRemittanceBadge(profile.id).catch(() => {});
   }
 }
 

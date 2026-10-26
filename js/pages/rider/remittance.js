@@ -1,4 +1,4 @@
-import { bootRiderPage } from '../../core/nav.js';
+import { bootRiderPage, updateRiderRemittanceBadge } from '../../core/nav.js';
 import { subscribeRiderWorkspace } from '../../core/realtime.js';
 import {
   escapeHtml,
@@ -59,6 +59,7 @@ export async function mount(me) {
         allOrders: [],
       }));
       renderView();
+      updateRiderRemittanceBadge(me.id).catch(() => {});
     } catch (err) {
       showToast(err.message || 'Could not load cash records.', 'error');
     }
@@ -210,7 +211,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/></svg>
           </div>
         </div>
 
@@ -223,7 +224,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
           </div>
         </div>
 
@@ -236,7 +237,7 @@ export async function mount(me) {
             </p>
           </div>
           <div class="remittance-stat-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:20px;height:20px;display:block;"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
         </div>
       </div>
@@ -266,7 +267,7 @@ export async function mount(me) {
         <div class="table-filter-toolbar">
           <div class="table-search-box">
             <span class="table-search-icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px;display:block;"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </span>
             <input type="search" id="rider-remittance-search" placeholder="Search order #, customer..." value="${escapeHtml(searchQuery)}">
           </div>
@@ -455,7 +456,17 @@ export async function mount(me) {
   }
 
   await loadData();
-  return subscribeRiderWorkspace(me.id, loadData);
+  const unsub = subscribeRiderWorkspace(me.id, loadData);
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadData();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootRiderPage('remittance', mount);
