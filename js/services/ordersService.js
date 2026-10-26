@@ -5,6 +5,7 @@ import {
   CUSTOMER_STEP_OF,
   CUSTOMER_STATUS_HEADINGS,
   STAFF_STEPS,
+  STAFF_STEP_OF,
   STATUS_LABELS,
 } from '../core/constants.js';
 import {
@@ -152,15 +153,13 @@ function getCustomerStepSubtitle(order) {
     case 'submitted':
       return 'We have received your order. Waiting for station confirmation.';
     case 'confirmed':
-      return `The station accepted your order. Expected delivery window: ${slotLabel}.`;
     case 'refilling':
-      return 'Your gallons are currently being refilled at the station.';
     case 'ready':
-      return `Your order is ready for dispatch. Expected window: ${slotLabel}.`;
+      return `The station is preparing your clean gallons. Expected window: ${slotLabel}.`;
     case 'rider_assigned':
-      return `${riderName} is assigned to your order. Expected window: ${slotLabel}.`;
+      return `Order prepared! ${riderName} is assigned and will depart soon. Expected window: ${slotLabel}.`;
     case 'out_for_delivery':
-      return `${riderName} is on the way. Arriving between ${slotLabel.replace('–', ' and ')}.`;
+      return `${riderName} is on the way to your delivery address. Arriving between ${slotLabel.replace('–', ' and ')}.`;
     case 'delivered':
       return 'Your order has been delivered. Waiting for payment confirmation.';
     case 'completed':
@@ -302,7 +301,8 @@ export function renderCustomerOrderHero(order, { showTrackButton = false } = {})
 }
 
 export function renderStaffOrderHero(order) {
-  const activeIdx = STAFF_STEPS.findIndex((s) => s.key === order.status);
+  const activeStepKey = STAFF_STEP_OF[order.status] || 'submitted';
+  const activeIdx = STAFF_STEPS.findIndex((s) => s.key === activeStepKey);
   const logByStatus = {};
   for (const row of order.status_log || []) {
     if (!logByStatus[row.status]) {
@@ -587,6 +587,42 @@ export async function staffAssignRider(orderId, riderId) {
     p_rider_id: riderId,
   });
   if (error) throw new Error(error.message || 'Could not assign rider.');
+  invalidateDataCache();
+}
+
+/**
+ * 1-Click Fast-Track Order Processing:
+ * Takes an order in any station prep state (submitted, confirmed, refilling, ready)
+ * and directly accepts, prepares, and assigns it to the rider in a single action.
+ */
+export async function staffFastTrackAssignRider(orderId, riderId) {
+  if (!riderId) throw new Error('Please select an available rider first.');
+
+  // 1. Try atomic fast-track RPC if installed in Supabase
+  const { error: rpcErr } = await supabase.rpc('staff_fast_track_order', {
+    p_order_id: orderId,
+    p_rider_id: riderId,
+  });
+
+  if (!rpcErr) {
+    invalidateDataCache();
+    return;
+  }
+
+  // 2. Automated fallback: sequence through required statuses
+  const { data: order } = await supabase.from('orders').select('status').eq('id', orderId).maybeSingle();
+  const status = order?.status;
+
+  if (status === 'submitted') {
+    await staffConfirmOrder(orderId);
+  }
+  if (status === 'submitted' || status === 'confirmed') {
+    await staffStartRefill(orderId);
+  }
+  if (status === 'submitted' || status === 'confirmed' || status === 'refilling') {
+    await staffMarkReady(orderId);
+  }
+  await staffAssignRider(orderId, riderId);
   invalidateDataCache();
 }
 

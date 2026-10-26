@@ -14,37 +14,46 @@ export const ORDER_STATUS = {
   CANCELLED: 'cancelled',
 };
 
-// All 8 internal statuses for Staff & Rider progress bar (Section 4.1).
+// Streamlined 4-stage staff progress flow
 export const STAFF_STEPS = [
   { key: 'submitted', label: 'Submitted' },
-  { key: 'confirmed', label: 'Confirmed' },
-  { key: 'refilling', label: 'Refilling' },
-  { key: 'ready', label: 'Ready' },
-  { key: 'rider_assigned', label: 'Rider assigned' },
+  { key: 'preparing', label: 'Preparing / Assigned' },
   { key: 'out_for_delivery', label: 'Out for delivery' },
-  { key: 'delivered', label: 'Delivered' },
   { key: 'completed', label: 'Completed' },
 ];
 
-// The 8 internal statuses mapped to the 6 steps the customer sees (Section 4.2).
+export const STAFF_STEP_OF = {
+  submitted: 'submitted',
+  confirmed: 'preparing',
+  refilling: 'preparing',
+  ready: 'preparing',
+  rider_assigned: 'preparing',
+  out_for_delivery: 'out_for_delivery',
+  delivered: 'out_for_delivery',
+  completed: 'completed',
+  cancelled: 'submitted',
+  attempted: 'out_for_delivery',
+};
+
+// Streamlined 4-stage customer tracking progress flow
 export const CUSTOMER_STEPS = [
-  { key: 'submitted', label: 'Submitted' },
-  { key: 'confirmed', label: 'Confirmed' },
-  { key: 'refilling', label: 'Refilling' },
-  { key: 'ready', label: 'Ready' },
+  { key: 'submitted', label: 'Order submitted' },
+  { key: 'preparing', label: 'Preparing order' },
   { key: 'delivery', label: 'Out for delivery' },
   { key: 'completed', label: 'Completed' },
 ];
 
 export const CUSTOMER_STEP_OF = {
   submitted: 'submitted',
-  confirmed: 'confirmed',
-  refilling: 'refilling',
-  ready: 'ready',
-  rider_assigned: 'ready',
+  confirmed: 'preparing',
+  refilling: 'preparing',
+  ready: 'preparing',
+  rider_assigned: 'preparing',
   out_for_delivery: 'delivery',
   delivered: 'delivery',
   completed: 'completed',
+  cancelled: 'submitted',
+  attempted: 'delivery',
 };
 
 export const STATUS_LABELS = {

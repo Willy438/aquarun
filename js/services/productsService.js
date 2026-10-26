@@ -154,22 +154,53 @@ export async function saveProduct({
       .from('products')
       .update(updatePayload)
       .eq('id', id)
-      .select()
-      .single();
+      .select();
 
-    if (error && /new_container_price/i.test(error.message || '')) {
+    if (
+      error &&
+      (/column|schema cache|new_container_price|is_returnable|PGRST204/i.test(error.message || '') ||
+        error.code === 'PGRST204')
+    ) {
       delete updatePayload.new_container_price;
+      delete updatePayload.is_returnable;
       ({ data, error } = await supabase
         .from('products')
         .update(updatePayload)
         .eq('id', id)
-        .select()
-        .single());
+        .select());
     }
 
-    if (error) throw new Error(error.message || 'Could not update product.');
+    if (error) {
+      const { data: rpcData, error: rpcErr } = await supabase.rpc('admin_update_product', {
+        p_id: id,
+        p_name: cleanName,
+        p_unit: cleanUnit,
+        p_price: numPrice,
+        p_new_container_price: numContainerPrice ?? null,
+        p_is_returnable: isReturnable ?? true,
+        p_is_active: Boolean(isActive),
+        p_photo_url: photoUrl || null,
+      });
+      if (!rpcErr && rpcData) {
+        invalidateDataCache('products:');
+        return normalizeProductRow(rpcData);
+      }
+      throw new Error(error.message || 'Could not update product.');
+    }
+    
+    let updatedRow = data?.[0];
+    if (!updatedRow) {
+      // If select was filtered or returned 0 rows, attempt to fetch the product
+      const { data: fetchRow } = await supabase.from('products').select().eq('id', id).maybeSingle();
+      if (fetchRow) {
+        updatedRow = fetchRow;
+      } else {
+        throw new Error('Product not found or update permission denied.');
+      }
+    }
+
     invalidateDataCache('products:');
-    return normalizeProductRow(data);
+    return normalizeProductRow(updatedRow);
   }
 
   const returnableBool = isReturnable === undefined ? true : Boolean(isReturnable);
@@ -191,34 +222,36 @@ export async function saveProduct({
   let { data, error } = await supabase
     .from('products')
     .insert(insertPayload)
-    .select()
-    .single();
+    .select();
 
-  if (error && /new_container_price/i.test(error.message || '')) {
+  if (
+    error &&
+    (/column|schema cache|new_container_price|is_returnable|PGRST204/i.test(error.message || '') ||
+      error.code === 'PGRST204')
+  ) {
     delete insertPayload.new_container_price;
+    delete insertPayload.is_returnable;
     ({ data, error } = await supabase
       .from('products')
       .insert(insertPayload)
-      .select()
-      .single());
+      .select());
   }
 
   if (error) throw new Error(error.message || 'Could not add product.');
   invalidateDataCache('products:');
-  return normalizeProductRow(data);
+  return normalizeProductRow(data?.[0]);
 }
 
 export async function toggleProductActive(productId, isActive) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('products')
     .update({ is_active: Boolean(isActive) })
     .eq('id', productId)
-    .select()
-    .single();
+    .select();
 
   if (error) throw new Error(error.message || 'Could not update product status.');
   invalidateDataCache('products:');
-  return data;
+  return data?.[0];
 }
 
 export async function getServiceCharge() {

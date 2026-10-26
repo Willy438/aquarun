@@ -12,6 +12,7 @@ import {
   staffAssignRider,
   staffConfirmOrder,
   staffConfirmPayment,
+  staffFastTrackAssignRider,
   staffMarkReady,
   staffStartRefill,
 } from '../../services/ordersService.js';
@@ -23,30 +24,22 @@ const ICONS = {
   check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
 };
 
-function getPrimaryActionMeta(order) {
+function getPrimaryActionMeta(order, availableRidersCount = 0) {
   switch (order.status) {
     case 'submitted':
-      return {
-        label: 'Confirm order',
-        hint: 'Confirms this order and sets the scheduled delivery window.',
-        enabled: true,
-      };
     case 'confirmed':
-      return {
-        label: 'Start refill',
-        hint: 'Marks this order as Being refilled at the station.',
-        enabled: true,
-      };
     case 'refilling':
-      return {
-        label: 'Mark as ready',
-        hint: 'Use this only after all refills are finished.',
-        enabled: true,
-      };
     case 'ready':
+      if (availableRidersCount > 0) {
+        return {
+          label: 'Accept & Assign Rider',
+          hint: '1-click dispatch: accepts order, preps refills, and assigns the selected rider immediately.',
+          enabled: true,
+        };
+      }
       return {
-        label: 'Assign rider',
-        hint: 'Pick an available rider below, then click Assign rider.',
+        label: 'Accept order (Assign rider later)',
+        hint: 'Confirms this order. You can assign a rider once they become available.',
         enabled: true,
       };
     case 'rider_assigned':
@@ -135,7 +128,7 @@ export async function mount(me) {
       const canAdjustSlot = ['submitted', 'confirmed', 'refilling', 'ready', 'rider_assigned'].includes(
         order.status
       );
-      const actionMeta = getPrimaryActionMeta(order);
+      const actionMeta = getPrimaryActionMeta(order, availableRiders.length);
 
       const lineItemsHtml = (order.items || [])
         .map((item) => {
@@ -167,12 +160,12 @@ export async function mount(me) {
             .join('')
         : `<option value="${escapeHtml(selectedSlotId)}">${escapeHtml(formatSlotWindow(effectiveSlot))}</option>`;
 
-      let riderControlHtml = `<div class="proc-locked-box">Rider assignment unlocks when the order is Ready</div>`;
-      if (order.status === 'ready') {
+      let riderControlHtml = '';
+      if (['submitted', 'confirmed', 'refilling', 'ready'].includes(order.status)) {
         if (availableRiders.length > 0) {
           riderControlHtml = `
-            <div class="field">
-              <label class="field-label" for="rider-select">Assign available rider</label>
+            <div class="field" style="margin-top: 8px;">
+              <label class="field-label" for="rider-select">Assign available rider (1-click)</label>
               <select class="select" id="rider-select">
                 ${availableRiders
                   .map(
@@ -185,14 +178,14 @@ export async function mount(me) {
           `;
         } else {
           riderControlHtml = `
-            <div class="notice notice-warning">
-              No riders are currently marked <strong>Available</strong>. Ask a rider to switch on their availability in their Profile.
+            <div class="notice notice-warning" style="margin-top: 8px;">
+              No riders are currently marked <strong>Available</strong>. You can accept the order now and assign a rider once online.
             </div>
           `;
         }
       } else if (['rider_assigned', 'out_for_delivery', 'delivered', 'completed'].includes(order.status)) {
         riderControlHtml = `
-          <div class="proc-locked-box">
+          <div class="proc-locked-box" style="margin-top: 8px;">
             Assigned rider: <strong>${escapeHtml(order.rider?.full_name || 'Assigned')}</strong>
           </div>
         `;
@@ -286,25 +279,21 @@ export async function mount(me) {
 
         setBusy(btn, true, 'Processing...');
         try {
-          if (order.status === 'submitted') {
-            const slotChanged = chosenSlotId !== order.preferred_slot_id;
-            await staffConfirmOrder(
-              order.id,
-              chosenSlotId,
-              slotChanged
-                ? 'The station adjusted your delivery window because of a high number of orders today.'
-                : null
-            );
-            showToast('Order confirmed!', 'success');
-          } else if (order.status === 'confirmed') {
-            await staffStartRefill(order.id);
-            showToast('Order moved to Refilling.', 'success');
-          } else if (order.status === 'refilling') {
-            await staffMarkReady(order.id);
-            showToast('Order marked as Ready for dispatch.', 'success');
-          } else if (order.status === 'ready') {
-            await staffAssignRider(order.id, chosenRiderId);
-            showToast('Rider assigned!', 'success');
+          if (['submitted', 'confirmed', 'refilling', 'ready'].includes(order.status)) {
+            if (chosenRiderId) {
+              await staffFastTrackAssignRider(order.id, chosenRiderId);
+              showToast('Order prepared and assigned to rider in 1 click!', 'success');
+            } else {
+              const slotChanged = chosenSlotId !== order.preferred_slot_id;
+              await staffConfirmOrder(
+                order.id,
+                chosenSlotId,
+                slotChanged
+                  ? 'The station adjusted your delivery window because of a high number of orders today.'
+                  : null
+              );
+              showToast('Order confirmed! Assign an available rider when ready.', 'success');
+            }
           } else if (order.status === 'delivered' && order.payment_status === 'unpaid') {
             const confirmed = await confirmModal({
               title: `Confirm Payment for Order #${order.order_number}?`,
