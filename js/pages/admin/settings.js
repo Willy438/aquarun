@@ -14,12 +14,12 @@ import {
 let mapInstance = null;
 
 const ICONS = {
-  pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
-  check: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-  clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
-  compass: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>`,
-  store: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>`,
-  save: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 18px; height: 18px; vertical-align: -3px; display: inline-block;"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+  pin: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
+  check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
+  store: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7"/><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4"/><path d="M2 7h20"/></svg>`,
+  save: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>`,
+  locate: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>`,
+  refresh: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>`,
 };
 
 async function ensureSettingsAssets() {
@@ -48,10 +48,8 @@ async function ensureSettingsAssets() {
 
 export async function mount() {
   const content = document.querySelector('#content');
-
   const topbarRight = document.querySelector('#topbar-right');
 
-  // Clean up any existing map instance from previous mounts
   if (mapInstance) {
     try {
       mapInstance.remove();
@@ -83,72 +81,52 @@ export async function mount() {
 
     function renderView() {
       content.innerHTML = `
-        <!-- Prominent Active Station Location Banner -->
-        <div class="active-hub-banner ${hasUnsavedChanges ? 'is-unsaved' : 'is-saved'}" id="hub-status-banner">
-          <div class="active-hub-icon">
-            ${hasUnsavedChanges ? ICONS.compass : ICONS.pin}
-          </div>
-          <div class="active-hub-body">
-            <div class="active-hub-header">
-              <span class="active-hub-caption">
-                ${hasUnsavedChanges ? 'Location selected (Unsaved)' : 'Current saved station location'}
-              </span>
-              <span class="pill ${hasUnsavedChanges ? 'pill-amber' : 'pill-green'}" id="hub-status-pill">
-                ${hasUnsavedChanges ? '● Unsaved changes · Click Save to apply' : '● Saved in database'}
-              </span>
-            </div>
-            <div class="active-hub-address" id="hub-display-address">
-              ${escapeHtml(currentAddress)}
-            </div>
-            <div class="active-hub-meta">
-              <span id="hub-display-coords" style="display: inline-flex; align-items: center; gap: 4px;">${ICONS.pin} ${currentLat.toFixed(5)}° N, ${currentLng.toFixed(5)}° E</span>
-              <span>·</span>
-              <span id="hub-display-radius">Coverage: ${currentRadiusKm} km radius</span>
-            </div>
-          </div>
-        </div>
-
         <div class="settings-grid">
+          <!-- Left Column: Station Location & Delivery Zone -->
           <div class="card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Set station hub reference</h2>
-                <p class="card-subtitle text-muted" style="margin: 4px 0 0 0; font-size: 13px;">
-                  Search an area or drag the pin. Distance and batch routes are calculated from this point.
+            <div class="settings-card-header">
+              <div class="settings-card-title-group">
+                <h2 class="settings-card-title">
+                  ${ICONS.pin}
+                  <span>Station Hub &amp; Delivery Zone</span>
+                </h2>
+                <p class="settings-card-sub">
+                  Pinpoint your station reference point to calculate customer delivery distances and coverage.
                 </p>
               </div>
             </div>
 
-            <div class="map-container-wrap">
-              <div class="map-search-bar">
-                <input
-                  type="text"
-                  id="station-search-input"
-                  placeholder="Search landmark, university, street or barangay..."
-                />
-                <button type="button" class="btn btn-sm btn-primary" id="station-search-btn">
-                  Search
-                </button>
-              </div>
-              <div id="settings-map"></div>
-            </div>
-
-            <div class="map-hint">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-              <span>Tip: Drag the pin or click any street to set the station point. The blue circle shows your delivery zone.</span>
-            </div>
-
-            <div class="coords-badge-row">
-              <div class="coord-pills-group">
-                <span class="coord-pill" id="val-lat">Lat: ${currentLat.toFixed(5)}</span>
-                <span class="coord-pill" id="val-lng">Lng: ${currentLng.toFixed(5)}</span>
-              </div>
-              <button type="button" class="btn btn-light btn-sm" id="recenter-btn" style="font-size: 12px; padding: 4px 10px;">
-                Reset to saved pin
+            <!-- Search Row Placed Cleanly Above Map -->
+            <div class="map-search-row">
+              <input
+                type="text"
+                id="station-search-input"
+                placeholder="Search landmark, university, street or barangay..."
+              />
+              <button type="button" class="btn btn-primary" id="station-search-btn">
+                Search
+              </button>
+              <button type="button" class="btn btn-light" id="station-locate-btn" title="Pin via current GPS location">
+                ${ICONS.locate} <span>Locate</span>
               </button>
             </div>
 
-            <div class="form-stack" style="margin-top: 18px;">
+            <!-- Map Frame -->
+            <div class="settings-map-frame">
+              <div id="settings-map"></div>
+            </div>
+
+            <!-- Coordinates & Reset Bar -->
+            <div class="map-meta-bar">
+              <span class="map-coords-badge" id="val-coords">
+                ${ICONS.pin} Lat: ${currentLat.toFixed(5)}, Lng: ${currentLng.toFixed(5)}
+              </span>
+              <button type="button" class="btn btn-light btn-sm" id="recenter-btn" style="font-size: 11.5px; padding: 4px 10px;">
+                ${ICONS.refresh} <span>Reset to saved pin</span>
+              </button>
+            </div>
+
+            <div class="form-stack" style="margin-top: 16px;">
               <div class="field">
                 <label class="field-label" for="station-address-input">Station address / Landmark name</label>
                 <input
@@ -161,8 +139,8 @@ export async function mount() {
               </div>
 
               <div class="field">
-                <label class="field-label">Max delivery radius</label>
-                <div class="radius-slider-wrap">
+                <label class="field-label">Delivery coverage radius</label>
+                <div class="radius-slider-box">
                   <input
                     type="range"
                     class="radius-slider"
@@ -172,152 +150,138 @@ export async function mount() {
                     step="0.5"
                     value="${currentRadiusKm}"
                   />
-                  <span class="radius-value-pill" id="radius-val-text">${currentRadiusKm} km</span>
+                  <span class="radius-pill" id="radius-val-text">${currentRadiusKm} km</span>
                 </div>
               </div>
-
-              <button
-                type="button"
-                class="btn btn-primary btn-block btn-lg"
-                id="save-settings-main-btn"
-                style="margin-top: 20px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; gap: 8px;"
-              >
-                ${ICONS.save} Save station settings
-              </button>
             </div>
           </div>
 
-          <div class="stack">
-            <!-- Active Hub Summary Card -->
-            <div class="card">
-              <div class="card-header">
-                <div class="card-title-group">
-                  <span class="card-icon">${ICONS.store}</span>
-                  <h2 class="card-title">Station profile</h2>
+          <!-- Right Column: Store Operations & Delivery Fee -->
+          <div class="card">
+            <div class="settings-card-header">
+              <div class="settings-card-title-group">
+                <h2 class="settings-card-title">
+                  ${ICONS.store}
+                  <span>Store Operations &amp; Rates</span>
+                </h2>
+                <p class="settings-card-sub">
+                  Control order acceptance status and flat delivery fees.
+                </p>
+              </div>
+            </div>
+
+            <!-- Store Status Toggle -->
+            <div class="store-status-row">
+              <div class="store-status-text">
+                <div class="store-status-title">
+                  <span>Store Status:</span>
+                  <span class="pill ${currentOpen ? 'pill-green' : 'pill-neutral'}" id="summary-store-pill" style="font-size: 11px; padding: 2px 8px;">
+                    ${currentOpen ? 'Open' : 'Closed'}
+                  </span>
                 </div>
-                <span class="pill ${currentOpen ? 'pill-green' : 'pill-neutral'}" id="summary-store-pill">
-                  ${currentOpen ? 'Open' : 'Closed'}
+                <p class="store-status-sub" id="station-open-desc">
+                  ${currentOpen ? 'Accepting customer refill orders' : 'Closed — new orders blocked'}
+                </p>
+              </div>
+              <label class="switch-label">
+                <input type="checkbox" id="station-open-toggle" ${currentOpen ? 'checked' : ''}>
+                <span class="switch-track"></span>
+              </label>
+            </div>
+
+            <!-- Delivery Service Fee -->
+            <div class="field">
+              <label class="field-label" for="service-charge-input">Delivery service charge (₱)</label>
+              <input
+                class="input"
+                id="service-charge-input"
+                type="number"
+                min="0"
+                step="1"
+                value="${currentCharge}"
+                style="font-size: 15px; font-weight: 700;"
+              />
+              <p class="text-muted" style="margin: 4px 0 0; font-size: 12px;">
+                Flat delivery fee applied per order within your delivery radius.
+              </p>
+            </div>
+
+            <!-- Live Station Profile Summary Card -->
+            <div class="station-summary-box">
+              <div class="station-summary-title">
+                <span>Active Station Specs</span>
+                <span class="pill ${hasUnsavedChanges ? 'pill-amber' : 'pill-green'}" id="hub-status-pill" style="font-size: 10.5px; padding: 2px 7px;">
+                  ${hasUnsavedChanges ? 'Unsaved' : 'Saved'}
                 </span>
               </div>
-
-              <div class="hub-summary-row">
-                <span class="hub-summary-label">Reference hub</span>
-                <span class="hub-summary-val" id="summary-hub-name" style="text-align: right; max-width: 180px;">
-                  ${escapeHtml(currentAddress)}
-                </span>
+              <div class="station-summary-item">
+                <span class="station-summary-label">Reference Hub:</span>
+                <span class="station-summary-val" id="summary-hub-name">${escapeHtml(currentAddress)}</span>
               </div>
-
-              <div class="hub-summary-row">
-                <span class="hub-summary-label">Service coverage</span>
-                <span class="hub-summary-val" id="summary-radius-val">${currentRadiusKm} km</span>
+              <div class="station-summary-item">
+                <span class="station-summary-label">Max Coverage:</span>
+                <span class="station-summary-val" id="summary-radius-val">${currentRadiusKm} km</span>
               </div>
-
-              <div class="hub-summary-row">
-                <span class="hub-summary-label">Delivery fee</span>
-                <span class="hub-summary-val" id="summary-charge-val">${formatPeso(currentCharge)}</span>
+              <div class="station-summary-item">
+                <span class="station-summary-label">Delivery Fee:</span>
+                <span class="station-summary-val" id="summary-charge-val">${formatPeso(currentCharge)}</span>
               </div>
-
-              <div class="hub-summary-row">
-                <span class="hub-summary-label">GPS coordinates</span>
-                <span class="hub-summary-val" id="summary-coords-val" style="font-family: monospace; font-size: 11.5px;">
+              <div class="station-summary-item">
+                <span class="station-summary-label">GPS Coords:</span>
+                <span class="station-summary-val" id="summary-coords-val" style="font-family: monospace; font-size: 11.5px;">
                   ${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}
                 </span>
               </div>
             </div>
 
-            <!-- Controls Card -->
-            <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Store controls</h2>
-              </div>
-
-              <div class="toggle-row-between">
-                <div class="toggle-info">
-                  <h4>Station status</h4>
-                  <p id="station-open-desc">${currentOpen ? 'Accepting customer orders' : 'Closed — new orders blocked'}</p>
-                </div>
-                <label class="switch-label">
-                  <input type="checkbox" id="station-open-toggle" ${currentOpen ? 'checked' : ''}>
-                  <span class="switch-track"></span>
-                </label>
-              </div>
-
-              <div class="form-stack" style="margin-top: 16px;">
-                <div class="field">
-                  <label class="field-label" for="service-charge-input">Delivery service charge (₱)</label>
-                  <input
-                    class="input"
-                    id="service-charge-input"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value="${currentCharge}"
-                  />
-                  <p class="field-hint" style="margin-top: 4px; font-size: 12px; color: #64748b;">
-                    Flat delivery fee per order in your delivery zone.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                class="btn btn-primary btn-block"
-                id="save-settings-btn"
-                style="margin-top: 22px;"
-              >
-                Save station settings
-              </button>
-            </div>
+            <!-- Single, Unified Save Button -->
+            <button
+              type="button"
+              class="btn btn-primary btn-block btn-lg"
+              id="save-settings-btn"
+              style="font-weight: 700; gap: 8px;"
+            >
+              ${ICONS.save} <span>Save station settings</span>
+            </button>
           </div>
         </div>
       `;
     }
 
     renderView();
+
     if (topbarRight) {
       topbarRight.innerHTML = `
         <button type="button" class="btn btn-primary btn-sm" id="save-settings-topbar-btn">
-          Save settings
+          ${ICONS.save} <span>Save settings</span>
         </button>
       `;
     }
 
     function setUnsavedState(isUnsaved) {
       hasUnsavedChanges = isUnsaved;
-      const banner = document.querySelector('#hub-status-banner');
       const pill = document.querySelector('#hub-status-pill');
-      if (banner && pill) {
-        banner.className = `active-hub-banner ${isUnsaved ? 'is-unsaved' : 'is-saved'}`;
+      if (pill) {
         pill.className = `pill ${isUnsaved ? 'pill-amber' : 'pill-green'}`;
-        pill.textContent = isUnsaved
-          ? '● Unsaved changes · Click Save to apply'
-          : '● Saved in database';
+        pill.textContent = isUnsaved ? 'Unsaved' : 'Saved';
       }
     }
 
     function updateLiveLabels() {
-      const displayAddr = document.querySelector('#hub-display-address');
-      const displayCoords = document.querySelector('#hub-display-coords');
-      const displayRadius = document.querySelector('#hub-display-radius');
-      const latEl = document.querySelector('#val-lat');
-      const lngEl = document.querySelector('#val-lng');
+      const coordsEl = document.querySelector('#val-coords');
       const summaryHubName = document.querySelector('#summary-hub-name');
       const summaryRadiusVal = document.querySelector('#summary-radius-val');
       const summaryCoordsVal = document.querySelector('#summary-coords-val');
       const summaryChargeVal = document.querySelector('#summary-charge-val');
 
-      if (displayAddr) displayAddr.textContent = currentAddress;
-      if (displayCoords) displayCoords.innerHTML = `${ICONS.pin} ${currentLat.toFixed(5)}° N, ${currentLng.toFixed(5)}° E`;
-      if (displayRadius) displayRadius.textContent = `Coverage: ${currentRadiusKm} km radius`;
-      if (latEl) latEl.textContent = `Lat: ${currentLat.toFixed(5)}`;
-      if (lngEl) lngEl.textContent = `Lng: ${currentLng.toFixed(5)}`;
+      if (coordsEl) coordsEl.innerHTML = `${ICONS.pin} Lat: ${currentLat.toFixed(5)}, Lng: ${currentLng.toFixed(5)}`;
       if (summaryHubName) summaryHubName.textContent = currentAddress;
       if (summaryRadiusVal) summaryRadiusVal.textContent = `${currentRadiusKm} km`;
       if (summaryCoordsVal) summaryCoordsVal.textContent = `${currentLat.toFixed(4)}, ${currentLng.toFixed(4)}`;
       if (summaryChargeVal) summaryChargeVal.textContent = formatPeso(currentCharge);
     }
 
-    // Initialize Leaflet Map
+    // Initialize Map
     setTimeout(() => {
       const mapEl = document.querySelector('#settings-map');
       if (!mapEl || typeof L === 'undefined') return;
@@ -354,7 +318,6 @@ export async function mount() {
           const addrInput = document.querySelector('#station-address-input');
           if (addrInput) addrInput.value = overrideName;
         } else {
-          // Reverse geocode to get institution/road/barangay name
           try {
             const resp = await fetch(
               `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLng}`
@@ -424,7 +387,7 @@ export async function mount() {
         const q = input?.value.trim();
         if (!q) return;
         const searchBtn = document.querySelector('#station-search-btn');
-        if (searchBtn) searchBtn.textContent = '...';
+        if (searchBtn) setBusy(searchBtn, true, 'Searching...');
 
         try {
           const resp = await fetch(
@@ -442,12 +405,12 @@ export async function mount() {
             onLocationChanged(lat, lon, resolvedName);
             showToast(`Found: ${resolvedName}`, 'success');
           } else {
-            showToast('No locations found. You can click directly on the map to place the pin.', 'error');
+            showToast('No locations found. You can click directly on the map to place the pin.', 'warning');
           }
         } catch {
           showToast('Search service busy. You can click on the map directly.', 'error');
         } finally {
-          if (searchBtn) searchBtn.textContent = 'Search';
+          if (searchBtn) setBusy(searchBtn, false);
         }
       }
 
@@ -457,6 +420,31 @@ export async function mount() {
           e.preventDefault();
           doSearch();
         }
+      });
+
+      // Locate GPS button
+      document.querySelector('#station-locate-btn')?.addEventListener('click', () => {
+        if (!navigator.geolocation) {
+          showToast('Geolocation is not supported by your browser.', 'error');
+          return;
+        }
+        const btn = document.querySelector('#station-locate-btn');
+        setBusy(btn, true, 'Locating...');
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setBusy(btn, false);
+            const userLat = pos.coords.latitude;
+            const userLng = pos.coords.longitude;
+            mapInstance.flyTo([userLat, userLng], 16);
+            onLocationChanged(userLat, userLng);
+            showToast('Pinned to current GPS position!', 'success');
+          },
+          () => {
+            setBusy(btn, false);
+            showToast('Could not retrieve GPS coordinates.', 'error');
+          },
+          { enableHighAccuracy: true, timeout: 8000 }
+        );
       });
     }, 50);
 
@@ -488,13 +476,9 @@ export async function mount() {
         }
       }
       currentOpen = willBeOpen;
-      const slider = toggleEl.nextElementSibling;
-      if (slider) {
-        slider.style.backgroundColor = currentOpen ? 'var(--blue-app, #1d5bd6)' : '#cbd5e1';
-      }
       if (toggleDesc) {
         toggleDesc.textContent = currentOpen
-          ? 'Accepting customer orders'
+          ? 'Accepting customer refill orders'
           : 'Closed — new orders blocked';
       }
       if (summaryStorePill) {
@@ -549,7 +533,7 @@ export async function mount() {
         setUnsavedState(false);
         updateLiveLabels();
 
-        showToast(`Saved! Current station address: ${addressVal}`, 'success');
+        showToast(`Settings saved! Station address: ${addressVal}`, 'success');
       } catch (err) {
         showToast(err.message || 'Could not save settings.', 'error');
       } finally {
@@ -557,7 +541,6 @@ export async function mount() {
       }
     }
 
-    document.querySelector('#save-settings-main-btn')?.addEventListener('click', (e) => handleSaveSettings(e.currentTarget));
     document.querySelector('#save-settings-btn')?.addEventListener('click', (e) => handleSaveSettings(e.currentTarget));
     document.querySelector('#save-settings-topbar-btn')?.addEventListener('click', (e) => handleSaveSettings(e.currentTarget));
   } catch (err) {

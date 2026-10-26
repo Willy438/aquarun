@@ -6,7 +6,6 @@ import {
   saveCustomerAddress,
   setDefaultCustomerAddress,
 } from '../../services/addressesService.js';
-import { formatAddressFull } from '../../services/ordersService.js';
 import { calculateDistanceKm, getStationLocationSettings } from '../../services/settingsService.js';
 
 const ICONS = {
@@ -30,6 +29,80 @@ function getAddressIcon(label = '') {
   if (norm.includes('home') || norm.includes('house')) return ICONS.home;
   if (norm.includes('work') || norm.includes('office')) return ICONS.briefcase;
   return ICONS.pin;
+}
+
+// Reverse Geocoding API: Coordinates -> Address Fields
+async function fetchAddressFromCoords(lat, lon) {
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`;
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (!data || !data.address) return null;
+
+    const a = data.address;
+    let street = '';
+    const houseNumber = a.house_number || '';
+    const road = a.road || a.pedestrian || a.street || '';
+    if (houseNumber && road) {
+      street = `${houseNumber} ${road}`;
+    } else if (road) {
+      street = road;
+    } else if (a.residential || a.suburb || a.neighbourhood) {
+      street = a.residential || a.suburb || a.neighbourhood;
+    } else if (data.display_name) {
+      street = data.display_name.split(',')[0].trim();
+    }
+
+    let barangay = '';
+    const candidates = [a.village, a.quarter, a.suburb, a.neighbourhood, a.city_district];
+    for (const c of candidates) {
+      if (c && /barangay|\bbrgy\b/i.test(c)) {
+        barangay = c;
+        break;
+      }
+    }
+    if (!barangay) {
+      const match = data.display_name.match(/Barangay\s+[0-9A-Za-z\s-]+/i) || data.display_name.match(/Brgy\.?\s+[0-9A-Za-z\s-]+/i);
+      if (match) {
+        barangay = match[0].split(',')[0].trim();
+      } else {
+        barangay = a.village || a.suburb || a.neighbourhood || 'Barangay 171';
+      }
+    }
+
+    const city = a.city || a.town || a.municipality || 'Caloocan';
+    return { street, barangay, city, full: data.display_name };
+  } catch {
+    return null;
+  }
+}
+
+// Forward Geocoding API: Address text -> Coordinates
+async function searchAddressCoordinates(street, barangay, city = 'Caloocan') {
+  try {
+    const queryParts = [];
+    if (street) queryParts.push(street);
+    if (barangay) queryParts.push(barangay);
+    if (city) queryParts.push(city);
+    queryParts.push('Philippines');
+    const query = queryParts.join(', ');
+
+    const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=1`;
+    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
+    if (!resp.ok) return null;
+    const data = await resp.json();
+    if (data && data.length > 0) {
+      return {
+        lat: parseFloat(data[0].lat),
+        lng: parseFloat(data[0].lon),
+        displayName: data[0].display_name,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 async function ensureAddressesAssets() {
@@ -65,6 +138,8 @@ export async function mount(me) {
   let chosenLat = null;
   let chosenLng = null;
   let miniMap = null;
+  let customerMarker = null;
+  let autoPinTimeout = null;
 
   let stationSettings = {
     lat: 14.7565,
@@ -84,6 +159,7 @@ export async function mount(me) {
         miniMap.remove();
       } catch {}
       miniMap = null;
+      customerMarker = null;
     }
   }
 
@@ -273,7 +349,7 @@ export async function mount(me) {
                   <div class="zone-status-box is-idle" id="zone-status-box">
                     ${ICONS.info}
                     <div>
-                      Click on the map or drag the pin to your exact delivery location. Station radius: <strong>${stationSettings.radiusKm} km</strong>.
+                      Click on map or drag pin to auto-fill address details. Station delivery zone is <strong>${stationSettings.radiusKm} km</strong>.
                     </div>
                   </div>
                 </div>
@@ -299,7 +375,7 @@ export async function mount(me) {
       `
       : '';
 
-    // Render Full Content View
+    // Render Full Content View - Notice Station Bar is placed AT THE TOP!
     content.innerHTML = `
       <div class="addr-page-container">
         <!-- Top Action Header -->
@@ -316,10 +392,7 @@ export async function mount(me) {
           </button>
         </div>
 
-        <!-- Addresses List Grid -->
-        ${cardsHtml}
-
-        <!-- Station Coverage Reference Banner -->
+        <!-- Station Coverage Reference Banner (AT THE TOP) -->
         <div class="addr-station-bar">
           <div class="addr-station-info-group">
             <span class="addr-station-icon">${ICONS.store}</span>
@@ -339,6 +412,9 @@ export async function mount(me) {
             </div>
           </div>
         </div>
+
+        <!-- Addresses List Grid -->
+        ${cardsHtml}
 
         <!-- Modal Dialog (if open) -->
         ${modalHtml}
@@ -396,8 +472,6 @@ export async function mount(me) {
           dashArray: '5, 5',
           interactive: false,
         }).addTo(miniMap);
-
-        let customerMarker = null;
 
         function updateZoneUI(lat, lng, showToastNotice = false) {
           const statusBox = document.querySelector('#zone-status-box');
@@ -484,47 +558,38 @@ export async function mount(me) {
             customerMarker.setLatLng([chosenLat, chosenLng]);
           }
 
-          updateZoneUI(chosenLat, chosenLng, true);
+          updateZoneUI(chosenLat, chosenLng, false);
 
+          // Every time a location is selected or pinned, auto-fill address details via API!
           if (shouldReverseGeocode) {
-            try {
-              const resp = await fetch(
-                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${chosenLat}&lon=${chosenLng}`
-              );
-              const data = await resp.json();
-              if (data && data.address) {
-                const streetInput = document.querySelector('#addr-street');
-                const brgyInput = document.querySelector('#addr-barangay');
-                const cityInput = document.querySelector('#addr-city');
+            const statusBox = document.querySelector('#zone-status-box');
+            if (statusBox) {
+              const prevHtml = statusBox.innerHTML;
+              statusBox.innerHTML = `${ICONS.info} <div><strong>Looking up street address...</strong></div>`;
+            }
 
-                const foundStreet =
-                  data.address.road ||
-                  data.address.suburb ||
-                  data.address.neighbourhood ||
-                  data.address.residential;
-                if (foundStreet && streetInput && !streetInput.value.trim()) {
-                  streetInput.value = foundStreet;
-                }
+            const addrData = await fetchAddressFromCoords(chosenLat, chosenLng);
+            if (addrData) {
+              const streetInput = document.querySelector('#addr-street');
+              const brgyInput = document.querySelector('#addr-barangay');
+              const cityInput = document.querySelector('#addr-city');
 
-                const foundBrgy =
-                  data.address.village ||
-                  data.address.quarter ||
-                  data.address.suburb ||
-                  data.address.neighbourhood;
-                if (foundBrgy && brgyInput && !brgyInput.value.trim()) {
-                  brgyInput.value = foundBrgy;
-                }
-
-                const foundCity =
-                  data.address.city ||
-                  data.address.town ||
-                  data.address.municipality ||
-                  data.address.county;
-                if (foundCity && cityInput && !cityInput.value.trim()) {
-                  cityInput.value = foundCity;
-                }
+              if (streetInput && addrData.street) {
+                streetInput.value = addrData.street;
+                clearInputError(streetInput);
               }
-            } catch {}
+              if (brgyInput && addrData.barangay) {
+                brgyInput.value = addrData.barangay;
+                clearInputError(brgyInput);
+              }
+              if (cityInput && addrData.city) {
+                cityInput.value = addrData.city;
+                clearInputError(cityInput);
+              }
+
+              showToast(`Address detected: ${addrData.street || addrData.barangay}`, 'info');
+            }
+            updateZoneUI(chosenLat, chosenLng, false);
           }
         }
 
@@ -558,7 +623,7 @@ export async function mount(me) {
               const lat = parseFloat(hit.lat);
               const lng = parseFloat(hit.lon);
               miniMap.setView([lat, lng], 16);
-              await onLocationSelected(lat, lng, false);
+              await onLocationSelected(lat, lng, true);
               showToast(`Found: ${hit.display_name.split(',')[0]}`, 'success');
             } else {
               showToast('Location not found. Try searching another street or barangay.', 'warning');
@@ -578,7 +643,7 @@ export async function mount(me) {
           }
         });
 
-        // Locate Me GPS
+        // Locate Me GPS: Pinpoint user doorstep and auto-fill address inputs
         document.querySelector('#locate-me-btn')?.addEventListener('click', () => {
           if (!navigator.geolocation) {
             showToast('Geolocation is not supported by your browser.', 'error');
@@ -593,7 +658,7 @@ export async function mount(me) {
               const userLng = pos.coords.longitude;
               miniMap.setView([userLat, userLng], 16);
               await onLocationSelected(userLat, userLng, true);
-              showToast('Location pinned via GPS!', 'success');
+              showToast('Location pinned & address auto-filled via GPS!', 'success');
             },
             () => {
               setBusy(btn, false);
@@ -601,6 +666,29 @@ export async function mount(me) {
             },
             { enableHighAccuracy: true, timeout: 8000 }
           );
+        });
+
+        // Forward Geocoding: Auto-pin on map when user types address details
+        function triggerAutoPinFromInputs() {
+          if (autoPinTimeout) clearTimeout(autoPinTimeout);
+          autoPinTimeout = setTimeout(async () => {
+            const streetVal = document.querySelector('#addr-street')?.value.trim();
+            const brgyVal = document.querySelector('#addr-barangay')?.value.trim();
+            const cityVal = document.querySelector('#addr-city')?.value.trim() || 'Caloocan';
+
+            if (!streetVal && !brgyVal) return;
+            const res = await searchAddressCoordinates(streetVal, brgyVal, cityVal);
+            if (res) {
+              miniMap.setView([res.lat, res.lng], 16);
+              await onLocationSelected(res.lat, res.lng, false);
+            }
+          }, 850);
+        }
+
+        ['#addr-street', '#addr-barangay'].forEach((sel) => {
+          const inputEl = document.querySelector(sel);
+          inputEl?.addEventListener('input', triggerAutoPinFromInputs);
+          inputEl?.addEventListener('blur', triggerAutoPinFromInputs);
         });
 
         // Trigger map invalidate size so tiles render smoothly
