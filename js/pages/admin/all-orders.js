@@ -161,7 +161,7 @@ export async function mount() {
       return num.includes(q) || cust.includes(q) || rider.includes(q);
     });
 
-    const avatarTones = ['', 'is-green', 'is-amber', 'is-purple'];
+    const avatarTones = [''];
 
     const rowsHtml =
       filtered.length === 0

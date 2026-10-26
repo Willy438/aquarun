@@ -95,9 +95,30 @@
 }
 
 .notice-warning {
-  background: #fff6df;
-  border: 1px solid #fde3a7;
-  color: #9a5b06;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  color: #92400e;
+  font-weight: 500;
+}
+
+.notice-danger {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-weight: 500;
+}
+
+.notice-success {
+  background: #f0fdf4;
+  border: 1px solid #dcfce7;
+  color: #166534;
+  font-weight: 500;
+}
+
+.notice-info {
+  background: #eff6ff;
+  border: 1px solid #dbeafe;
+  color: #1e40af;
   font-weight: 500;
 }
 

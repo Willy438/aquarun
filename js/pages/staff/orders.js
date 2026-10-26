@@ -20,6 +20,7 @@ const ICONS = {
   pin: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
   truck: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
   money: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  check: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
 };
 
 const FILTER_STATUSES = [
@@ -238,7 +239,7 @@ export async function mount() {
     if (!dispatchableOrders.length) {
       container.innerHTML = `
         <div class="card empty-state" style="padding: 40px 20px; text-align: center;">
-          <div style="font-size: 28px; margin-bottom: 8px;">✓</div>
+          <div style="display: flex; justify-content: center; margin-bottom: 10px;">${ICONS.check}</div>
           <h3 style="font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 4px;">No unassigned orders ready for dispatch</h3>
           <p class="text-muted" style="font-size: 13px;">All confirmed and ready orders have been assigned to riders or completed.</p>
         </div>
@@ -472,7 +473,7 @@ export async function mount() {
                             </span>
                           </div>
                           <span class="pill ${isSettled ? 'pill-neutral' : 'pill-green'}">
-                            ${isSettled ? '✓ All Settled' : '● Cash to Remit'}
+                            ${isSettled ? 'Settled' : 'Cash to Remit'}
                           </span>
                         </div>
 

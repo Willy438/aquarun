@@ -783,10 +783,10 @@ export async function mount(me) {
           addressDistanceCheck?.distanceKm !== undefined
         ) {
           if (addressDistanceCheck.isWithin) {
-            distanceHintEl.innerHTML = `<span style="color:#16a34a; font-weight:600;">✓ Within delivery radius (${addressDistanceCheck.distanceKm} km from station)</span>`;
+            distanceHintEl.innerHTML = `<span style="color:#16a34a; font-weight:600;">Within delivery radius (${addressDistanceCheck.distanceKm} km from station)</span>`;
             distanceHintEl.hidden = false;
           } else {
-            distanceHintEl.innerHTML = `<span style="color:#dc2626; font-weight:700;">⚠️ Outside delivery radius (${addressDistanceCheck.distanceKm} km · Max: ${addressDistanceCheck.maxRadiusKm} km)</span>`;
+            distanceHintEl.innerHTML = `<span style="color:#dc2626; font-weight:700;">Outside delivery radius (${addressDistanceCheck.distanceKm} km · Max: ${addressDistanceCheck.maxRadiusKm} km)</span>`;
             distanceHintEl.hidden = false;
           }
         } else {
@@ -796,7 +796,7 @@ export async function mount(me) {
 
       if (radiusNoticeEl) {
         if (addressDistanceCheck && !addressDistanceCheck.isWithin) {
-          radiusNoticeEl.innerHTML = `<strong>⚠️ Outside Delivery Area:</strong> This address is <strong>${addressDistanceCheck.distanceKm} km</strong> from our station. Our maximum delivery radius is <strong>${addressDistanceCheck.maxRadiusKm} km</strong>.`;
+          radiusNoticeEl.innerHTML = `<strong>Outside Delivery Area:</strong> This address is <strong>${addressDistanceCheck.distanceKm} km</strong> from our station. Our maximum delivery radius is <strong>${addressDistanceCheck.maxRadiusKm} km</strong>.`;
           radiusNoticeEl.hidden = false;
         } else {
           radiusNoticeEl.hidden = true;

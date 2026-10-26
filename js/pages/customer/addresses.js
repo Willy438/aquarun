@@ -452,23 +452,23 @@ export async function mount(me) {
             statusBox.innerHTML = `
               ${ICONS.check}
               <div>
-                <strong>✓ Inside delivery zone (${dist} km from station)</strong>
+                <strong>Inside delivery zone (${dist} km from station)</strong>
                 <span class="zone-subtext">Delivery is available to this address.</span>
               </div>
             `;
             if (showToastNotice) {
-              showToast(`✓ Inside delivery zone (${dist} km from station). Delivery available!`, 'success');
+              showToast(`Inside delivery zone (${dist} km from station). Delivery available!`, 'success');
             }
           } else {
             statusBox.innerHTML = `
               ${ICONS.alert}
               <div>
-                <strong>⚠️ Outside delivery radius (${dist} km from station)</strong>
+                <strong>Outside delivery radius (${dist} km from station)</strong>
                 <span class="zone-subtext">Our station delivers up to ${radiusKm} km. Delivery is NOT available to this location.</span>
               </div>
             `;
             if (showToastNotice) {
-              showToast(`⚠️ Outside delivery zone (${dist} km away — station max is ${radiusKm} km).`, 'warning');
+              showToast(`Outside delivery zone (${dist} km away · station max is ${radiusKm} km).`, 'warning');
             }
           }
 
@@ -478,7 +478,7 @@ export async function mount(me) {
               customerMarker.unbindPopup();
               customerMarker.unbindTooltip();
               customerMarker.bindTooltip(
-                isOk ? `✓ Within zone (${dist} km)` : `⚠️ Outside zone (${dist} km)`,
+                isOk ? `Within zone (${dist} km)` : `Outside zone (${dist} km)`,
                 {
                   permanent: true,
                   direction: 'top',
@@ -500,7 +500,7 @@ export async function mount(me) {
             } else {
               saveBtn.classList.add('btn-outside-zone');
               saveBtn.disabled = true;
-              saveBtn.innerHTML = `⚠️ Outside delivery zone (${dist} km · Max ${radiusKm} km)`;
+              saveBtn.innerHTML = `Outside delivery zone (${dist} km · Max ${radiusKm} km)`;
             }
           }
         }

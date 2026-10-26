@@ -238,7 +238,7 @@ export async function mount() {
       );
     });
 
-    const avatarTones = ['', 'is-green', 'is-amber', 'is-purple'];
+    const avatarTones = [''];
 
     const rowsHtml =
       filtered.length === 0

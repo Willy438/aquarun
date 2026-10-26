@@ -379,7 +379,7 @@ export async function mount(profile) {
       { label: 'Completed', filterKey: 'completed', count: countCompleted, tone: 'is-green' },
     ];
 
-    const avatarTones = ['', 'is-green', 'is-amber', 'is-purple'];
+    const avatarTones = [''];
     const ridersHtml =
       riders.length === 0
         ? `

@@ -19,6 +19,7 @@ import {
 } from '../../services/deliveryService.js';
 
 const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+const ALERT_SVG = `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
 
 export async function mount(me) {
   const pageTitle = document.querySelector('#page-title') || document.querySelector('.topbar h1');
@@ -98,7 +99,7 @@ export async function mount(me) {
       ${
         timing.isEarly
           ? `<div class="notice notice-warning" style="margin-bottom: 14px; background: #fef3c7; border-color: #fde68a; color: #92400e; padding: 12px 14px; border-radius: 8px;">
-              <strong>⚠️ Early Delivery Notice:</strong> ${escapeHtml(timing.warningText)} Please verify that the customer is present and agrees to receive the delivery ahead of their requested window.
+              <strong>${ALERT_SVG} Early Delivery Notice:</strong> ${escapeHtml(timing.warningText)} Please verify that the customer is present and agrees to receive the delivery ahead of their requested window.
             </div>`
           : ''
       }

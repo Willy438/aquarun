@@ -238,10 +238,10 @@ export async function mount(me) {
               }">
                 ${
                   isSettled
-                    ? '✓ Settled'
+                    ? 'Settled'
                     : hasSubmitted
-                      ? '● Awaiting Approval'
-                      : '● Cash on Hand'
+                      ? 'Awaiting Approval'
+                      : 'Cash on Hand'
                 }
               </span>
             </div>

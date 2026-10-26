@@ -31,6 +31,7 @@ import { getSlotAvailability } from '../../services/slotsService.js';
 const ICONS = {
   pin: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
   clock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`,
+  alert: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
 };
 
 export async function mount(me) {
@@ -315,7 +316,7 @@ export async function mount(me) {
             <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
               <div>
                 <h3 style="font-size: 15px; font-weight: 700; color: #92400e; margin: 0 0 4px 0;">
-                  ⚠️ Delivery Attempted — Customer Unavailable
+                  ${ICONS.alert} Delivery Attempted — Customer Unavailable
                 </h3>
                 <p style="font-size: 13px; color: #b45309; margin: 0; line-height: 1.45;">
                   ${escapeHtml(

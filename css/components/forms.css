@@ -1,6 +1,6 @@
 /* Mobile-first forms with >=44px tap targets */
 .field { display: flex; flex-direction: column; gap: 7px; min-width: 0; flex: 1; }
-.field-label { font-size: 12px; font-weight: 700; color: var(--ink-navy); }
+.field-label { font-size: 13px; font-weight: 700; color: var(--ink-navy); }
 .input, .select {
   width: 100%;
   min-height: 44px;
@@ -8,7 +8,7 @@
   border: 1px solid var(--line-input);
   border-radius: 11px;
   padding: 10px 14px;
-  font-size: clamp(13.5px, 1.2vw, 14px);
+  font-size: 14px;
   color: var(--ink-navy);
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
