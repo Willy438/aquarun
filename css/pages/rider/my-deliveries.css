@@ -589,3 +589,15 @@
   text-decoration: underline;
 }
 
+
+.rider-customer-phone-meta {
+  color: #1e293b;
+  font-weight: 500;
+  display: inline-block;
+  margin-left: 6px;
+}
+
+.rider-customer-phone-meta strong {
+  color: var(--ink-navy, #0f172a);
+  font-weight: 700;
+}

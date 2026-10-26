@@ -12,20 +12,24 @@ import { calculateDistanceKm, getStationLocationSettings } from '../../services/
 const ICONS = {
   bookmark: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a1 1 0 0 1 1 1v17l-7-4-7 4V4a1 1 0 0 1 1-1Z"/></svg>`,
   home: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4.5v-6h3v6H18a1 1 0 0 0 1-1V9.5"/></svg>`,
+  briefcase: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
   pin: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
   plus: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`,
   check: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
   alert: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`,
   info: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
   locate: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="7"/><line x1="12" y1="2" x2="12" y2="5"/><line x1="12" y1="19" x2="12" y2="22"/><line x1="2" y1="12" x2="5" y2="12"/><line x1="19" y1="12" x2="22" y2="12"/></svg>`,
-  expand: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>`,
-  collapse: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 14 10 14 10 20"/><polyline points="20 10 14 10 14 4"/><line x1="14" y1="10" x2="21" y2="3"/><line x1="10" y1="14" x2="3" y2="21"/></svg>`,
   store: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`,
-  x: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  x: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>`,
+  edit: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
+  trash: `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>`,
 };
 
 function getAddressIcon(label = '') {
-  return /^home$/i.test(label.trim()) ? ICONS.home : ICONS.pin;
+  const norm = (label || '').trim().toLowerCase();
+  if (norm.includes('home') || norm.includes('house')) return ICONS.home;
+  if (norm.includes('work') || norm.includes('office')) return ICONS.briefcase;
+  return ICONS.pin;
 }
 
 async function ensureAddressesAssets() {
@@ -57,11 +61,10 @@ export async function mount(me) {
   const content = document.querySelector('#content');
   let addresses = [];
   let editingId = null;
-  let isFormOpen = window.location.hash === '#add' || window.location.hash === '#new';
+  let isModalOpen = window.location.hash === '#add' || window.location.hash === '#new';
   let chosenLat = null;
   let chosenLng = null;
   let miniMap = null;
-  let isMapExpanded = false;
 
   let stationSettings = {
     lat: 14.7565,
@@ -90,16 +93,17 @@ export async function mount(me) {
     if (editingAddr) {
       chosenLat = editingAddr?.latitude ? Number(editingAddr.latitude) : null;
       chosenLng = editingAddr?.longitude ? Number(editingAddr.longitude) : null;
-    } else if (!isFormOpen) {
+    } else if (!isModalOpen) {
       chosenLat = null;
       chosenLng = null;
     }
 
-    const listHtml = addresses.length
-      ? `<div class="address-list">
+    // Generate Cards List
+    const cardsHtml = addresses.length
+      ? `
+        <div class="addr-grid">
           ${addresses
             .map((addr) => {
-              const isSelected = editingId === addr.id;
               const hasCoords = addr.latitude && addr.longitude;
               const dist = hasCoords
                 ? calculateDistanceKm(
@@ -114,34 +118,37 @@ export async function mount(me) {
               let badgeHtml = '';
               if (dist !== null) {
                 badgeHtml = isWithinZone
-                  ? `<span class="address-distance-badge in-zone">${ICONS.check} ${dist} km · In zone</span>`
-                  : `<span class="address-distance-badge out-zone">${ICONS.alert} ${dist} km · Outside zone</span>`;
+                  ? `<span class="address-distance-badge in-zone">${ICONS.check} ${dist} km · In delivery zone</span>`
+                  : `<span class="address-distance-badge out-zone">${ICONS.alert} ${dist} km · Outside station zone</span>`;
               } else {
-                badgeHtml = `<span class="address-distance-badge no-coords">${ICONS.pin} Needs pin</span>`;
+                badgeHtml = `<span class="address-distance-badge no-coords">${ICONS.pin} Map pin required to order</span>`;
               }
 
               return `
-                <div class="address-card ${isSelected ? 'is-active-editing' : ''}">
-                  <div class="address-card-top">
-                    <div class="address-card-title-group">
-                      <span class="address-card-icon">${getAddressIcon(addr.label)}</span>
-                      <span class="address-label">${escapeHtml(addr.label)}</span>
+                <div class="addr-card ${addr.is_default ? 'is-default' : ''}">
+                  <div class="addr-card-top">
+                    <div class="addr-card-label-badge">
+                      <span class="addr-card-icon">${getAddressIcon(addr.label)}</span>
+                      <span>${escapeHtml(addr.label || 'Address')}</span>
                     </div>
-                    ${addr.is_default ? `<span class="pill pill-green" style="font-size: 10.5px; padding: 2px 7px;">Default</span>` : ''}
+                    ${addr.is_default ? `<span class="pill pill-green" style="font-size: 11px; padding: 2px 8px;">Default</span>` : ''}
                   </div>
 
-                  <p class="address-line">${escapeHtml(formatAddressFull(addr))}</p>
+                  <h3 class="addr-card-street">${escapeHtml(addr.street || 'Address details')}</h3>
+                  <p class="addr-card-area">
+                    ${escapeHtml(addr.barangay ? `${addr.barangay}, ` : '')}${escapeHtml(addr.city || 'Caloocan')}
+                  </p>
                   ${
                     addr.landmark
-                      ? `<p class="address-landmark">Landmark: ${escapeHtml(addr.landmark)}</p>`
+                      ? `<p class="addr-card-landmark">Landmark: ${escapeHtml(addr.landmark)}</p>`
                       : ''
                   }
 
-                  <div>${badgeHtml}</div>
+                  <div class="addr-card-status">${badgeHtml}</div>
 
-                  <div class="address-actions">
-                    <button type="button" class="btn btn-outline-blue btn-sm" data-edit-id="${escapeHtml(addr.id)}">
-                      ${isSelected ? 'Editing...' : 'Edit'}
+                  <div class="addr-card-actions">
+                    <button type="button" class="btn btn-light btn-sm" data-edit-id="${escapeHtml(addr.id)}">
+                      ${ICONS.edit} <span>Edit</span>
                     </button>
                     ${
                       !addr.is_default
@@ -150,29 +157,30 @@ export async function mount(me) {
                           </button>`
                         : ''
                     }
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(addr.id)}">
-                      Delete
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(addr.id)}" title="Delete address" style="margin-left: auto;">
+                      ${ICONS.trash} <span>Delete</span>
                     </button>
                   </div>
                 </div>
               `;
             })
             .join('')}
-        </div>`
-      : `<div class="empty-state" style="padding: 24px 14px; text-align: center;">
-          <div style="width: 44px; height: 44px; border-radius: 50%; background: var(--brand-soft, #ebf2ff); color: var(--blue-app, #1d5bd6); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 8px;">
-            ${ICONS.pin}
-          </div>
-          <p style="font-size: 13.5px; font-weight: 700; color: #1e293b; margin: 0;">No saved addresses yet</p>
-          <p class="text-muted" style="font-size: 12px; margin: 4px 0 12px;">Add your house location to confirm delivery coverage.</p>
-          <button type="button" class="btn btn-primary btn-sm" id="empty-add-addr-btn">
+        </div>
+      `
+      : `
+        <div class="addr-empty-card">
+          <div class="addr-empty-icon">${ICONS.pin}</div>
+          <h2 class="addr-empty-title">No saved addresses yet</h2>
+          <p class="addr-empty-desc">
+            Add your home or office address to check station delivery coverage and order water refills in one click.
+          </p>
+          <button type="button" class="btn btn-primary" id="empty-add-addr-btn">
             ${ICONS.plus} <span>Add delivery address</span>
           </button>
-        </div>`;
+        </div>
+      `;
 
-    // Right Column content: Form (when adding/editing) OR Welcome Card (when browsing)
-    const shouldShowForm = isFormOpen || Boolean(editingAddr);
-
+    // Modal Form (when isModalOpen is true)
     let defaultLabel = '';
     if (editingAddr) {
       defaultLabel = editingAddr.label || '';
@@ -180,212 +188,165 @@ export async function mount(me) {
       defaultLabel = addresses.some((a) => (a.label || '').trim().toLowerCase() === 'home') ? 'Work' : 'Home';
     }
 
-    const rightColumnHtml = shouldShowForm
+    const modalHtml = isModalOpen
       ? `
-        <div class="card addresses-main">
-          <div class="card-header" style="padding-bottom: 12px;">
-            <div class="card-title-group">
-              <span class="card-icon">${editingAddr ? ICONS.pin : ICONS.plus}</span>
-              <h2 class="card-title" style="font-size: 15px;">
+        <div class="addr-modal-backdrop" id="addr-modal-backdrop">
+          <div class="addr-modal-card" role="dialog" aria-modal="true" aria-labelledby="addr-modal-heading">
+            <div class="addr-modal-header">
+              <h2 class="addr-modal-title" id="addr-modal-heading">
                 ${editingAddr ? `Edit: ${escapeHtml(editingAddr.label)}` : 'Add delivery address'}
               </h2>
+              <button type="button" class="addr-modal-close" id="close-modal-btn" aria-label="Close dialog">
+                ${ICONS.x}
+              </button>
             </div>
-            <button type="button" class="btn btn-light btn-sm" id="close-form-btn" style="font-size: 12px; gap: 4px;">
-              ${ICONS.x} <span>Close</span>
-            </button>
-          </div>
 
-          <form class="form-stack" id="address-form" novalidate>
-            <!-- Label and Landmark in 2 columns -->
-            <div class="field-row">
-              <div class="field">
-                <label class="field-label" for="addr-label">Address label <span style="color:#ef4444;">*</span></label>
-                <div class="addr-label-presets">
-                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Home' ? 'active' : ''}" data-preset="Home">Home</button>
-                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Work' ? 'active' : ''}" data-preset="Work">Work</button>
-                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Apartment' ? 'active' : ''}" data-preset="Apartment">Apartment</button>
-                  <button type="button" class="addr-preset-btn ${defaultLabel === 'Parents' ? 'active' : ''}" data-preset="Parents">Parents</button>
-                  <button type="button" class="addr-preset-btn ${!['Home', 'Work', 'Apartment', 'Parents'].includes(defaultLabel) ? 'active' : ''}" data-preset="Other">Other</button>
+            <div class="addr-modal-body">
+              <form class="form-stack" id="address-form" novalidate>
+                <!-- Quick Label Presets -->
+                <div class="field">
+                  <label class="field-label" for="addr-label">Address label <span style="color:#ef4444;">*</span></label>
+                  <div class="addr-label-presets">
+                    <button type="button" class="addr-preset-btn ${defaultLabel === 'Home' ? 'active' : ''}" data-preset="Home">Home</button>
+                    <button type="button" class="addr-preset-btn ${defaultLabel === 'Work' ? 'active' : ''}" data-preset="Work">Work</button>
+                    <button type="button" class="addr-preset-btn ${defaultLabel === 'Apartment' ? 'active' : ''}" data-preset="Apartment">Apartment</button>
+                    <button type="button" class="addr-preset-btn ${defaultLabel === 'Parents' ? 'active' : ''}" data-preset="Parents">Parents</button>
+                    <button type="button" class="addr-preset-btn ${!['Home', 'Work', 'Apartment', 'Parents'].includes(defaultLabel) ? 'active' : ''}" data-preset="Other">Other</button>
+                  </div>
+                  <input class="input" id="addr-label" name="label" type="text" placeholder="e.g. Home, Work, Apartment" value="${escapeHtml(defaultLabel)}" required>
+                  <div class="field-error-msg" id="addr-label-error"></div>
                 </div>
-                <input class="input" id="addr-label" name="label" type="text" placeholder="e.g. Home, Work, Apartment" value="${escapeHtml(defaultLabel)}" required>
-                <div class="field-error-msg" id="addr-label-error"></div>
-              </div>
-              <div class="field">
-                <label class="field-label" for="addr-landmark">Landmark (optional)</label>
-                <input class="input" id="addr-landmark" name="landmark" type="text" placeholder="Nearby landmark, gate, corner" value="${escapeHtml(editingAddr?.landmark || '')}">
-              </div>
-            </div>
 
-            <!-- Street Address -->
-            <div class="field">
-              <label class="field-label" for="addr-street">Street address / House number <span style="color:#ef4444;">*</span></label>
-              <input class="input" id="addr-street" name="street" type="text" placeholder="House/Unit #, Street, Subdivision" value="${escapeHtml(editingAddr?.street || '')}" required>
-              <div class="field-error-msg" id="addr-street-error"></div>
-            </div>
-
-            <!-- Barangay & City in 2 columns -->
-            <div class="field-row">
-              <div class="field">
-                <label class="field-label" for="addr-barangay">Barangay <span style="color:#ef4444;">*</span></label>
-                <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : 'Barangay 171')}" required>
-                <div class="field-error-msg" id="addr-barangay-error"></div>
-              </div>
-              <div class="field">
-                <label class="field-label" for="addr-city">City <span style="color:#ef4444;">*</span></label>
-                <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(editingAddr?.city || 'Caloocan')}" required>
-                <div class="field-error-msg" id="addr-city-error"></div>
-              </div>
-            </div>
-
-            <!-- Balanced Map Box -->
-            <div class="addr-map-box" id="addr-map-box">
-              <div class="addr-map-box-header">
-                <div class="addr-map-box-title">
-                  ${ICONS.pin}
-                  <span>Pinpoint house on map</span>
+                <!-- Street Address & Landmark -->
+                <div class="addr-form-grid-2">
+                  <div class="field">
+                    <label class="field-label" for="addr-street">Street address / House # <span style="color:#ef4444;">*</span></label>
+                    <input class="input" id="addr-street" name="street" type="text" placeholder="House/Unit #, Street, Subd." value="${escapeHtml(editingAddr?.street || '')}" required>
+                    <div class="field-error-msg" id="addr-street-error"></div>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="addr-landmark">Landmark (optional)</label>
+                    <input class="input" id="addr-landmark" name="landmark" type="text" placeholder="Corner, Gate, Store" value="${escapeHtml(editingAddr?.landmark || '')}">
+                  </div>
                 </div>
-                <div class="addr-map-actions-group">
-                  <button type="button" class="btn btn-light" id="locate-me-btn" title="Use GPS location">
-                    ${ICONS.locate} <span>Locate me</span>
-                  </button>
-                  <button type="button" class="btn btn-light" id="expand-map-btn" title="Toggle fullscreen view">
-                    ${ICONS.expand} <span id="expand-btn-text">Fullscreen</span>
-                  </button>
+
+                <!-- Barangay & City -->
+                <div class="addr-form-grid-2">
+                  <div class="field">
+                    <label class="field-label" for="addr-barangay">Barangay <span style="color:#ef4444;">*</span></label>
+                    <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : 'Barangay 171')}" required>
+                    <div class="field-error-msg" id="addr-barangay-error"></div>
+                  </div>
+                  <div class="field">
+                    <label class="field-label" for="addr-city">City <span style="color:#ef4444;">*</span></label>
+                    <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(editingAddr?.city || 'Caloocan')}" required>
+                    <div class="field-error-msg" id="addr-city-error"></div>
+                  </div>
                 </div>
-              </div>
 
-              <!-- Quick Search on Map -->
-              <div class="addr-map-search-row">
-                <input type="text" id="map-search-input" placeholder="Search street, subdivision, or barangay...">
-                <button type="button" class="btn btn-primary" id="map-search-btn">
-                  Find
-                </button>
-              </div>
+                <!-- Map Pinpoint Section -->
+                <div class="addr-map-section" id="addr-map-section">
+                  <div class="addr-map-header">
+                    <div class="addr-map-title">
+                      ${ICONS.pin}
+                      <span>Pinpoint delivery spot on map</span>
+                    </div>
+                    <button type="button" class="btn btn-light btn-sm" id="locate-me-btn" title="Use current GPS location">
+                      ${ICONS.locate} <span>My location</span>
+                    </button>
+                  </div>
 
-              <!-- Leaflet Map Container -->
-              <div class="addr-map-wrap">
-                <div id="addr-pin-map"></div>
-              </div>
+                  <!-- Quick Search Row -->
+                  <div class="addr-map-search-row">
+                    <input type="text" id="map-search-input" placeholder="Search street, subdivision, or barangay...">
+                    <button type="button" class="btn btn-primary" id="map-search-btn">
+                      Search
+                    </button>
+                  </div>
 
-              <!-- Zone Status Banner -->
-              <div class="zone-status-box is-idle" id="zone-status-box">
-                ${ICONS.info}
-                <div>
-                  Tap on the map or drag the pin to your house. Station delivery zone is <strong>${stationSettings.radiusKm} km</strong>.
+                  <!-- Leaflet Map -->
+                  <div class="addr-map-wrap">
+                    <div id="addr-pin-map"></div>
+                  </div>
+
+                  <!-- Real-time Zone Feedback -->
+                  <div class="zone-status-box is-idle" id="zone-status-box">
+                    ${ICONS.info}
+                    <div>
+                      Click on the map or drag the pin to your exact delivery location. Station radius: <strong>${stationSettings.radiusKm} km</strong>.
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                <!-- Default Checkbox -->
+                <label class="check" style="margin: 6px 0 0;">
+                  <input type="checkbox" id="addr-default" name="isDefault" ${editingAddr?.is_default || addresses.length === 0 ? 'checked' : ''}>
+                  <span style="font-size: 13px; font-weight: 500; color: var(--ink-navy, #0f172a);">Set as default delivery address</span>
+                </label>
+              </form>
             </div>
 
-            <label class="check" style="margin-top: 2px;">
-              <input type="checkbox" id="addr-default" name="isDefault" ${editingAddr?.is_default || addresses.length === 0 ? 'checked' : ''}>
-              <span style="font-size: 13px;">Set as default delivery address</span>
-            </label>
-
-            <div style="display: flex; gap: 8px; margin-top: 8px;">
-              <button type="button" class="btn btn-light" id="cancel-form-btn" style="flex: 1; padding: 10px;">
+            <div class="addr-modal-footer">
+              <button type="button" class="btn btn-light" id="cancel-modal-btn">
                 Cancel
               </button>
-              <button type="submit" class="btn btn-primary" id="save-address-btn" style="flex: 2; padding: 10px;">
+              <button type="submit" form="address-form" class="btn btn-primary" id="save-address-btn">
                 ${editingAddr ? 'Update address' : 'Save address'}
               </button>
             </div>
-          </form>
+          </div>
         </div>
       `
-      : `
-        <div class="card addresses-main addresses-placeholder-card">
-          <div class="addr-welcome-header">
-            <div class="addr-welcome-badge">
-              ${ICONS.pin}
-              <span>Caloocan Station Delivery Hub</span>
-            </div>
-            <h2 class="addr-welcome-title">Need water delivered?</h2>
-            <p class="addr-welcome-desc">
-              Add a delivery address to pinpoint your house on our interactive map and verify delivery coverage from our station.
-            </p>
-          </div>
+      : '';
 
-          <div class="addr-feature-grid">
-            <div class="addr-feature-item">
-              <div class="addr-feature-icon">${ICONS.pin}</div>
-              <div class="addr-feature-text">
-                <strong>Pinpoint House on Map</strong>
-                <span>Drop a precise pin right at your doorstep for fast, accurate rider delivery.</span>
-              </div>
-            </div>
-            <div class="addr-feature-item">
-              <div class="addr-feature-icon">${ICONS.check}</div>
-              <div class="addr-feature-text">
-                <strong>Instant Zone Verification</strong>
-                <span>Real-time coverage scan confirms if you are within our ${stationSettings.radiusKm} km delivery radius.</span>
-              </div>
-            </div>
-            <div class="addr-feature-item">
-              <div class="addr-feature-icon">${ICONS.home}</div>
-              <div class="addr-feature-text">
-                <strong>Saved Addresses</strong>
-                <span>Save Home, Office, or Apartment for seamless 1-click checkout.</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="addr-welcome-cta">
-            <button type="button" class="btn btn-primary btn-lg" id="trigger-add-addr-btn" style="padding: 10px 24px; font-weight: 700;">
-              ${ICONS.plus} <span>Add delivery address</span>
-            </button>
-          </div>
-        </div>
-      `;
-
+    // Render Full Content View
     content.innerHTML = `
-      <div class="addresses-layout">
-        <!-- Left Column: Saved Addresses & Station Info -->
-        <div class="addresses-sidebar">
-          <div class="card">
-            <div class="card-header" style="padding-bottom: 12px;">
-              <div class="addresses-header-actions">
-                <div class="card-title-group">
-                  <span class="card-icon">${ICONS.bookmark}</span>
-                  <h2 class="card-title" style="font-size: 15px;">Saved addresses (${addresses.length})</h2>
-                </div>
-                <button type="button" class="btn btn-sm btn-primary" id="add-new-addr-btn" style="font-size: 12px; padding: 4px 10px;">
-                  ${ICONS.plus} <span>Add address</span>
-                </button>
-              </div>
-            </div>
-            ${listHtml}
+      <div class="addr-page-container">
+        <!-- Top Action Header -->
+        <div class="addr-page-header">
+          <div class="addr-page-header-text">
+            <h2 class="addr-page-header-title">
+              <span>Saved delivery addresses</span>
+              <span class="addr-count-pill">${addresses.length}</span>
+            </h2>
+            <p class="addr-page-header-sub">Manage your delivery locations and verify station delivery coverage.</p>
           </div>
+          <button type="button" class="btn btn-primary" id="add-new-addr-btn">
+            ${ICONS.plus} <span>Add delivery address</span>
+          </button>
+        </div>
 
-          <!-- Station Delivery Zone Reference Card -->
-          <div class="sidebar-coverage-card">
-            <div class="sidebar-coverage-title">
-              ${ICONS.store}
-              <span>Station Delivery Info</span>
+        <!-- Addresses List Grid -->
+        ${cardsHtml}
+
+        <!-- Station Coverage Reference Banner -->
+        <div class="addr-station-bar">
+          <div class="addr-station-info-group">
+            <span class="addr-station-icon">${ICONS.store}</span>
+            <div>
+              <strong style="color: var(--ink-navy, #0f172a); display: block;">${escapeHtml(stationSettings.address || 'AquaRun Station Hub')}</strong>
+              <span style="font-size: 11.5px; color: var(--muted-blue, #64748b);">Official refill &amp; fulfillment center</span>
             </div>
-            <div class="sidebar-coverage-row">
-              <span>Hub:</span>
-              <strong style="max-width: 170px; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(stationSettings.address || 'Station')}">
-                ${escapeHtml(stationSettings.address || 'Caloocan Station')}
-              </strong>
-            </div>
-            <div class="sidebar-coverage-row">
+          </div>
+          <div class="addr-station-tags">
+            <div class="addr-station-tag">
               <span>Delivery Radius:</span>
               <strong>${stationSettings.radiusKm} km zone</strong>
             </div>
-            <div class="sidebar-coverage-row">
+            <div class="addr-station-tag">
               <span>Payment Mode:</span>
               <strong>Cash on Delivery (COD)</strong>
             </div>
           </div>
         </div>
 
-        <!-- Right Column: Add / Edit Address Form & Map OR Guide Card -->
-        ${rightColumnHtml}
+        <!-- Modal Dialog (if open) -->
+        ${modalHtml}
       </div>
     `;
 
-    // Initialize Map only when form container is in the DOM
-    if (shouldShowForm) {
+    // Initialize Map only when modal is open
+    if (isModalOpen) {
       setTimeout(() => {
         const mapEl = document.querySelector('#addr-pin-map');
         if (!mapEl || typeof L === 'undefined') return;
@@ -408,7 +369,7 @@ export async function mount(me) {
           attribution: '© OpenStreetMap contributors',
         }).addTo(miniMap);
 
-        // Station Hub Marker with compact bubble (interactive: false so clicks pass through to map)
+        // Station Hub Marker
         const stationIcon = L.divIcon({
           className: 'station-hub-leaflet-icon',
           html: `<div class="station-hub-bubble" title="AquaRun Water Station">
@@ -419,14 +380,14 @@ export async function mount(me) {
           iconAnchor: [32, 24],
         });
 
-        const stationMarker = L.marker([stLat, stLng], {
+        L.marker([stLat, stLng], {
           icon: stationIcon,
           zIndexOffset: 50,
           interactive: false,
         }).addTo(miniMap);
 
-        // Station Delivery Radius Circle (interactive: false so clicks pass through anywhere!)
-        const deliveryCircle = L.circle([stLat, stLng], {
+        // Station Delivery Radius Circle
+        L.circle([stLat, stLng], {
           radius: radiusKm * 1000,
           color: '#1d5bd6',
           fillColor: '#3b82f6',
@@ -457,28 +418,26 @@ export async function mount(me) {
               </div>
             `;
             if (showToastNotice) {
-              showToast(`Inside delivery zone (${dist} km from station). Delivery available!`, 'success');
+              showToast(`Inside delivery zone (${dist} km from station).`, 'success');
             }
           } else {
             statusBox.innerHTML = `
               ${ICONS.alert}
               <div>
                 <strong>Outside delivery radius (${dist} km from station)</strong>
-                <span class="zone-subtext">Our station delivers up to ${radiusKm} km. Delivery is NOT available to this location.</span>
+                <span class="zone-subtext">Our station delivers up to ${radiusKm} km. Please select a spot inside the highlighted circle.</span>
               </div>
             `;
             if (showToastNotice) {
-              showToast(`Outside delivery zone (${dist} km away · station max is ${radiusKm} km).`, 'warning');
+              showToast(`Outside delivery zone (${dist} km · Station max is ${radiusKm} km).`, 'warning');
             }
           }
 
-          // Use non-blocking tooltip so clicks are NEVER swallowed by Leaflet popups!
           if (customerMarker) {
             try {
-              customerMarker.unbindPopup();
               customerMarker.unbindTooltip();
               customerMarker.bindTooltip(
-                isOk ? `Within zone (${dist} km)` : `Outside zone (${dist} km)`,
+                isOk ? `Inside zone (${dist} km)` : `Outside zone (${dist} km)`,
                 {
                   permanent: true,
                   direction: 'top',
@@ -490,7 +449,6 @@ export async function mount(me) {
             } catch {}
           }
 
-          // Update save button state
           const saveBtn = document.querySelector('#save-address-btn');
           if (saveBtn) {
             if (isOk) {
@@ -500,7 +458,7 @@ export async function mount(me) {
             } else {
               saveBtn.classList.add('btn-outside-zone');
               saveBtn.disabled = true;
-              saveBtn.innerHTML = `Outside delivery zone (${dist} km · Max ${radiusKm} km)`;
+              saveBtn.innerHTML = `Outside zone (${dist} km · Max ${radiusKm} km)`;
             }
           }
         }
@@ -538,116 +496,89 @@ export async function mount(me) {
                 const streetInput = document.querySelector('#addr-street');
                 const brgyInput = document.querySelector('#addr-barangay');
                 const cityInput = document.querySelector('#addr-city');
-                const labelInput = document.querySelector('#addr-label');
 
-                if (labelInput && !labelInput.value.trim()) {
-                  labelInput.value = 'Home';
-                  clearInputError(labelInput);
+                const foundStreet =
+                  data.address.road ||
+                  data.address.suburb ||
+                  data.address.neighbourhood ||
+                  data.address.residential;
+                if (foundStreet && streetInput && !streetInput.value.trim()) {
+                  streetInput.value = foundStreet;
                 }
 
-                if (streetInput && !streetInput.value.trim()) {
-                  const roadName =
-                    data.address.road ||
-                    data.address.pedestrian ||
-                    data.address.neighbourhood ||
-                    data.address.suburb ||
-                    (data.display_name ? data.display_name.split(',')[0].trim() : '');
-                  if (roadName) {
-                    streetInput.value = roadName;
-                    clearInputError(streetInput);
-                  }
+                const foundBrgy =
+                  data.address.village ||
+                  data.address.quarter ||
+                  data.address.suburb ||
+                  data.address.neighbourhood;
+                if (foundBrgy && brgyInput && !brgyInput.value.trim()) {
+                  brgyInput.value = foundBrgy;
                 }
-                if (brgyInput && !brgyInput.value.trim()) {
-                  const brgy =
-                    data.address.suburb ||
-                    data.address.quarter ||
-                    data.address.neighbourhood ||
-                    data.address.village ||
-                    '';
-                  if (brgy) {
-                    brgyInput.value = brgy;
-                    clearInputError(brgyInput);
-                  }
-                }
-                if (cityInput && !cityInput.value.trim()) {
-                  cityInput.value = data.address.city || data.address.town || 'Caloocan';
-                  clearInputError(cityInput);
+
+                const foundCity =
+                  data.address.city ||
+                  data.address.town ||
+                  data.address.municipality ||
+                  data.address.county;
+                if (foundCity && cityInput && !cityInput.value.trim()) {
+                  cityInput.value = foundCity;
                 }
               }
             } catch {}
           }
         }
 
+        // If editing existing address with coords, restore marker
         if (chosenLat && chosenLng) {
-          customerMarker = L.marker([chosenLat, chosenLng], {
-            draggable: true,
-            zIndexOffset: 100,
-          }).addTo(miniMap);
-          customerMarker.on('click', (e) => {
-            if (e && e.originalEvent) e.originalEvent.stopPropagation();
-            document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
-            onLocationSelected(chosenLat, chosenLng, true);
-          });
-          customerMarker.on('dragend', () => {
-            const pos = customerMarker.getLatLng();
-            document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
-            onLocationSelected(pos.lat, pos.lng, true);
-          });
-          updateZoneUI(chosenLat, chosenLng, false);
-        } else {
-          miniMap.fitBounds(deliveryCircle.getBounds(), { padding: [15, 15] });
+          onLocationSelected(chosenLat, chosenLng, false);
         }
 
-        setTimeout(() => {
-          if (miniMap) miniMap.invalidateSize();
-        }, 150);
-
+        // Click map to drop/move pin
         miniMap.on('click', (e) => {
-          document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
           onLocationSelected(e.latlng.lat, e.latlng.lng, true);
         });
 
-        // Map Search Handler
-        async function handleMapSearch() {
-          const queryInput = document.querySelector('#map-search-input');
+        // Search location via Nominatim
+        async function runMapSearch() {
+          const query = document.querySelector('#map-search-input')?.value.trim();
+          if (!query) return;
           const searchBtn = document.querySelector('#map-search-btn');
-          const q = queryInput?.value.trim();
-          if (!q) return;
+          setBusy(searchBtn, true, 'Searching...');
 
-          setBusy(searchBtn, true, 'Finding...');
           try {
-            document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
+            const searchQuery = query.toLowerCase().includes('caloocan')
+              ? query
+              : `${query}, Caloocan, Philippines`;
             const resp = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
-                q + ', Philippines'
-              )}&limit=1`
+              `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&limit=1`
             );
             const results = await resp.json();
             if (results && results.length > 0) {
-              const targetLat = parseFloat(results[0].lat);
-              const targetLng = parseFloat(results[0].lon);
-              miniMap.setView([targetLat, targetLng], 16);
-              await onLocationSelected(targetLat, targetLng, false);
-              showToast('Location pinned on map!', 'success');
+              const hit = results[0];
+              const lat = parseFloat(hit.lat);
+              const lng = parseFloat(hit.lon);
+              miniMap.setView([lat, lng], 16);
+              await onLocationSelected(lat, lng, false);
+              showToast(`Found: ${hit.display_name.split(',')[0]}`, 'success');
             } else {
-              showToast('Place not found. Try searching a specific street.', 'error');
+              showToast('Location not found. Try searching another street or barangay.', 'warning');
             }
           } catch {
-            showToast('Search failed. Please try again.', 'error');
+            showToast('Search error. Please try again.', 'error');
           } finally {
             setBusy(searchBtn, false);
           }
         }
 
-        document.querySelector('#map-search-btn')?.addEventListener('click', handleMapSearch);
+        document.querySelector('#map-search-btn')?.addEventListener('click', runMapSearch);
         document.querySelector('#map-search-input')?.addEventListener('keydown', (e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
-            handleMapSearch();
+            runMapSearch();
           }
         });
 
-        // Locate Me (GPS) Handler
+        // Locate Me GPS
         document.querySelector('#locate-me-btn')?.addEventListener('click', () => {
           if (!navigator.geolocation) {
             showToast('Geolocation is not supported by your browser.', 'error');
@@ -672,69 +603,50 @@ export async function mount(me) {
           );
         });
 
-        // Fullscreen / Expanded View Map Handler
-        const mapBox = document.querySelector('#addr-map-box');
-        const expandBtn = document.querySelector('#expand-map-btn');
-        const expandText = document.querySelector('#expand-btn-text');
+        // Trigger map invalidate size so tiles render smoothly
+        setTimeout(() => {
+          if (miniMap) miniMap.invalidateSize();
+        }, 120);
+      }, 50);
+    }
 
-        function toggleMapExpand() {
-          isMapExpanded = !isMapExpanded;
-          if (isMapExpanded) {
-            mapBox.classList.add('is-expanded');
-            if (expandText) expandText.textContent = 'Close';
-            expandBtn.innerHTML = `${ICONS.collapse} <span id="expand-btn-text">Close</span>`;
-          } else {
-            mapBox.classList.remove('is-expanded');
-            if (expandText) expandText.textContent = 'Fullscreen';
-            expandBtn.innerHTML = `${ICONS.expand} <span id="expand-btn-text">Fullscreen</span>`;
-          }
-          setTimeout(() => {
-            if (miniMap) miniMap.invalidateSize();
-          }, 150);
-        }
-
-        expandBtn?.addEventListener('click', toggleMapExpand);
-
-        window.addEventListener('keydown', (e) => {
-          if (e.key === 'Escape' && isMapExpanded) {
-            toggleMapExpand();
-          }
-        });
+    // Modal Control Functions
+    function openModal(addrId = null) {
+      editingId = addrId;
+      isModalOpen = true;
+      renderPage();
+      setTimeout(() => {
+        document.querySelector('#addr-label')?.focus();
       }, 60);
     }
 
-    // Attach Event Listeners
-    function openAddAddress() {
+    function closeModal() {
       editingId = null;
-      isFormOpen = true;
-      renderPage();
-      document.querySelector('#address-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-      document.querySelector('#addr-label')?.focus();
-    }
-
-    function closeForm() {
-      editingId = null;
-      isFormOpen = false;
+      isModalOpen = false;
       renderPage();
     }
 
-    content.querySelector('#add-new-addr-btn')?.addEventListener('click', openAddAddress);
-    content.querySelector('#trigger-add-addr-btn')?.addEventListener('click', openAddAddress);
-    content.querySelector('#empty-add-addr-btn')?.addEventListener('click', openAddAddress);
-
-    content.querySelector('#close-form-btn')?.addEventListener('click', closeForm);
-    content.querySelector('#cancel-form-btn')?.addEventListener('click', closeForm);
+    // Event Listeners: Open Modal
+    content.querySelector('#add-new-addr-btn')?.addEventListener('click', () => openModal(null));
+    content.querySelector('#empty-add-addr-btn')?.addEventListener('click', () => openModal(null));
 
     content.querySelectorAll('[data-edit-id]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        editingId = btn.dataset.editId;
-        isFormOpen = true;
-        renderPage();
-        document.querySelector('#address-form')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        document.querySelector('#addr-label')?.focus();
-      });
+      btn.addEventListener('click', () => openModal(btn.dataset.editId));
     });
 
+    // Event Listeners: Close Modal
+    content.querySelector('#close-modal-btn')?.addEventListener('click', closeModal);
+    content.querySelector('#cancel-modal-btn')?.addEventListener('click', closeModal);
+
+    content.querySelector('#addr-modal-backdrop')?.addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) closeModal();
+    });
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && isModalOpen) closeModal();
+    });
+
+    // Set Default Address Action
     content.querySelectorAll('[data-default-id]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.defaultId;
@@ -750,13 +662,14 @@ export async function mount(me) {
       });
     });
 
+    // Delete Address Action
     content.querySelectorAll('[data-delete-id]').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.deleteId;
         const target = addresses.find((a) => a.id === id);
         const confirmed = await confirmModal({
           title: `Delete "${target?.label || 'Address'}"?`,
-          message: 'Are you sure you want to remove this saved address?',
+          message: 'Are you sure you want to remove this delivery address?',
           confirmText: 'Delete address',
           cancelText: 'Cancel',
           danger: true,
@@ -766,10 +679,6 @@ export async function mount(me) {
         setBusy(btn, true, 'Deleting...');
         try {
           await deleteCustomerAddress(me.id, id);
-          if (editingId === id) {
-            editingId = null;
-            isFormOpen = false;
-          }
           showToast('Address removed.', 'success');
           await loadAddresses();
         } catch (err) {
@@ -779,7 +688,7 @@ export async function mount(me) {
       });
     });
 
-    // Quick Label Preset Buttons
+    // Preset Label Buttons
     content.querySelectorAll('.addr-preset-btn').forEach((btn) => {
       btn.addEventListener('click', () => {
         const preset = btn.dataset.preset;
@@ -797,7 +706,7 @@ export async function mount(me) {
       });
     });
 
-    // Helper functions for in-form field validation
+    // Validation Helpers
     function markInputError(inputEl, msg) {
       if (!inputEl) return;
       inputEl.classList.add('is-invalid');
@@ -826,10 +735,9 @@ export async function mount(me) {
         el.textContent = '';
         el.style.display = 'none';
       });
-      document.querySelector('#addr-map-box')?.classList.remove('is-invalid-box');
+      document.querySelector('#addr-map-section')?.classList.remove('is-invalid-box');
     }
 
-    // Clear error highlights as user types
     ['#addr-label', '#addr-street', '#addr-barangay', '#addr-city'].forEach((sel) => {
       const input = content.querySelector(sel);
       input?.addEventListener('input', () => {
@@ -848,11 +756,11 @@ export async function mount(me) {
       });
     });
 
-    // Form submission validation & saving
+    // Form Submit
     content.querySelector('#address-form')?.addEventListener('submit', async (e) => {
       e.preventDefault();
       const form = e.currentTarget;
-      const submitBtn = form.querySelector('#save-address-btn');
+      const submitBtn = document.querySelector('#save-address-btn');
 
       clearAllFormErrors(form);
 
@@ -861,45 +769,37 @@ export async function mount(me) {
       const brgyVal = form.barangay?.value.trim() || '';
       const cityVal = form.city?.value.trim() || 'Caloocan';
 
-      // 1. Validate Label
       if (!labelVal) {
         markInputError(form.label, 'Please enter an address label (e.g. Home, Work).');
-        showToast('Please enter an address label (e.g. Home, Work).', 'error');
-        form.label?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Please enter an address label.', 'error');
         form.label?.focus();
         return;
       }
 
-      // 2. Validate Street
       if (!streetVal) {
         markInputError(form.street, 'Please enter your street address or house number.');
-        showToast('Please enter your street address or house number.', 'error');
-        form.street?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        showToast('Please enter your street address.', 'error');
         form.street?.focus();
         return;
       }
 
-      // 3. Validate Barangay
       if (!brgyVal) {
         markInputError(form.barangay, 'Please enter your barangay.');
         showToast('Please enter your barangay.', 'error');
-        form.barangay?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         form.barangay?.focus();
         return;
       }
 
-      // 4. Validate that house is pinned on map
       if (chosenLat === null || chosenLng === null) {
-        const mapBox = document.querySelector('#addr-map-box');
-        if (mapBox) {
-          mapBox.classList.add('is-invalid-box');
-          mapBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        const mapSection = document.querySelector('#addr-map-section');
+        if (mapSection) {
+          mapSection.classList.add('is-invalid-box');
+          mapSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         showToast('Please pinpoint your house location on the map before saving.', 'error');
         return;
       }
 
-      // 5. Validate that house is inside the station delivery zone
       const dist = calculateDistanceKm(
         stationSettings.lat,
         stationSettings.lng,
@@ -908,7 +808,7 @@ export async function mount(me) {
       );
       if (dist !== null && dist > stationSettings.radiusKm) {
         showToast(
-          `Cannot save address: Location is ${dist} km away, which is outside our ${stationSettings.radiusKm} km delivery radius. Please choose a location inside the highlighted delivery zone.`,
+          `Cannot save: Location is ${dist} km away, which is outside the ${stationSettings.radiusKm} km station delivery zone.`,
           'error'
         );
         return;
@@ -929,7 +829,7 @@ export async function mount(me) {
         });
         showToast(editingId ? 'Address updated.' : 'Address saved successfully.', 'success');
         editingId = null;
-        isFormOpen = false;
+        isModalOpen = false;
         await loadAddresses();
       } catch (err) {
         showToast(err.message || 'Could not save address.', 'error');

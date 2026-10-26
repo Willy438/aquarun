@@ -1,84 +1,115 @@
-/* Customer Saved addresses page - Balanced, clean, mobile-responsive layout */
+/* Customer Saved Addresses Page - Clean, Airy, Mobile-Friendly UI/UX */
 
-.addresses-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 16px;
-  align-items: start;
-}
-
-@media (min-width: 960px) {
-  .addresses-layout {
-    grid-template-columns: 340px minmax(0, 1fr);
-    gap: 20px;
-  }
-}
-
-@media (min-width: 1280px) {
-  .addresses-layout {
-    grid-template-columns: 370px minmax(0, 1fr);
-    gap: 24px;
-  }
-}
-
-/* Left sidebar: Saved addresses */
-.addresses-sidebar {
+.addr-page-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-}
-
-.addresses-header-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+  gap: 20px;
   width: 100%;
+  max-width: 1200px;
 }
 
-.address-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.address-card {
-  position: relative;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: #ffffff;
-  transition: all 0.15s ease;
-}
-
-.address-card:hover {
-  border-color: #cbd5e1;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-}
-
-.address-card.is-active-editing {
-  border-color: var(--blue-app, #1d5bd6);
-  background: #f0f7ff;
-  box-shadow: 0 0 0 1.5px var(--blue-app, #1d5bd6);
-}
-
-.address-card-top {
+/* Page Action Header Bar */
+.addr-page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 12px;
+  background: var(--surface);
+  border: 1px solid var(--line-app);
+  border-radius: 14px;
+  padding: 16px 20px;
+  box-shadow: 0 2px 8px rgba(15, 36, 84, 0.03);
 }
 
-.address-card-title-group {
+.addr-page-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.addr-page-header-title {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin: 0;
+  font-size: clamp(16px, 1.4vw, 18px);
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
 }
 
-.address-card-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
+.addr-count-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
+}
+
+.addr-page-header-sub {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted-blue, #64748b);
+}
+
+/* Responsive Address Cards Grid */
+.addr-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+@media (min-width: 640px) {
+  .addr-grid {
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 18px;
+  }
+}
+
+/* Clean Address Card */
+.addr-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid var(--line-app);
+  border-radius: 14px;
+  padding: 18px;
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+  position: relative;
+  box-shadow: 0 2px 6px rgba(15, 36, 84, 0.03);
+}
+
+.addr-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 14px rgba(15, 36, 84, 0.07);
+}
+
+.addr-card.is-default {
+  border-color: #c7d9fc;
+}
+
+.addr-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.addr-card-label-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+}
+
+.addr-card-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
   background: var(--brand-soft, #ebf2ff);
   color: var(--blue-app, #1d5bd6);
   display: inline-flex;
@@ -87,45 +118,51 @@
   flex-shrink: 0;
 }
 
-.address-card-icon svg {
-  width: 15px;
-  height: 15px;
+.addr-card-icon svg {
+  width: 16px;
+  height: 16px;
 }
 
-.address-label {
-  font-size: 13.5px;
+.addr-card-street {
+  margin: 0 0 4px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--ink-navy, #0f172a);
+  line-height: 1.35;
 }
 
-.address-line {
-  font-size: 12.5px;
+.addr-card-area {
+  margin: 0 0 6px;
+  font-size: 13px;
   color: #475569;
   line-height: 1.4;
-  margin-bottom: 4px;
 }
 
-.address-landmark {
-  font-size: 11.5px;
-  color: #64748b;
-  margin-bottom: 6px;
+.addr-card-landmark {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted-blue, #64748b);
   font-style: italic;
+}
+
+.addr-card-status {
+  margin-bottom: 14px;
 }
 
 .address-distance-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  font-size: 11px;
+  gap: 5px;
+  font-size: 11.5px;
   font-weight: 600;
-  padding: 2px 7px;
-  border-radius: 5px;
-  margin-bottom: 6px;
+  padding: 3px 9px;
+  border-radius: 6px;
 }
 
 .address-distance-badge svg {
-  width: 12px;
-  height: 12px;
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
 }
 
 .address-distance-badge.in-zone {
@@ -143,71 +180,315 @@
   color: #64748b;
 }
 
-.address-actions {
+.addr-card-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 8px;
-  padding-top: 8px;
-  border-top: 1px solid #f1f5f9;
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-app);
 }
 
-.address-actions button {
-  padding: 4px 10px;
-  font-size: 12px;
+.addr-card-actions .btn {
+  font-size: 12.5px;
+  min-height: 36px;
+  padding: 6px 12px;
 }
 
-/* Sidebar coverage info card */
-.sidebar-coverage-card {
-  background: #f8fafc;
-  border: 1px dashed #cbd5e1;
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 12px;
-  color: #475569;
-}
-
-.sidebar-coverage-title {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  color: #1e293b;
-  margin-bottom: 6px;
-  font-size: 12px;
-}
-
-.sidebar-coverage-row {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 4px;
-  color: #64748b;
-}
-
-.sidebar-coverage-row strong {
-  color: #1e293b;
-}
-
-/* Map Section Box in Address Form */
-.addr-map-box {
-  margin: 10px 0 14px;
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 12px;
-  transition: all 0.2s ease;
-}
-
-.addr-map-box-header {
+/* Station Coverage Footer Strip */
+.addr-station-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
+  gap: 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-size: 12.5px;
+  color: #475569;
+}
+
+.addr-station-info-group {
+  display: flex;
+  align-items: center;
   gap: 8px;
+}
+
+.addr-station-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.addr-station-tags {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.addr-station-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.addr-station-tag strong {
+  color: var(--ink-navy, #0f172a);
+}
+
+/* Empty State Card */
+.addr-empty-card {
+  text-align: center;
+  padding: clamp(36px, 6vw, 56px) 24px;
+  background: var(--surface);
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.addr-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.addr-empty-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.addr-empty-title {
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+  margin: 0 0 6px;
+}
+
+.addr-empty-desc {
+  font-size: 13.5px;
+  color: var(--muted-blue, #64748b);
+  max-width: 420px;
+  margin: 0 0 18px;
+  line-height: 1.5;
+}
+
+/* =====================================================================
+   Address Modal (Add / Edit Form with Integrated Pin Map)
+   ===================================================================== */
+
+.addr-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 18, 32, 0.55);
+  backdrop-filter: blur(2px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px;
+  z-index: 100;
+  animation: modalFadeIn 0.15s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.addr-modal-card {
+  background: var(--surface);
+  border-radius: 16px;
+  max-width: 620px;
+  width: 100%;
+  max-height: calc(100vh - 28px);
+  max-height: calc(100dvh - 28px);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(11, 18, 32, 0.25);
+  overflow: hidden;
+  animation: modalSlideUp 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.addr-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--line-app);
+  flex-shrink: 0;
+}
+
+.addr-modal-title {
+  margin: 0;
+  font-size: 16.5px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+}
+
+.addr-modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  border: 1px solid var(--line-app);
+  background: #f8fafc;
+  color: var(--muted-blue, #64748b);
+  font-size: 20px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addr-modal-close:hover {
+  background: #f1f5f9;
+  color: var(--ink-navy, #0f172a);
+}
+
+.addr-modal-body {
+  padding: 18px 20px;
+  overflow-y: auto;
+  flex: 1 1 auto;
+}
+
+.addr-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--line-app);
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+/* Preset label chips */
+.addr-label-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
   margin-bottom: 8px;
 }
 
-.addr-map-box-title {
+.addr-preset-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addr-preset-btn:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.addr-preset-btn.active {
+  background: var(--blue-app, #1d5bd6);
+  color: #ffffff;
+  border-color: var(--blue-app, #1d5bd6);
+  box-shadow: 0 1px 3px rgba(29, 91, 214, 0.25);
+}
+
+/* Form fields grid */
+.addr-form-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+@media (min-width: 520px) {
+  .addr-form-grid-2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.field-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+}
+
+.field-error-msg {
+  font-size: 11.5px;
+  color: #dc2626;
+  font-weight: 600;
+  display: none;
+  margin-top: 3px;
+}
+
+.input.is-invalid {
+  border-color: #ef4444 !important;
+  background: #fffafa !important;
+}
+
+/* Modal Map Picker */
+.addr-map-section {
+  margin: 12px 0 16px;
+  background: #f8fafc;
+  border: 1px solid var(--line-app);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.addr-map-section.is-invalid-box {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.15);
+}
+
+.addr-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.addr-map-title {
   display: flex;
   align-items: center;
   gap: 6px;
@@ -216,51 +497,24 @@
   color: var(--ink-navy, #0f172a);
 }
 
-.addr-map-box-title svg {
-  width: 16px !important;
-  height: 16px !important;
-  max-width: 16px !important;
-  max-height: 16px !important;
+.addr-map-title svg {
+  width: 15px;
+  height: 15px;
   color: var(--blue-app, #1d5bd6);
-  flex-shrink: 0;
-}
-
-.addr-map-actions-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.addr-map-actions-group .btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 4px 9px;
-  font-size: 12px;
-  height: 28px;
-}
-
-.addr-map-actions-group .btn svg {
-  width: 13px !important;
-  height: 13px !important;
-  max-width: 13px !important;
-  max-height: 13px !important;
-  flex-shrink: 0;
 }
 
 .addr-map-search-row {
   display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
+  gap: 8px;
 }
 
 .addr-map-search-row input {
   flex: 1;
   min-width: 0;
-  padding: 6px 10px;
-  font-size: 12.5px;
+  padding: 7px 12px;
+  font-size: 13px;
   border: 1px solid #cbd5e1;
-  border-radius: 7px;
+  border-radius: 8px;
   background: #ffffff;
   outline: none;
 }
@@ -271,24 +525,24 @@
 }
 
 .addr-map-search-row .btn {
-  padding: 6px 12px;
-  font-size: 12px;
+  padding: 6px 14px;
+  font-size: 12.5px;
   white-space: nowrap;
 }
 
 .addr-map-wrap {
-  position: relative;
   width: 100%;
   height: 250px;
-  border-radius: 8px;
+  border-radius: 10px;
   overflow: hidden;
   border: 1px solid #cbd5e1;
   background: #e2e8f0;
+  position: relative;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 640px) {
   .addr-map-wrap {
-    height: 260px;
+    height: 270px;
   }
 }
 
@@ -298,45 +552,9 @@
   z-index: 1;
 }
 
-/* Fullscreen / Expanded Overlay */
-.addr-map-box.is-expanded {
-  position: fixed;
-  top: 16px;
-  left: 16px;
-  right: 16px;
-  bottom: 16px;
-  z-index: 9999;
-  background: #ffffff;
-  border-radius: 14px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.35), 0 0 0 9999px rgba(15, 23, 42, 0.65);
-  display: flex;
-  flex-direction: column;
-  padding: 16px;
-  gap: 10px;
-  animation: mapExpandAnim 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.addr-map-box.is-expanded .addr-map-wrap {
-  flex: 1;
-  height: 100% !important;
-  min-height: 0;
-}
-
-@keyframes mapExpandAnim {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-/* Zone status callout card */
+/* Zone Status Feedback Banner */
 .zone-status-box {
-  margin-top: 8px;
-  padding: 8px 12px;
+  padding: 9px 12px;
   border-radius: 8px;
   font-size: 12px;
   display: flex;
@@ -346,286 +564,86 @@
 }
 
 .zone-status-box svg {
-  width: 14px !important;
-  height: 14px !important;
-  max-width: 14px !important;
-  max-height: 14px !important;
+  width: 15px !important;
+  height: 15px !important;
   flex-shrink: 0;
   margin-top: 1px;
 }
 
+.zone-status-box.is-idle {
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  color: #475569;
+}
+
 .zone-status-box.is-inside {
-  background: #ecfdf5;
-  border: 1px solid #a7f3d0;
-  color: #065f46;
+  background: #dcfce7;
+  border: 1px solid #bbf7d0;
+  color: #15803d;
 }
 
 .zone-status-box.is-outside {
-  background: #fef2f2;
+  background: #fee2e2;
   border: 1px solid #fecaca;
-  color: #991b1b;
-}
-
-.zone-status-box.is-idle {
-  background: #eff6ff;
-  border: 1px solid #bfdbfe;
-  color: #1e40af;
-}
-
-/* Non-blocking Leaflet tooltips that never steal clicks */
-.map-zone-tip {
-  font-family: inherit !important;
-  font-size: 11px !important;
-  font-weight: 700 !important;
-  padding: 3px 8px !important;
-  border-radius: 6px !important;
-  border: 1px solid transparent !important;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
-  pointer-events: none !important;
-  user-select: none !important;
-  white-space: nowrap !important;
-}
-
-.map-zone-tip.is-inside {
-  background: #059669 !important;
-  color: #ffffff !important;
-  border-color: #047857 !important;
-}
-
-.map-zone-tip.is-outside {
-  background: #dc2626 !important;
-  color: #ffffff !important;
-  border-color: #b91c1c !important;
-}
-
-.map-zone-tip::before {
-  border-top-color: inherit !important;
-}
-
-/* Station Hub Leaflet Marker */
-.station-hub-leaflet-icon {
-  background: none;
-  border: none;
-}
-
-.station-hub-bubble {
-  background: #1e3a8a;
-  color: #ffffff;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 3px 8px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  box-shadow: 0 3px 8px rgba(30, 58, 138, 0.35);
-  border: 1.5px solid #ffffff;
-  white-space: nowrap;
-  transform: translate(-50%, -100%);
-}
-
-.station-hub-bubble svg {
-  width: 12px;
-  height: 12px;
-  fill: #60a5fa;
-  stroke: #ffffff;
-}
-
-.station-hub-bubble::after {
-  content: '';
-  position: absolute;
-  bottom: -5px;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 5px 5px 0 5px;
-  border-style: solid;
-  border-color: #1e3a8a transparent transparent transparent;
-}
-
-/* Addresses placeholder / welcome card when form is not triggered */
-.addresses-placeholder-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 36px 24px;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-}
-
-.addr-welcome-header {
-  max-width: 440px;
-  margin: 0 auto 24px;
-}
-
-.addr-welcome-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 4px 12px;
-  background: var(--brand-soft, #ebf2ff);
-  color: var(--blue-app, #1d5bd6);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: 12px;
-}
-
-.addr-welcome-badge svg {
-  width: 14px;
-  height: 14px;
-}
-
-.addr-welcome-title {
-  font-size: 20px;
-  font-weight: 800;
-  color: #0f172a;
-  margin: 0 0 8px;
-}
-
-.addr-welcome-desc {
-  font-size: 13.5px;
-  color: #64748b;
-  line-height: 1.5;
-  margin: 0;
-}
-
-.addr-feature-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  width: 100%;
-  max-width: 460px;
-  margin: 0 auto 24px;
-  text-align: left;
-}
-
-.addr-feature-item {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 12px 14px;
-  background: #f8fafc;
-  border: 1px solid #edf2f7;
-  border-radius: 10px;
-}
-
-.addr-feature-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--brand-soft, #ebf2ff);
-  color: var(--blue-app, #1d5bd6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.addr-feature-icon svg {
-  width: 16px;
-  height: 16px;
-}
-
-.addr-feature-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.addr-feature-text strong {
-  font-size: 13px;
-  color: #1e293b;
-}
-
-.addr-feature-text span {
-  font-size: 12px;
-  color: #64748b;
-  line-height: 1.4;
-}
-
-.addr-welcome-cta {
-  margin-top: 8px;
-}
-
-.btn-outside-zone {
-  background: #fee2e2 !important;
-  color: #991b1b !important;
-  border-color: #fca5a5 !important;
-  cursor: not-allowed !important;
-  opacity: 0.9 !important;
+  color: #b91c1c;
 }
 
 .zone-subtext {
   display: block;
   font-size: 11px;
-  font-weight: normal;
+  opacity: 0.9;
   margin-top: 2px;
-  opacity: 0.95;
 }
 
-/* Address Label Quick Preset Buttons */
-.addr-label-presets {
-  display: flex;
+/* Station Hub Leaflet Marker */
+.station-hub-leaflet-icon {
+  background: transparent;
+  border: none;
+}
+
+.station-hub-bubble {
+  display: inline-flex;
   align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 6px;
-}
-
-.addr-preset-btn {
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  color: #475569;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 9999px;
-  cursor: pointer;
-  transition: all 0.15s ease;
-  line-height: 1.4;
-}
-
-.addr-preset-btn:hover {
-  background: #f1f5f9;
-  color: #1e293b;
-  border-color: #cbd5e1;
-}
-
-.addr-preset-btn.active {
-  background: var(--blue-app, #1d5bd6);
+  gap: 4px;
+  padding: 3px 8px;
+  background: #1e3a8a;
   color: #ffffff;
-  border-color: var(--blue-app, #1d5bd6);
-  box-shadow: 0 1px 3px rgba(29, 91, 214, 0.25);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  white-space: nowrap;
 }
 
-/* In-form Validation Cues */
-.input.is-invalid {
-  border-color: #ef4444 !important;
-  background-color: #fffaf0;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important;
+.station-hub-bubble svg {
+  width: 12px;
+  height: 12px;
+  fill: #93c5fd;
 }
 
-.field-error-msg {
-  display: none;
-  font-size: 11.5px;
-  color: #dc2626;
-  font-weight: 500;
-  margin-top: 4px;
+/* Map Zone Non-blocking Tooltip */
+.map-zone-tip {
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  border-radius: 6px !important;
+  padding: 3px 8px !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18) !important;
 }
 
-.addr-map-box.is-invalid-box {
-  border-color: #ef4444 !important;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
-  animation: shake 0.35s ease-in-out;
+.map-zone-tip.is-inside {
+  background: #15803d !important;
+  color: #ffffff !important;
 }
 
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  25% { transform: translateX(-4px); }
-  75% { transform: translateX(4px); }
+.map-zone-tip.is-outside {
+  background: #b91c1c !important;
+  color: #ffffff !important;
 }
 
-
+.btn-outside-zone {
+  opacity: 0.65;
+  cursor: not-allowed !important;
+  background: #94a3b8 !important;
+  border-color: #94a3b8 !important;
+}
