@@ -20,6 +20,7 @@ import {
   getRiderRemittanceSummary,
   isOrderItemNewContainer,
   riderRemitCash,
+  riderSubmitRemittance,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
 import {
@@ -466,11 +467,18 @@ export async function mount(initialMe) {
                 </p>
               </div>
             </div>
-            <div>
+            <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
               ${
-                remittance.count > 0
+                remittance.hasSubmitted
+                  ? `<span class="pill pill-amber" style="font-size: 12px; padding: 5px 12px; font-weight: 700;">Submitted (${formatPeso(remittance.submittedCash)}) · Awaiting Cashier</span>`
+                  : ''
+              }
+              ${
+                remittance.unsubmittedCount > 0
                   ? `<button type="button" class="btn btn-primary btn-sm" id="btn-rider-remit" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">Turn over &amp; remit cash (${formatPeso(remittance.totalCash)}) →</button>`
-                  : `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash remitted to station</span>`
+                  : remittance.totalCash === 0
+                    ? `<span class="pill pill-neutral" style="font-size: 12px; padding: 5px 12px;">All cash remitted to station</span>`
+                    : ''
               }
             </div>
           </div>
@@ -650,13 +658,13 @@ export async function mount(initialMe) {
           </div>
 
           <div class="notice notice-tint" style="font-size: 12px; margin: 0; line-height: 1.45;">
-            Confirming records that you have turned over this cash to the station cashier. All listed deliveries will be marked as remitted and your cash on hand balance will reset to ₱0.00.
+            Submitting records that you are turning over this physical cash collection to the station cashier. Hand over the physical cash to the cashier, who will verify and approve the settlement.
           </div>
         </div>
         <div class="modal-footer" style="display: flex; justify-content: flex-end; gap: 10px; padding: 14px 22px; border-top: 1px solid #e2e8f0; background: #f8fafc; border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
           <button type="button" class="btn btn-light" data-action="cancel">Cancel</button>
           <button type="button" class="btn btn-primary" id="btn-confirm-remit-modal" style="background: #16a34a; border-color: #16a34a; font-weight: 700;">
-            Confirm Cash Turnover (${formatPeso(remittance.totalCash)})
+            Submit Cash Remittance (${formatPeso(remittance.totalCash)})
           </button>
         </div>
       </div>
@@ -674,14 +682,14 @@ export async function mount(initialMe) {
 
     backdrop.querySelector('#btn-confirm-remit-modal')?.addEventListener('click', async (e) => {
       const btn = e.currentTarget;
-      setBusy(btn, true, 'Turning over cash...');
+      setBusy(btn, true, 'Submitting remittance...');
       try {
-        await riderRemitCash(me.id);
-        showToast(`Successfully remitted ${formatPeso(remittance.totalCash)} to station cashier!`, 'success');
+        await riderSubmitRemittance(me.id);
+        showToast(`Cash remittance of ${formatPeso(remittance.totalCash)} submitted to station! Cashier can now approve.`, 'success');
         close();
         await loadAndRender();
       } catch (err) {
-        showToast(err.message || 'Could not record cash remittance.', 'error');
+        showToast(err.message || 'Could not submit cash remittance.', 'error');
         setBusy(btn, false);
       }
     });

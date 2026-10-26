@@ -682,12 +682,14 @@ export async function getRiderRemittanceSummary(riderId) {
   let data = null;
   let { data: res, error } = await supabase
     .from('orders')
-    .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, customer:profiles!customer_id(full_name)')
+    .select(
+      'id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, rider_remitted, remitted_at, remittance_status, customer:profiles!customer_id(full_name)'
+    )
     .eq('rider_id', riderId)
     .in('status', ['delivered', 'completed']);
 
   if (error) {
-    // If relation join fails, fallback to simple select
+    // If relation join fails or columns don't exist yet, fallback gracefully
     const fallback = await supabase
       .from('orders')
       .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at')
@@ -699,26 +701,53 @@ export async function getRiderRemittanceSummary(riderId) {
     data = res || [];
   }
 
-  // Filter orders that have not yet been remitted
-  const unremittedOrders = data.filter((o) => {
+  // Filter and classify orders
+  const unremittedOrders = [];
+  const submittedOrders = [];
+  const unsubmittedOrders = [];
+
+  for (const o of data) {
     const note = String(o.slot_note || '');
-    const isRemittedTag = note.includes('[REMITTED]');
-    const isRemittedCol = Boolean(o.rider_remitted);
-    return !isRemittedTag && !isRemittedCol;
-  });
+    const isSettled =
+      Boolean(o.rider_remitted) ||
+      note.includes('[REMITTED]') ||
+      o.remittance_status === 'approved';
+
+    if (!isSettled) {
+      unremittedOrders.push(o);
+      const isSubmitted =
+        o.remittance_status === 'submitted' ||
+        note.includes('[REMITTANCE_SUBMITTED]');
+      if (isSubmitted) {
+        submittedOrders.push(o);
+      } else {
+        unsubmittedOrders.push(o);
+      }
+    }
+  }
 
   const totalCash = unremittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const submittedCash = submittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
+  const unsubmittedCash = unsubmittedOrders.reduce((sum, o) => sum + Number(o.total || 0), 0);
 
   return {
     unremittedOrders,
+    submittedOrders,
+    unsubmittedOrders,
     totalCash,
+    submittedCash,
+    unsubmittedCash,
     count: unremittedOrders.length,
+    submittedCount: submittedOrders.length,
+    unsubmittedCount: unsubmittedOrders.length,
+    hasSubmitted: submittedOrders.length > 0,
+    allSettled: unremittedOrders.length === 0,
   };
 }
 
-export async function staffAcceptRiderRemittance(riderId) {
-  // Try RPC first
-  const { data: rpcData, error: rpcErr } = await supabase.rpc('accept_rider_remittance', {
+export async function riderSubmitRemittance(riderId) {
+  // 1. Try RPC rider_submit_remittance
+  const { data: rpcData, error: rpcErr } = await supabase.rpc('rider_submit_remittance', {
     p_rider_id: riderId,
   });
 
@@ -727,31 +756,147 @@ export async function staffAcceptRiderRemittance(riderId) {
     return Number(rpcData || 0);
   }
 
-  // Direct table fallback
+  // 2. Fallback to direct table update tagging [REMITTANCE_SUBMITTED]
   const summary = await getRiderRemittanceSummary(riderId);
   if (!summary.unremittedOrders.length) return 0;
 
+  let anyUpdated = false;
+  let lastErr = null;
+
   for (const o of summary.unremittedOrders) {
-    const existingNote = o.slot_note ? `${o.slot_note} ` : '';
-    const payload = {
-      slot_note: `${existingNote}[REMITTED]`.trim(),
-      status: 'completed',
-      payment_status: 'paid',
-      paid_at: o.paid_at || new Date().toISOString(),
-      remitted_at: new Date().toISOString(),
-      rider_remitted: true,
-    };
-    let { error: updateErr } = await supabase.from('orders').update(payload).eq('id', o.id);
-    if (updateErr && /rider_remitted|remitted_at/i.test(updateErr.message || '')) {
-      delete payload.rider_remitted;
-      delete payload.remitted_at;
-      await supabase.from('orders').update(payload).eq('id', o.id);
+    const existingNote = String(o.slot_note || '');
+    if (!existingNote.includes('[REMITTANCE_SUBMITTED]')) {
+      const payload = {
+        slot_note: `${existingNote} [REMITTANCE_SUBMITTED]`.trim(),
+        remittance_status: 'submitted',
+        remittance_submitted_at: new Date().toISOString(),
+      };
+      let { error: updateErr } = await supabase.from('orders').update(payload).eq('id', o.id);
+      if (updateErr && /remittance_status|remittance_submitted_at/i.test(updateErr.message || '')) {
+        delete payload.remittance_status;
+        delete payload.remittance_submitted_at;
+        const res = await supabase.from('orders').update(payload).eq('id', o.id);
+        updateErr = res.error;
+      }
+      if (updateErr) {
+        lastErr = updateErr;
+      } else {
+        anyUpdated = true;
+      }
     }
+  }
+
+  if (!anyUpdated && lastErr) {
+    throw new Error(
+      'Could not submit remittance. Please execute sql/11_sales_and_cash_remittance.sql in your Supabase SQL Editor to grant database permissions.'
+    );
   }
 
   invalidateDataCache();
   return summary.totalCash;
 }
 
-export const riderRemitCash = staffAcceptRiderRemittance;
+export async function staffApproveRemittance(riderId) {
+  // 1. Try RPC staff_approve_remittance
+  let { data: rpcData, error: rpcErr } = await supabase.rpc('staff_approve_remittance', {
+    p_rider_id: riderId,
+  });
+
+  if (rpcErr && /function.*does not exist/i.test(rpcErr.message || '')) {
+    // Try legacy RPC accept_rider_remittance
+    const legacy = await supabase.rpc('accept_rider_remittance', { p_rider_id: riderId });
+    if (!legacy.error) {
+      invalidateDataCache();
+      return Number(legacy.data || 0);
+    }
+    rpcErr = legacy.error;
+  } else if (!rpcErr) {
+    invalidateDataCache();
+    return Number(rpcData || 0);
+  }
+
+  // 2. Direct table fallback
+  const summary = await getRiderRemittanceSummary(riderId);
+  if (!summary.unremittedOrders.length) return 0;
+
+  let anyUpdated = false;
+  let lastErr = null;
+
+  for (const o of summary.unremittedOrders) {
+    const rawNote = String(o.slot_note || '');
+    const cleanNote = rawNote
+      .replace(/\[REMITTANCE_SUBMITTED\]/g, '')
+      .replace(/\[REMITTED\]/g, '')
+      .trim();
+
+    const payload = {
+      slot_note: `${cleanNote} [REMITTED]`.trim(),
+      status: 'completed',
+      payment_status: 'paid',
+      paid_at: o.paid_at || new Date().toISOString(),
+      remitted_at: new Date().toISOString(),
+      rider_remitted: true,
+      remittance_status: 'approved',
+    };
+
+    let { error: updateErr } = await supabase.from('orders').update(payload).eq('id', o.id);
+    if (updateErr && /rider_remitted|remitted_at|remittance_status/i.test(updateErr.message || '')) {
+      delete payload.rider_remitted;
+      delete payload.remitted_at;
+      delete payload.remittance_status;
+      const res = await supabase.from('orders').update(payload).eq('id', o.id);
+      updateErr = res.error;
+    }
+
+    if (updateErr) {
+      lastErr = updateErr;
+    } else {
+      anyUpdated = true;
+    }
+  }
+
+  if (!anyUpdated && lastErr) {
+    throw new Error(
+      'Could not approve remittance. Please execute sql/11_sales_and_cash_remittance.sql in your Supabase SQL Editor to grant database permissions.'
+    );
+  }
+
+  invalidateDataCache();
+  return summary.totalCash;
+}
+
+export const staffAcceptRiderRemittance = staffApproveRemittance;
+export const riderRemitCash = riderSubmitRemittance;
+
+export async function getRemittanceSalesHistory(limit = 40) {
+  let { data, error } = await supabase
+    .from('orders')
+    .select(
+      'id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at, remitted_at, remittance_status, rider_remitted, rider:profiles!rider_id(id, full_name, phone), customer:profiles!customer_id(full_name)'
+    )
+    .in('status', ['delivered', 'completed'])
+    .order('delivered_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    const fallback = await supabase
+      .from('orders')
+      .select('id, order_number, total, payment_status, status, slot_note, delivered_at, paid_at')
+      .in('status', ['delivered', 'completed'])
+      .order('delivered_at', { ascending: false })
+      .limit(limit);
+    data = fallback.data || [];
+  }
+
+  const settled = (data || []).filter((o) => {
+    const note = String(o.slot_note || '');
+    return (
+      Boolean(o.rider_remitted) ||
+      note.includes('[REMITTED]') ||
+      o.remittance_status === 'approved'
+    );
+  });
+
+  return settled;
+}
 

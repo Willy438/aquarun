@@ -441,13 +441,16 @@ export async function mount() {
 
       container.innerHTML = `
         <div class="card" style="margin-bottom: 16px;">
-          <div class="card-header">
+          <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
             <div>
               <h2 class="card-title">Rider Cash Remittances & Shift Handover</h2>
               <p class="text-muted" style="margin: 4px 0 0 0; font-size: 13px;">
-                Verify physical cash envelopes turned in by riders upon returning to the station. Acknowledging remittance logs the funds and clears the rider's pending cash on hand.
+                Verify physical cash envelopes turned in by riders upon returning to the station.
               </p>
             </div>
+            <a class="btn btn-outline-blue btn-sm" href="remittance.html" style="font-weight: 700;">
+              Open Dedicated Sales &amp; Remittance Hub →
+            </a>
           </div>
         </div>
 
