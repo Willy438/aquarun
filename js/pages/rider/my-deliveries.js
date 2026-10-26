@@ -228,9 +228,9 @@ export async function mount(initialMe) {
         }
       }
 
-      // Batch Trip Manifest Card
+      // Batch Trip Manifest Card - only shown if batch has multiple stops
       let tripManifestHtml = '';
-      if (activeDeliveries.length > 0) {
+      if (activeDeliveries.length > 1) {
         const breakdownParts = [];
         if (roundRefills > 0) breakdownParts.push(`${roundRefills} Round Refills`);
         if (slimRefills > 0) breakdownParts.push(`${slimRefills} Slim Refills`);
@@ -241,43 +241,31 @@ export async function mount(initialMe) {
             <div class="trip-manifest-top">
               <div class="trip-manifest-title">
                 ${ICONS.truck}
-                <span>Batch Trip Manifest (${activeDeliveries.length} ${activeDeliveries.length === 1 ? 'Stop' : 'Stops'})</span>
+                <span>Batch Run Manifest (${activeDeliveries.length} Stops)</span>
               </div>
-              ${
-                unstartedOrders.length > 0
-                  ? `<button type="button" class="trip-depart-btn" id="batch-depart-btn">
-                      ${ICONS.truck} Depart Station (${unstartedOrders.length} to start)
-                    </button>`
-                  : `<span class="pill" style="background:rgba(255,255,255,0.22);color:#fff;font-weight:700;">● Trip in Progress</span>`
-              }
+              <span class="pill pill-neutral" style="font-weight: 700; font-size: 11.5px;">Nearest-Stop Route</span>
             </div>
 
             <div class="trip-manifest-stats">
               <div class="trip-stat-block">
                 <span class="trip-stat-label">Total Gallons to Load</span>
                 <span class="trip-stat-val">${totalGallonsToLoad} Gallons</span>
-                <small style="font-size:11px;color:#dbeafe;margin-top:2px;">
-                  ${breakdownParts.join(' · ') || 'Refill Gallons'}
+                <small style="font-size:11px;color:#64748b;margin-top:2px;">
+                  ${breakdownParts.join(' · ') || 'Refills'}
                 </small>
               </div>
 
               <div class="trip-stat-block">
                 <span class="trip-stat-label">Total COD Cash to Collect</span>
-                <span class="trip-stat-val">${formatPeso(totalCashToCollect)}</span>
-                <small style="font-size:11px;color:#dbeafe;margin-top:2px;">Cash on Delivery (COD)</small>
+                <span class="trip-stat-val" style="color:#0284c7;">${formatPeso(totalCashToCollect)}</span>
+                <small style="font-size:11px;color:#64748b;margin-top:2px;">Cash on Delivery (COD)</small>
               </div>
 
               <div class="trip-stat-block">
-                <span class="trip-stat-label">Fuel-Saver Closeness</span>
-                <span class="trip-stat-val">Nearest-First</span>
-                <small style="font-size:11px;color:#dbeafe;margin-top:2px;">Sorted by station hub distance</small>
+                <span class="trip-stat-label">Hub Location</span>
+                <span class="trip-stat-val" style="font-size:13px;font-weight:600;">${escapeHtml(stationSettings.address || 'Caloocan Station')}</span>
+                <small style="font-size:11px;color:#64748b;margin-top:2px;">Starting depot</small>
               </div>
-            </div>
-
-            <div class="trip-manifest-footer">
-              <span class="trip-manifest-hub">
-                ${ICONS.pin} Reference Hub: <strong>${escapeHtml(stationSettings.address || 'Caloocan Station')}</strong>
-              </span>
             </div>
           </div>
         `;
@@ -286,7 +274,7 @@ export async function mount(initialMe) {
       let heroHtml = '';
       if (nextDelivery) {
         const customerName = nextDelivery.customer?.full_name || 'Customer';
-        const customerPhone = nextDelivery.customer?.phone ? ` · ${nextDelivery.customer.phone}` : '';
+        const customerPhone = nextDelivery.customer?.phone || '';
         const addressLine = formatAddressLine(nextDelivery.address);
         const slotWindow = formatSlotWindow(getEffectiveSlot(nextDelivery));
         const isToday = nextDelivery.delivery_date === today;
@@ -301,93 +289,105 @@ export async function mount(initialMe) {
           : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddressLine(nextDelivery.address))}`;
 
         heroHtml = `
-          <div class="hero-banner">
-            <div class="hero-top">
-              <div>
-                <div class="hero-meta-line" style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
-                  <span class="stop-sequence-badge is-first">${ICONS.pin} Stop #1 (${stopDistText})</span>
-                  <span>Order #${escapeHtml(nextDelivery.order_number)} · ${escapeHtml(STATUS_LABELS[nextDelivery.status] || nextDelivery.status)}</span>
-                  ${
-                    timing.isEarly
-                      ? `<span class="pill pill-amber" style="background:#fef3c7;color:#92400e;font-weight:700;font-size:11px;">Ahead of window (${escapeHtml(timing.slotWindow)})</span>`
-                      : timing.isLate
-                        ? `<span class="pill pill-rose" style="background:#fee2e2;color:#991b1b;font-weight:700;font-size:11px;">Past window (${escapeHtml(timing.slotWindow)})</span>`
-                        : ''
-                  }
-                </div>
-                <h2 class="hero-status-title">
-                  <a href="delivery-details.html?id=${encodeURIComponent(nextDelivery.id)}">${escapeHtml(customerName)}</a>
-                </h2>
-                <p class="hero-status-sub">${escapeHtml(addressLine)}${escapeHtml(customerPhone)}</p>
-                <div>
-                  <a class="stop-map-link" href="${mapUrl}" target="_blank" rel="noopener" style="color:#ffffff;text-decoration:underline;">
-                    ${ICONS.map} Open in Google Maps
-                  </a>
-                </div>
+          <div class="rider-active-card">
+            <div class="rider-active-header">
+              <div class="rider-active-badges">
+                <span class="stop-sequence-badge is-first">${ICONS.pin} Stop 1 of ${activeDeliveries.length} (${stopDistText})</span>
+                <span class="pill pill-neutral" style="font-weight:700;">#${escapeHtml(nextDelivery.order_number)}</span>
+                <span class="pill ${isOut ? 'pill-blue' : 'pill-amber'}" style="font-weight:700;">
+                  ${escapeHtml(STATUS_LABELS[nextDelivery.status] || nextDelivery.status)}
+                </span>
+                ${
+                  timing.isEarly
+                    ? `<span class="pill pill-amber" style="font-weight:700;">Ahead of window (${escapeHtml(timing.slotWindow)})</span>`
+                    : timing.isLate
+                      ? `<span class="pill pill-rose" style="font-weight:700;">Past window (${escapeHtml(timing.slotWindow)})</span>`
+                      : ''
+                }
               </div>
-              ${
-                isOut
-                  ? `<a class="btn btn-white btn-sm" href="complete-delivery.html?id=${encodeURIComponent(nextDelivery.id)}">Complete delivery</a>`
-                  : `<button type="button" class="btn btn-white btn-sm" id="hero-start-delivery-btn" data-order-id="${escapeHtml(nextDelivery.id)}">Start delivery</button>`
-              }
+              <span style="font-size: 12.5px; color: #64748b; font-weight: 500;">
+                Window: <strong style="color: #0f172a;">${escapeHtml(deliveryWindowLabel)}</strong>
+              </span>
             </div>
 
-            <div class="hero-strip hero-strip-4">
-              <div class="hero-strip-item">
-                <p class="hero-strip-label">Items</p>
-                <p class="hero-strip-value">${escapeHtml(summarizeOrderItems(nextDelivery.items))}</p>
+            <div class="rider-active-customer">
+              <h2 class="rider-customer-name">
+                <a href="delivery-details.html?id=${encodeURIComponent(nextDelivery.id)}">${escapeHtml(customerName)}</a>
+              </h2>
+              <p class="rider-customer-address">
+                ${escapeHtml(addressLine)}
+              </p>
+              <div class="rider-quick-actions">
+                <a class="rider-action-chip is-primary" href="${mapUrl}" target="_blank" rel="noopener">
+                  ${ICONS.map} Open in Google Maps
+                </a>
+                ${
+                  customerPhone
+                    ? `<a class="rider-action-chip" href="tel:${escapeHtml(customerPhone)}">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:2px;"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                        Call ${escapeHtml(customerPhone)}
+                      </a>`
+                    : ''
+                }
               </div>
-              <div class="hero-strip-item">
-                <p class="hero-strip-label">Delivery window</p>
-                <p class="hero-strip-value">${escapeHtml(deliveryWindowLabel)}</p>
+            </div>
+
+            <div class="rider-metrics-grid">
+              <div class="rider-metric-cell">
+                <span class="rider-metric-label">Cash to Collect</span>
+                <span class="rider-metric-value is-amount">${escapeHtml(formatPeso(nextDelivery.total))}</span>
+                <small style="font-size: 11px; color: #64748b; margin-top: 2px;">Cash on delivery (COD)</small>
               </div>
-              <div class="hero-strip-item">
-                <p class="hero-strip-label">Empties to collect</p>
-                <p class="hero-strip-value">${escapeHtml(bottlesQty)} ${bottlesQty === 1 ? 'bottle' : 'bottles'}</p>
+              <div class="rider-metric-cell">
+                <span class="rider-metric-label">Items to Deliver</span>
+                <span class="rider-metric-value">${escapeHtml(summarizeOrderItems(nextDelivery.items))}</span>
+                <small style="font-size: 11px; color: #64748b; margin-top: 2px;">Check container seals</small>
               </div>
-              <div class="hero-strip-item">
-                <p class="hero-strip-label">Cash to collect</p>
-                <p class="hero-strip-value">${escapeHtml(formatPeso(nextDelivery.total))} · Cash on delivery</p>
+              <div class="rider-metric-cell">
+                <span class="rider-metric-label">Empties to Collect</span>
+                <span class="rider-metric-value">${escapeHtml(bottlesQty)} ${bottlesQty === 1 ? 'bottle' : 'bottles'}</span>
+                <small style="font-size: 11px; color: #64748b; margin-top: 2px;">Bottle swap at door</small>
               </div>
+            </div>
+
+            <div class="rider-active-footer">
+              ${
+                isOut
+                  ? `<a class="rider-primary-btn" href="complete-delivery.html?id=${encodeURIComponent(nextDelivery.id)}">
+                      ${ICONS.check} Complete Delivery &amp; Record Handover
+                    </a>`
+                  : `<button type="button" class="rider-primary-btn" id="hero-start-delivery-btn" data-order-id="${escapeHtml(nextDelivery.id)}">
+                      ${ICONS.truck} ${unstartedOrders.length > 1 ? `Start Batch Run (${unstartedOrders.length} stops)` : 'Start Delivery to Customer'}
+                    </button>`
+              }
             </div>
           </div>
         `;
       } else if (completedToday > 0) {
         heroHtml = `
-          <div class="hero-banner">
-            <div class="hero-top">
-              <div>
-                <div class="hero-meta-line">
-                  <span class="hero-pill-tag" style="background:rgba(255,255,255,0.22);color:#ffffff;">Shift status</span>
-                  <span>${escapeHtml(completedToday)} ${completedToday === 1 ? 'delivery' : 'deliveries'} completed today</span>
-                </div>
-                <h2 class="hero-status-title">All assigned deliveries completed today</h2>
-                <p class="hero-status-sub">You have completed all scheduled deliveries for now. Stay available for incoming dispatch or review and submit collected cash.</p>
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                <a class="btn btn-white btn-sm" href="remittance.html">Cash record</a>
-                <button type="button" class="btn btn-white btn-sm" id="hero-shift-toggle-btn">
-                  ${me.is_available ? 'Go off shift' : 'Go on shift'}
-                </button>
-              </div>
+          <div class="card" style="padding: 32px 24px; text-align: center; background: #ffffff; border: 1px solid var(--border-color, #e2e8f0); border-radius: 14px;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #dcfce7; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #15803d;">
+              ${ICONS.check}
+            </div>
+            <h2 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">All assigned deliveries completed today</h2>
+            <p style="font-size: 13.5px; color: #64748b; max-width: 440px; margin: 0 auto 18px auto; line-height: 1.5;">
+              You have completed all ${completedToday} ${completedToday === 1 ? 'delivery' : 'deliveries'} assigned to you today. Review your cash record or remain available for incoming dispatch.
+            </p>
+            <div>
+              <a class="btn btn-primary btn-sm" href="remittance.html" style="font-weight: 700;">Review cash record</a>
             </div>
           </div>
         `;
       } else {
         heroHtml = `
-          <div class="hero-banner">
-            <div class="hero-top">
-              <div>
-                <div class="hero-meta-line">
-                  <span class="hero-pill-tag">My deliveries</span>
-                </div>
-                <h2 class="hero-status-title">No assigned deliveries right now</h2>
-                <p class="hero-status-sub">Make sure you are marked Available for assignment so station staff can assign batch orders to you.</p>
-              </div>
-              <button type="button" class="btn btn-white btn-sm" id="hero-shift-toggle-btn">
-                ${me.is_available ? 'Go off shift' : 'Go on shift'}
-              </button>
+          <div class="card" style="padding: 36px 24px; text-align: center; background: #ffffff; border: 1px solid var(--border-color, #e2e8f0); border-radius: 14px;">
+            <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
+              ${ICONS.truck}
             </div>
+            <h2 style="font-size: 18px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">No assigned deliveries right now</h2>
+            <p style="font-size: 13.5px; color: #64748b; max-width: 440px; margin: 0 auto; line-height: 1.5;">
+              You are ready for assignments. Station staff will dispatch customer orders to you as refill orders come in.
+            </p>
           </div>
         `;
       }
@@ -588,58 +588,92 @@ export async function mount(initialMe) {
         </div>
       `;
 
-      // Batch Depart Button Handler
-      content.querySelector('#batch-depart-btn')?.addEventListener('click', async (e) => {
+      // Single unified Start Delivery button (handles both single & batch trips)
+      content.querySelector('#hero-start-delivery-btn')?.addEventListener('click', async (e) => {
         const btn = e.currentTarget;
-        if (!unstartedOrders.length) return;
+        const orderId = btn.dataset.orderId;
 
-        const timingResults = unstartedOrders.map((o) => ({
-          order: o,
-          timing: checkOrderDeliveryTiming(o),
-        }));
-        const earlyOrLate = timingResults.filter((x) => x.timing.isEarly || x.timing.isLate);
+        // If batch has multiple unstarted orders, prompt and start all
+        if (unstartedOrders.length > 1) {
+          const timingResults = unstartedOrders.map((o) => ({
+            order: o,
+            timing: checkOrderDeliveryTiming(o),
+          }));
+          const earlyOrLate = timingResults.filter((x) => x.timing.isEarly || x.timing.isLate);
 
-        let batchTimingReason = null;
-        let referenceTiming = null;
+          let batchTimingReason = null;
+          let referenceTiming = null;
 
-        if (earlyOrLate.length > 0) {
-          referenceTiming = earlyOrLate[0].timing;
-          const res = await promptDeliveryTimingModal({
-            actionType: 'batch_depart',
-            timing: referenceTiming,
-            order: earlyOrLate[0].order,
-            batchCount: earlyOrLate.length,
-          });
-          if (!res.confirmed) return;
-          batchTimingReason = res.reason;
-        } else {
-          const confirmed = await confirmModal({
-            title: 'Depart Station with Batch?',
-            message: `Start delivery for all ${unstartedOrders.length} assigned orders? They will all transition to "Out for delivery".`,
-            confirmText: 'Yes, depart station',
-            cancelText: 'Cancel',
-          });
-          if (!confirmed) return;
+          if (earlyOrLate.length > 0) {
+            referenceTiming = earlyOrLate[0].timing;
+            const res = await promptDeliveryTimingModal({
+              actionType: 'batch_depart',
+              timing: referenceTiming,
+              order: earlyOrLate[0].order,
+              batchCount: earlyOrLate.length,
+            });
+            if (!res.confirmed) return;
+            batchTimingReason = res.reason;
+          } else {
+            const confirmed = await confirmModal({
+              title: 'Start Batch Delivery?',
+              message: `Depart station with all ${unstartedOrders.length} assigned orders? They will transition to "Out for delivery".`,
+              confirmText: 'Yes, start trip',
+              cancelText: 'Cancel',
+            });
+            if (!confirmed) return;
+          }
+
+          setBusy(btn, true, 'Starting trip...');
+          try {
+            if (batchTimingReason && referenceTiming) {
+              for (const item of earlyOrLate) {
+                await recordDeliveryTimingNote(
+                  item.order.id,
+                  'depart',
+                  batchTimingReason,
+                  item.timing
+                );
+              }
+            }
+            const orderIds = unstartedOrders.map((o) => o.id);
+            await riderStartBatchDelivery(orderIds);
+            showToast(`Trip started! ${orderIds.length} orders are now Out for delivery.`, 'success');
+            await loadAndRender();
+          } catch (err) {
+            showToast(err.message || 'Could not start batch delivery.', 'error');
+            setBusy(btn, false);
+          }
+          return;
         }
 
+        // Single order start
+        const targetOrder = allDeliveries.find((o) => o.id === orderId);
+        let timingReason = null;
+        let timing = null;
+
+        if (targetOrder) {
+          timing = checkOrderDeliveryTiming(targetOrder);
+          if (timing.isEarly || timing.isLate) {
+            const res = await promptDeliveryTimingModal({
+              actionType: 'depart',
+              timing,
+              order: targetOrder,
+            });
+            if (!res.confirmed) return;
+            timingReason = res.reason;
+          }
+        }
         setBusy(btn, true, 'Starting...');
         try {
-          if (batchTimingReason && referenceTiming) {
-            for (const item of earlyOrLate) {
-              await recordDeliveryTimingNote(
-                item.order.id,
-                'depart',
-                batchTimingReason,
-                item.timing
-              );
-            }
+          if (timingReason && timing) {
+            await recordDeliveryTimingNote(orderId, 'depart', timingReason, timing);
           }
-          const orderIds = unstartedOrders.map((o) => o.id);
-          await riderStartBatchDelivery(orderIds);
-          showToast(`Trip started! ${orderIds.length} orders are now Out for delivery.`, 'success');
+          await riderStartDelivery(orderId);
+          showToast('Delivery started! Status is now Out for delivery.', 'success');
           await loadAndRender();
         } catch (err) {
-          showToast(err.message || 'Could not start batch delivery.', 'error');
+          showToast(err.message || 'Could not start delivery.', 'error');
           setBusy(btn, false);
         }
       });
@@ -668,46 +702,6 @@ export async function mount(initialMe) {
 
       content.querySelector('#btn-view-remittance-proof')?.addEventListener('click', () => {
         openRiderRemittanceProofModal(remittance, me);
-      });
-
-      content.querySelector('#hero-shift-toggle-btn')?.addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        btn.disabled = true;
-        await handleAvailabilityChange(!me.is_available);
-        btn.disabled = false;
-      });
-
-      content.querySelector('#hero-start-delivery-btn')?.addEventListener('click', async (e) => {
-        const btn = e.currentTarget;
-        const orderId = btn.dataset.orderId;
-        const targetOrder = allDeliveries.find((o) => o.id === orderId);
-        let timingReason = null;
-        let timing = null;
-
-        if (targetOrder) {
-          timing = checkOrderDeliveryTiming(targetOrder);
-          if (timing.isEarly || timing.isLate) {
-            const res = await promptDeliveryTimingModal({
-              actionType: 'depart',
-              timing,
-              order: targetOrder,
-            });
-            if (!res.confirmed) return;
-            timingReason = res.reason;
-          }
-        }
-        setBusy(btn, true, 'Starting...');
-        try {
-          if (timingReason && timing) {
-            await recordDeliveryTimingNote(orderId, 'depart', timingReason, timing);
-          }
-          await riderStartDelivery(orderId);
-          showToast('Delivery started! Status is now Out for delivery.', 'success');
-          navigateRiderSpa(`delivery-details.html?id=${encodeURIComponent(orderId)}`);
-        } catch (err) {
-          showToast(err.message || 'Could not start delivery.', 'error');
-          setBusy(btn, false);
-        }
       });
     } catch (err) {
       showToast(err.message || 'Could not load deliveries.', 'error');
