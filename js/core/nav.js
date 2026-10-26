@@ -386,9 +386,13 @@ export async function updateCustomerActiveOrderBadge(customerId) {
   if (num > 0) {
     badge.textContent = String(num);
     badge.hidden = false;
+    badge.removeAttribute('hidden');
+    badge.style.display = 'inline-flex';
   } else {
     badge.textContent = '';
     badge.hidden = true;
+    badge.setAttribute('hidden', '');
+    badge.style.display = 'none';
   }
 }
 
@@ -406,9 +410,13 @@ export async function updateStaffOrdersBadge() {
   if (num > 0) {
     badge.textContent = String(num);
     badge.hidden = false;
+    badge.removeAttribute('hidden');
+    badge.style.display = 'inline-flex';
   } else {
     badge.textContent = '';
     badge.hidden = true;
+    badge.setAttribute('hidden', '');
+    badge.style.display = 'none';
   }
 }
 
@@ -427,9 +435,68 @@ export async function updateRiderCurrentBadge(riderId) {
   if (num > 0) {
     badge.textContent = String(num);
     badge.hidden = false;
+    badge.removeAttribute('hidden');
+    badge.style.display = 'inline-flex';
   } else {
     badge.textContent = '';
     badge.hidden = true;
+    badge.setAttribute('hidden', '');
+    badge.style.display = 'none';
+  }
+}
+
+let shellRealtimeSub = null;
+let shellHeartbeatTimer = null;
+
+export function startShellRealtimeSync(role, profile) {
+  if (shellRealtimeSub) return;
+  const channelName = `shell-sync-${role}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+
+  if (role === 'staff') {
+    shellRealtimeSub = supabase
+      .channel(channelName)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        updateStaffOrdersBadge().catch(() => {});
+      })
+      .subscribe();
+    shellHeartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        updateStaffOrdersBadge().catch(() => {});
+      }
+    }, 4000);
+  } else if (role === 'rider' && profile?.id) {
+    shellRealtimeSub = supabase
+      .channel(channelName)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => {
+        updateRiderCurrentBadge(profile.id).catch(() => {});
+      })
+      .subscribe();
+    shellHeartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        updateRiderCurrentBadge(profile.id).catch(() => {});
+      }
+    }, 4000);
+  } else if (role === 'customer' && profile?.id) {
+    shellRealtimeSub = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'orders',
+          filter: `customer_id=eq.${profile.id}`,
+        },
+        () => {
+          updateCustomerActiveOrderBadge(profile.id).catch(() => {});
+        }
+      )
+      .subscribe();
+    shellHeartbeatTimer = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        updateCustomerActiveOrderBadge(profile.id).catch(() => {});
+      }
+    }, 4000);
   }
 }
 
@@ -875,6 +942,7 @@ export async function bootCustomerPage(pageKey, mountFn) {
   currentProfile = me;
   preloadRoleModules('customer', me);
   await renderNav(me, cleanKey);
+  startShellRealtimeSync('customer', me);
   activeCleanup = await mountFn(me);
   captureCurrentPageSnapshot('customer', cleanKey);
 }
@@ -897,6 +965,7 @@ export async function bootStaffPage(pageKey, mountFn) {
   currentProfile = me;
   preloadRoleModules('staff', me);
   await renderNav(me, cleanKey);
+  startShellRealtimeSync('staff', me);
   activeCleanup = await mountFn(me);
   captureCurrentPageSnapshot('staff', cleanKey);
 }
@@ -919,6 +988,7 @@ export async function bootRiderPage(pageKey, mountFn) {
   currentProfile = me;
   preloadRoleModules('rider', me);
   await renderNav(me, cleanKey);
+  startShellRealtimeSync('rider', me);
   activeCleanup = await mountFn(me);
   captureCurrentPageSnapshot('rider', cleanKey);
 }

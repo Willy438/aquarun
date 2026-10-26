@@ -221,10 +221,21 @@ export async function mount(me) {
   }
 
   await loadAndRender();
-  return subscribeStaffWorkspace(() => {
+  const unsub = subscribeStaffWorkspace(() => {
     loadAndRender();
     renderNav(me, 'dashboard');
   });
+
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadAndRender();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootStaffPage('dashboard', mount);

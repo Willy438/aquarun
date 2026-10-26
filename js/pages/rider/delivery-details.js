@@ -367,7 +367,17 @@ export async function mount(me) {
   }
 
   await renderPage();
-  return subscribeRiderWorkspace(me.id, renderPage);
+  const unsub = subscribeRiderWorkspace(me.id, renderPage);
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      renderPage();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootRiderPage('delivery-details', mount);

@@ -228,10 +228,21 @@ export async function mount(me) {
   }
 
   await loadAndRender();
-  return subscribeCustomerOrders(me.id, () => {
+  const unsub = subscribeCustomerOrders(me.id, () => {
     loadAndRender();
     renderNav(me, 'home');
   });
+
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadAndRender();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootCustomerPage('home', mount);

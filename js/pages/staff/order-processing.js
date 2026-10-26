@@ -333,10 +333,21 @@ export async function mount(me) {
   }
 
   await renderPage();
-  return subscribeStaffWorkspace(() => {
+  const unsub = subscribeStaffWorkspace(() => {
     renderPage();
     renderNav(me, 'order-processing');
   });
+
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      renderPage();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootStaffPage('order-processing', mount);

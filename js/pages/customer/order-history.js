@@ -378,7 +378,7 @@ export async function mount(me) {
 
   async function loadOrders() {
     try {
-      orders = await getCustomerOrders(me.id, { limit: 100 });
+      orders = await getCustomerOrders(me.id, { limit: 100, forceRefresh: true });
       renderView();
     } catch (err) {
       showToast(err.message || 'Could not load order history.', 'error');
@@ -386,7 +386,17 @@ export async function mount(me) {
   }
 
   await loadOrders();
-  return subscribeCustomerOrders(me.id, loadOrders);
+  const unsub = subscribeCustomerOrders(me.id, loadOrders);
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadOrders();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootCustomerPage('order-history', mount);

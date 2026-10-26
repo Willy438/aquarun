@@ -765,7 +765,7 @@ export function renderStaffOrderHero(order) {
   `;
 }
 
-export async function getCustomerActiveOrders(customerId) {
+export async function getCustomerActiveOrders(customerId, { forceRefresh = false } = {}) {
   return cachedQuery(`orders:activeList:${customerId}`, async () => {
     const { data, error } = await supabase
       .from('orders')
@@ -776,15 +776,15 @@ export async function getCustomerActiveOrders(customerId) {
 
     if (error) throw error;
     return data ?? [];
-  });
+  }, { forceRefresh });
 }
 
-export async function getCustomerActiveOrder(customerId) {
-  const list = await getCustomerActiveOrders(customerId);
+export async function getCustomerActiveOrder(customerId, { forceRefresh = false } = {}) {
+  const list = await getCustomerActiveOrders(customerId, { forceRefresh });
   return list[0] || null;
 }
 
-export async function getCustomerOrderById(customerId, orderId) {
+export async function getCustomerOrderById(customerId, orderId, { forceRefresh = false } = {}) {
   return cachedQuery(`orders:byId:${customerId}:${orderId}`, async () => {
     const { data, error } = await supabase
       .from('orders')
@@ -795,10 +795,10 @@ export async function getCustomerOrderById(customerId, orderId) {
 
     if (error) throw error;
     return data;
-  });
+  }, { forceRefresh });
 }
 
-export async function getCustomerOrders(customerId, { limit = 50 } = {}) {
+export async function getCustomerOrders(customerId, { limit = 50, forceRefresh = false } = {}) {
   return cachedQuery(`orders:cust:${customerId}:${limit}`, async () => {
     let query = supabase
       .from('orders')
@@ -811,10 +811,10 @@ export async function getCustomerOrders(customerId, { limit = 50 } = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data ?? [];
-  });
+  }, { forceRefresh });
 }
 
-export async function getAllOrdersForStaff({ limit = 200 } = {}) {
+export async function getAllOrdersForStaff({ limit = 200, forceRefresh = false } = {}) {
   return cachedQuery(`orders:staff:${limit}`, async () => {
     let query = supabase
       .from('orders')
@@ -826,7 +826,7 @@ export async function getAllOrdersForStaff({ limit = 200 } = {}) {
     const { data, error } = await query;
     if (error) throw error;
     return data ?? [];
-  });
+  }, { forceRefresh });
 }
 
 export async function getStaffOrderById(orderId) {

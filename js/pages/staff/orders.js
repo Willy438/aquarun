@@ -1,4 +1,4 @@
-import { bootStaffPage, navigateStaffSpa } from '../../core/nav.js';
+import { bootStaffPage, navigateStaffSpa, updateStaffOrdersBadge } from '../../core/nav.js';
 import { STATUS_LABELS } from '../../core/constants.js';
 import { subscribeStaffWorkspace } from '../../core/realtime.js';
 import {
@@ -29,7 +29,7 @@ const ICONS = {
   bolt: `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
   pin: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>`,
   truck: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="15" height="12" rx="1"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>`,
-  money: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`,
+  money: `<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="3"/><line x1="6" y1="12" x2="6.01" y2="12"/><line x1="18" y1="12" x2="18.01" y2="12"/></svg>`,
   check: `<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
 };
 
@@ -646,13 +646,28 @@ export async function mount() {
       allOrders = orders;
       activeRiders = riders;
       renderView();
+      updateStaffOrdersBadge().catch(() => {});
     } catch (err) {
       showToast(err.message || 'Could not load orders.', 'error');
     }
   }
 
   await loadData();
-  return subscribeStaffWorkspace(loadData);
+  const unsub = subscribeStaffWorkspace(() => {
+    loadData();
+    updateStaffOrdersBadge().catch(() => {});
+  });
+
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadData();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootStaffPage('orders', mount);

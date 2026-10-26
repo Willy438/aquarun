@@ -112,11 +112,11 @@ export async function mount(initialMe) {
 
   const checkedSet = new Set([0]);
 
-  async function loadAndRender() {
+  async function loadAndRender({ forceRefresh = false } = {}) {
     try {
       const today = getTodayManila();
       const [allDeliveries, stationSettings, remittance] = await Promise.all([
-        getRiderDeliveries(me.id),
+        getRiderDeliveries(me.id, { forceRefresh }),
         getStationLocationSettings().catch(() => ({
           lat: 14.7565,
           lng: 121.0437,
@@ -774,10 +774,21 @@ export async function mount(initialMe) {
   }
 
   await loadAndRender();
-  return subscribeRiderWorkspace(me.id, () => {
-    loadAndRender();
+  const unsub = subscribeRiderWorkspace(me.id, () => {
+    loadAndRender({ forceRefresh: true });
     renderNav(me, 'my-deliveries');
   });
+
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      loadAndRender({ forceRefresh: true });
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootRiderPage('my-deliveries', mount);

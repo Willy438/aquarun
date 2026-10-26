@@ -47,7 +47,7 @@ export function sortDeliveriesByScheduledSlot(orders = []) {
   });
 }
 
-export async function getRiderDeliveries(riderId) {
+export async function getRiderDeliveries(riderId, { forceRefresh = false } = {}) {
   return cachedQuery(`rider:deliveries:${riderId}`, async () => {
     const { data, error } = await supabase
       .from('orders')
@@ -58,7 +58,7 @@ export async function getRiderDeliveries(riderId) {
 
     if (error) throw error;
     return data ?? [];
-  });
+  }, { forceRefresh });
 }
 
 export async function getRiderCurrentOrder(riderId, orderId = null) {

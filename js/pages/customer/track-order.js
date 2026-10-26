@@ -543,10 +543,21 @@ export async function mount(me) {
   }
 
   await renderPage();
-  return subscribeCustomerOrders(me.id, () => {
+  const unsub = subscribeCustomerOrders(me.id, () => {
     renderPage();
     renderNav(me, 'track-order');
   });
+
+  const pollTimer = setInterval(() => {
+    if (document.visibilityState === 'visible') {
+      renderPage();
+    }
+  }, 4000);
+
+  return () => {
+    clearInterval(pollTimer);
+    unsub();
+  };
 }
 
 bootCustomerPage('track-order', mount);

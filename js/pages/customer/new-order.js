@@ -1,4 +1,4 @@
-import { bootCustomerPage, navigateCustomerSpa } from '../../core/nav.js';
+import { bootCustomerPage, navigateCustomerSpa, updateCustomerActiveOrderBadge } from '../../core/nav.js';
 import {
   confirmModal,
   escapeHtml,
@@ -912,6 +912,7 @@ export async function mount(me) {
           notes: deliveryNote.trim(),
           items: itemsPayload,
         });
+        updateCustomerActiveOrderBadge(me.id).catch(() => {});
         showToast('Order placed!', 'success');
         navigateCustomerSpa(`track-order.html?id=${encodeURIComponent(orderId)}`);
       } catch (err) {
