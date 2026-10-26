@@ -279,6 +279,9 @@ let currentActivePageKey = null;
 const MODULE_CACHE = new Map();
 
 function normalizeNavKey(rawKey) {
+  const clean = String(rawKey || '').replace(/\.html$/i, '');
+  return clean === 'complete-delivery' ? 'delivery-details' : clean;
+}
 
 function preloadRoleModules(role, me = null) {
   const metaMap = getPageMetaMap(role);
@@ -1016,7 +1019,6 @@ export async function bootCustomerPage(pageKey, mountFn) {
   await renderNav(me, cleanKey);
   startShellRealtimeSync('customer', me);
   activeCleanup = await mountFn(me);
-  captureCurrentPageSnapshot('customer', cleanKey);
 }
 
 export async function bootStaffPage(pageKey, mountFn) {
@@ -1039,7 +1041,6 @@ export async function bootStaffPage(pageKey, mountFn) {
   await renderNav(me, cleanKey);
   startShellRealtimeSync('staff', me);
   activeCleanup = await mountFn(me);
-  captureCurrentPageSnapshot('staff', cleanKey);
 }
 
 export async function bootRiderPage(pageKey, mountFn) {
@@ -1062,7 +1063,6 @@ export async function bootRiderPage(pageKey, mountFn) {
   await renderNav(me, cleanKey);
   startShellRealtimeSync('rider', me);
   activeCleanup = await mountFn(me);
-  captureCurrentPageSnapshot('rider', cleanKey);
 }
 
 export async function bootAdminPage(pageKey, mountFn) {
@@ -1084,5 +1084,4 @@ export async function bootAdminPage(pageKey, mountFn) {
   preloadRoleModules('admin', me);
   await renderNav(me, cleanKey);
   activeCleanup = await mountFn(me);
-  captureCurrentPageSnapshot('admin', cleanKey);
 }
