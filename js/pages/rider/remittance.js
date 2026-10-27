@@ -143,10 +143,10 @@ export async function mount(me) {
               <tr style="font-size: 13px;">
                 <td style="font-weight: 700; color: var(--blue-app);">#${escapeHtml(orderNum)}</td>
                 <td style="font-weight: 600; color: #0f172a;">${escapeHtml(custName)}</td>
+                <td style="font-weight: 600; color: #0f172a;">${escapeHtml(formatPeso(o.total))}</td>
+                <td>${statusBadge}</td>
                 <td style="color: #64748b;">${escapeHtml(deliveredTime)}</td>
                 <td style="color: #64748b;">${escapeHtml(turnedOverTime)}</td>
-                <td>${statusBadge}</td>
-                <td style="text-align: right; font-weight: 700; color: #0f172a;">${escapeHtml(formatPeso(o.total))}</td>
               </tr>
             `;
           })
@@ -294,12 +294,12 @@ export async function mount(me) {
           <table class="table">
             <thead>
               <tr>
-                <th style="width: 120px;">Order</th>
-                <th style="width: 200px;">Customer</th>
-                <th style="width: 150px;">Delivered</th>
-                <th style="width: 150px;">Turned over</th>
-                <th style="width: 130px;">Status</th>
-                <th style="width: 110px; text-align: right;">Amount</th>
+                <th style="width: 110px;">Order</th>
+                <th>Customer</th>
+                <th style="width: 120px;">Amount</th>
+                <th style="width: 140px;">Status</th>
+                <th style="width: 160px;">Delivered</th>
+                <th style="width: 160px;">Turned over</th>
               </tr>
             </thead>
             <tbody>

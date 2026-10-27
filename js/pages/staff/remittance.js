@@ -465,13 +465,11 @@ export async function mount(me) {
                 </td>
                 <td style="font-weight: 600; color: #0f172a;">${escapeHtml(riderName)}</td>
                 <td>${escapeHtml(custName)}</td>
-                <td style="color: #64748b;">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</td>
+                <td style="font-weight: 600; color: #0f172a;">${escapeHtml(formatPeso(o.total))}</td>
                 <td>
                   <span class="pill pill-green" style="font-size: 11px;">Settled &amp; Reconciled</span>
                 </td>
-                <td style="text-align: right; font-weight: 800; color: #0f172a;">
-                  ${escapeHtml(formatPeso(o.total))}
-                </td>
+                <td style="color: #64748b;">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</td>
               </tr>
             `;
           })
