@@ -5,6 +5,7 @@ import {
   escapeHtml,
   formatDateShort,
   formatPeso,
+  getPesoIconSvg,
   formatTimeShort,
   getTodayManila,
   matchesDateFilter,
@@ -260,7 +261,7 @@ export async function mount(me) {
             <p class="stat-label-top">Reconciled Sales</p>
             <p class="stat-value" style="color: var(--ink-navy); font-size: 20px;">${formatPeso(remittance.settledCash || 0)}</p>
           </div>
-          <span class="stat-icon" style="font-size: 18px; font-weight: 800; color: var(--muted-blue);">₱</span>
+          <span class="stat-icon">${getPesoIconSvg({ size: 18, strokeWidth: 2 })}</span>
         </div>
 
         <div class="stat-card stat-card-between">

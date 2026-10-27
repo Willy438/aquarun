@@ -5,6 +5,7 @@ import {
   confirmModal,
   escapeHtml,
   formatPeso,
+  getPesoIconSvg,
   setBusy,
   showToast,
 } from '../../core/ui.js';
@@ -170,8 +171,8 @@ export async function mount() {
                   <input class="input" id="prod-unit-single" type="text" value="${escapeHtml(product?.unit || 'container')}" />
                 </div>
               </div>
-              <div class="notice" id="single-type-notice" style="margin-top: 6px; font-size: 12px; line-height: 1.5; padding: 10px 12px; background: #fefce8; border-color: #fef08a; color: #854d0e;">
-                <strong>Sold Outright:</strong> Clean dry container delivered without water. Customers receive <strong>+1 empty bottle balance</strong> upon delivery.
+              <div class="notice" id="single-type-notice" style="margin-top: 6px; font-size: 12px; line-height: 1.5; padding: 10px 12px; background: var(--brand-soft, #ebf2ff); border: 1px solid #bfdbfe; color: var(--ink-navy, #0f172a);">
+                <strong style="color: var(--blue-app, #1d5bd6);">Sold Outright:</strong> Clean dry container delivered without water. Customers receive <strong>+1 empty bottle balance</strong> upon delivery.
               </div>
             </div>
 
@@ -205,13 +206,15 @@ export async function mount() {
 
               <div class="prod-photo-preview-box${currentPhotoData ? ' has-image' : ''}" id="prod-photo-dropzone">
                 <canvas class="prod-crop-canvas" id="prod-crop-canvas" width="${CROP_WIDTH}" height="${CROP_HEIGHT}" hidden></canvas>
-                <span class="prod-crop-badge" id="prod-crop-badge" hidden>Drag photo to reposition · Scroll to zoom</span>
                 <div class="prod-photo-placeholder" id="prod-photo-placeholder">
                   ${getGallonIconSvg()}
                   <span>Click or drop a photo to upload</span>
                   <small>PNG, JPG, or WEBP · Drag &amp; zoom to crop after uploading</small>
                 </div>
               </div>
+              <p class="prod-crop-hint" id="prod-crop-badge" hidden>
+                Drag photo to reposition · Scroll to zoom
+              </p>
 
               <div class="prod-crop-controls" id="prod-crop-controls" hidden>
                 <div class="prod-zoom-row">
@@ -583,7 +586,7 @@ export async function mount() {
       backdrop.querySelector('#prod-price')?.focus();
       backdrop.querySelector('#prod-price')?.select();
     } else if (focusField === 'photo') {
-      uploadBtn?.focus();
+      dropzone?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     } else {
       backdrop.querySelector('#prod-name')?.focus();
     }
@@ -928,11 +931,64 @@ export async function mount() {
     swapInput?.select();
   }
 
+  let searchQuery = '';
+  let activeFilter = 'all';
+  let currentPage = 1;
+  const pageSize = 10;
+
   function renderView() {
-    const cardsHtml =
-      products.length === 0
-        ? `<div class="card"><p class="text-muted">No products added yet. Click "+ Add product" to create one.</p></div>`
-        : products
+    // 1. Filter products based on search and category tabs
+    const q = searchQuery.trim().toLowerCase();
+    let filtered = products.slice();
+
+    if (q) {
+      filtered = filtered.filter((p) => {
+        const name = (p.name || '').toLowerCase();
+        const unit = (p.unit || '').toLowerCase();
+        const cat = p.is_returnable !== false ? 'refill returnable swap' : 'empty container sold outright';
+        return name.includes(q) || unit.includes(q) || cat.includes(q);
+      });
+    }
+
+    if (activeFilter === 'refill') {
+      filtered = filtered.filter((p) => p.is_returnable !== false);
+    } else if (activeFilter === 'outright') {
+      filtered = filtered.filter((p) => p.is_returnable === false);
+    } else if (activeFilter === 'active') {
+      filtered = filtered.filter((p) => p.is_active !== false);
+    } else if (activeFilter === 'hidden') {
+      filtered = filtered.filter((p) => p.is_active === false);
+    }
+
+    // Counts for filter pills
+    const allCount = products.length;
+    const refillCount = products.filter((p) => p.is_returnable !== false).length;
+    const outrightCount = products.filter((p) => p.is_returnable === false).length;
+    const activeCount = products.filter((p) => p.is_active !== false).length;
+    const hiddenCount = products.filter((p) => p.is_active === false).length;
+
+    // Pagination calculations
+    const totalFiltered = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(totalFiltered / pageSize));
+    if (currentPage > totalPages) currentPage = totalPages;
+    const startIndex = (currentPage - 1) * pageSize;
+    const pagedProducts = filtered.slice(startIndex, startIndex + pageSize);
+
+    // Build Table Body Rows
+    const rowsHtml =
+      totalFiltered === 0
+        ? `
+          <tr>
+            <td colspan="5">
+              <div class="prod-table-empty">
+                <h3>No products found</h3>
+                <p>${searchQuery ? 'Try clearing your search or choosing a different filter tab.' : 'No products have been added yet.'}</p>
+                ${searchQuery ? '<button type="button" class="btn btn-secondary btn-sm" id="btn-clear-prod-search" style="margin-top: 8px;">Clear search</button>' : ''}
+              </div>
+            </td>
+          </tr>
+        `
+        : pagedProducts
             .map((prod) => {
               const isActive = Boolean(prod.is_active);
               const isReturnable = prod.is_returnable !== false;
@@ -940,108 +996,106 @@ export async function mount() {
                 ? `<span class="pill pill-success">Active</span>`
                 : `<span class="pill pill-neutral">Hidden</span>`;
               const returnablePill = isReturnable
-                ? `<span class="pill pill-info">Returnable</span>`
-                : `<span class="pill pill-neutral">Sold outright</span>`;
+                ? `<span class="pill pill-info">Returnable Refill</span>`
+                : `<span class="pill pill-neutral">Sold Outright</span>`;
               const newGallonPrice = Number(
                 prod.new_container_price ?? (isReturnable ? Number(prod.price || 25) + 125 : prod.price)
               );
               const emptyContainerPrice = Math.max(25, newGallonPrice - Number(prod.price || 0));
               const subtitle = isReturnable
-                ? `Swap refill · New gallon + water: ${formatPeso(newGallonPrice)}`
-                : 'Sold outright · No empty container return';
+                ? 'Standard 5-gallon refill'
+                : 'Sold outright · No container return';
               const hasPhoto = Boolean(prod.photo_url);
 
-              const artInner = hasPhoto
-                ? `<img class="admin-product-art-img" src="${escapeHtml(prod.photo_url)}" alt="${escapeHtml(prod.name)}" />`
-                : `
-                  <div class="admin-product-art-circle">
-                    ${getGallonIconSvg()}
-                  </div>
-                `;
+              const thumbInner = hasPhoto
+                ? `<img class="prod-table-thumb-img" src="${escapeHtml(prod.photo_url)}" alt="${escapeHtml(prod.name)}" />`
+                : `<div class="prod-table-thumb-fallback">${getGallonIconSvg()}</div>`;
 
               return `
-                <article class="admin-product-card${isActive ? '' : ' is-hidden-prod'}">
-                  <div class="admin-product-art${hasPhoto ? ' has-photo' : ''}" data-edit-photo="${escapeHtml(prod.id)}" title="Click to upload, crop, or change product photo">
-                    ${artInner}
-                    <span class="admin-product-art-overlay">
-                      ${getCameraIconSvg()} ${hasPhoto ? 'Adjust / Change photo' : 'Upload photo'}
-                    </span>
-                  </div>
-                  <div class="admin-product-body">
-                    <div class="admin-product-top">
-                      <div>
-                        <h3 class="admin-product-title">${escapeHtml(prod.name)}</h3>
-                        <p class="admin-product-sub">${escapeHtml(subtitle)}</p>
+                <tr class="${isActive ? '' : 'is-hidden-row'}">
+                  <!-- Product: 1:1 Photo & Title -->
+                  <td>
+                    <div class="prod-table-product-cell">
+                      <div class="prod-table-thumb-wrap" data-edit-photo="${escapeHtml(prod.id)}" title="Click to view or crop photo">
+                        ${thumbInner}
+                        <span class="prod-table-thumb-hover">${getCameraIconSvg()}</span>
                       </div>
-                      <div class="admin-action-btns">
-                        ${returnablePill}
-                        ${statusPill}
+                      <div class="prod-table-info">
+                        <span class="prod-table-name">${escapeHtml(prod.name)}</span>
+                        <span class="prod-table-sub">${escapeHtml(subtitle)}</span>
                       </div>
                     </div>
+                  </td>
 
-                    <div class="admin-product-price-row">
-                      <div class="admin-product-pricing-box">
-                        <div class="admin-price-chip">
-                          <span class="price-label">${isReturnable ? 'Swap refill:' : 'Price:'}</span>
-                          <strong class="price-val">${escapeHtml(formatPeso(prod.price))}</strong>
+                  <!-- Category -->
+                  <td>
+                    ${returnablePill}
+                  </td>
+
+                  <!-- Pricing Details -->
+                  <td>
+                    <div class="prod-table-pricing">
+                      <div class="prod-price-chip">
+                        <span class="chip-label">${isReturnable ? 'Swap refill:' : 'Price:'}</span>
+                        <strong class="chip-val">${escapeHtml(formatPeso(prod.price))}</strong>
+                      </div>
+                      ${
+                        isReturnable
+                          ? `
+                        <div class="prod-price-chip">
+                          <span class="chip-label">New gallon:</span>
+                          <strong class="chip-val">${escapeHtml(formatPeso(newGallonPrice))}</strong>
                         </div>
-                        ${
-                          isReturnable
-                            ? `
-                          <div class="admin-price-chip">
-                            <span class="price-label">New gallon + water:</span>
-                            <strong class="price-val">${escapeHtml(formatPeso(newGallonPrice))}</strong>
-                          </div>
-                          <div class="admin-price-chip">
-                            <span class="price-label">Empty container:</span>
-                            <strong class="price-val">${escapeHtml(formatPeso(emptyContainerPrice))}</strong>
-                          </div>
-                        `
-                            : `
-                          <div class="admin-price-chip">
-                            <span class="price-label">Unit:</span>
-                            <strong class="price-val">per ${escapeHtml(prod.unit || 'piece')}</strong>
-                          </div>
-                        `
-                        }
-                      </div>
-
-                      <div class="admin-product-switch-row">
-                        <span>Visibility:</span>
-                        <button
-                          type="button"
-                          class="admin-switch${isActive ? ' is-on' : ''}"
-                          data-toggle-prod="${escapeHtml(prod.id)}"
-                          aria-label="Toggle product visibility"
-                          title="${isActive ? 'Hide from customer catalog' : 'Show in customer catalog'}"
-                        ></button>
-                      </div>
+                        <div class="prod-price-chip">
+                          <span class="chip-label">Container:</span>
+                          <strong class="chip-val">${escapeHtml(formatPeso(emptyContainerPrice))}</strong>
+                        </div>
+                      `
+                          : `
+                        <div class="prod-price-chip">
+                          <span class="chip-label">Unit:</span>
+                          <strong class="chip-val">per ${escapeHtml(prod.unit || 'piece')}</strong>
+                        </div>
+                      `
+                      }
                     </div>
+                  </td>
 
-                    <div class="admin-product-actions">
+                  <!-- Visibility Toggle -->
+                  <td style="text-align: center;">
+                    <div class="prod-table-vis-cell">
+                      <button
+                        type="button"
+                        class="admin-switch${isActive ? ' is-on' : ''}"
+                        data-toggle-prod="${escapeHtml(prod.id)}"
+                        aria-label="Toggle product visibility"
+                        title="${isActive ? 'Hide from customer catalog' : 'Show in customer catalog'}"
+                      ></button>
+                      ${statusPill}
+                    </div>
+                  </td>
+
+                  <!-- Actions -->
+                  <td style="text-align: right;">
+                    <div class="prod-table-actions">
                       <button type="button" class="btn btn-primary btn-sm" data-quick-price="${escapeHtml(prod.id)}">Edit prices</button>
-                      <button type="button" class="btn btn-secondary btn-sm" data-edit-prod="${escapeHtml(prod.id)}">Full details</button>
-                      <button type="button" class="btn btn-secondary btn-sm" data-edit-photo="${escapeHtml(prod.id)}">${hasPhoto ? 'Photo' : 'Upload photo'}</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-edit-prod="${escapeHtml(prod.id)}">Details</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-edit-photo="${escapeHtml(prod.id)}">${hasPhoto ? 'Photo' : 'Upload'}</button>
                     </div>
-                  </div>
-                </article>
+                  </td>
+                </tr>
               `;
             })
             .join('');
 
     content.innerHTML = `
       <div class="stack-lg">
-        <!-- Delivery service charge (AT TOP FOR EASY ACCESS) -->
+        <!-- Delivery service charge (with Thin Peso Icon) -->
         <section class="card delivery-charge-top-card">
           <div class="delivery-charge-top-inner">
             <div class="delivery-charge-top-left">
               <span class="delivery-charge-top-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="1" y="3" width="15" height="13"></rect>
-                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
-                  <circle cx="5.5" cy="18.5" r="2.5"></circle>
-                  <circle cx="18.5" cy="18.5" r="2.5"></circle>
-                </svg>
+                ${getPesoIconSvg({ size: 20, strokeWidth: 2 })}
               </span>
               <div>
                 <h2 class="card-title" style="font-size: 15px; margin: 0 0 2px 0;">Delivery service charge</h2>
@@ -1050,41 +1104,164 @@ export async function mount() {
             </div>
             <form class="service-charge-inline-form" id="service-charge-form">
               <label class="label" for="service-charge-input" style="font-size: 13px; font-weight: 700; margin: 0; white-space: nowrap;">Charge per order:</label>
-              <input
-                class="input"
-                id="service-charge-input"
-                type="text"
-                value="₱${Number(serviceCharge || 0).toFixed(0)}"
-                style="width: 100px; min-height: 40px; text-align: center; font-weight: 800; font-size: 14px;"
-                required
-              />
+              <div class="charge-input-wrap">
+                <span class="charge-input-prefix">
+                  ${getPesoIconSvg({ size: 14, strokeWidth: 2 })}
+                </span>
+                <input
+                  class="input charge-input-field"
+                  id="service-charge-input"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value="${Number(serviceCharge || 0).toFixed(0)}"
+                  required
+                />
+              </div>
               <button type="submit" class="btn btn-primary btn-sm" id="btn-save-charge" style="min-height: 40px; padding: 0 18px;">Save</button>
             </form>
           </div>
         </section>
 
-        <!-- Horizontal 1:1 Product Cards Grid -->
-        <div class="admin-products-grid">
-          ${cardsHtml}
+        <!-- Search & Filter Toolbar -->
+        <div class="prod-table-toolbar">
+          <div class="prod-search-field">
+            <span class="prod-search-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+            </span>
+            <input
+              type="search"
+              class="input prod-search-input"
+              id="prod-search-input"
+              placeholder="Search products by name or type..."
+              value="${escapeHtml(searchQuery)}"
+            />
+          </div>
+
+          <div class="prod-filter-tabs" id="prod-filter-tabs">
+            <button type="button" class="prod-filter-tab ${activeFilter === 'all' ? 'is-active' : ''}" data-filter="all">
+              All <span class="tab-count">${allCount}</span>
+            </button>
+            <button type="button" class="prod-filter-tab ${activeFilter === 'refill' ? 'is-active' : ''}" data-filter="refill">
+              Refills <span class="tab-count">${refillCount}</span>
+            </button>
+            <button type="button" class="prod-filter-tab ${activeFilter === 'outright' ? 'is-active' : ''}" data-filter="outright">
+              Sold outright <span class="tab-count">${outrightCount}</span>
+            </button>
+            <button type="button" class="prod-filter-tab ${activeFilter === 'active' ? 'is-active' : ''}" data-filter="active">
+              Active <span class="tab-count">${activeCount}</span>
+            </button>
+            <button type="button" class="prod-filter-tab ${activeFilter === 'hidden' ? 'is-active' : ''}" data-filter="hidden">
+              Hidden <span class="tab-count">${hiddenCount}</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Professional Data Table -->
+        <div class="card prod-table-card">
+          <div class="prod-table-responsive">
+            <table class="prod-table">
+              <thead>
+                <tr>
+                  <th style="width: 280px;">Product</th>
+                  <th style="width: 150px;">Category</th>
+                  <th>Pricing details</th>
+                  <th style="width: 140px; text-align: center;">Visibility</th>
+                  <th style="width: 220px; text-align: right;">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rowsHtml}
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Pagination Footer -->
+          ${
+            totalFiltered > 0
+              ? `
+            <div class="prod-table-pagination">
+              <span class="pagination-info">
+                Showing <strong>${startIndex + 1}–${Math.min(startIndex + pageSize, totalFiltered)}</strong> of <strong>${totalFiltered}</strong> products
+              </span>
+              <div class="pagination-controls">
+                <button type="button" class="btn btn-light btn-sm" id="prod-prev-page" ${currentPage <= 1 ? 'disabled' : ''}>
+                  ← Previous
+                </button>
+                <span class="pagination-page-label">Page ${currentPage} of ${totalPages}</span>
+                <button type="button" class="btn btn-light btn-sm" id="prod-next-page" ${currentPage >= totalPages ? 'disabled' : ''}>
+                  Next →
+                </button>
+              </div>
+            </div>
+          `
+              : ''
+          }
         </div>
       </div>
     `;
 
+    // Bind Search Input
+    const searchInput = content.querySelector('#prod-search-input');
+    searchInput?.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      currentPage = 1;
+      renderView();
+      // Keep search focused
+      const updatedInput = content.querySelector('#prod-search-input');
+      if (updatedInput) {
+        updatedInput.focus();
+        updatedInput.setSelectionRange(updatedInput.value.length, updatedInput.value.length);
+      }
+    });
+
+    content.querySelector('#btn-clear-prod-search')?.addEventListener('click', () => {
+      searchQuery = '';
+      currentPage = 1;
+      renderView();
+    });
+
+    // Bind Filter Tabs
+    content.querySelectorAll('[data-filter]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        activeFilter = tab.getAttribute('data-filter') || 'all';
+        currentPage = 1;
+        renderView();
+      });
+    });
+
+    // Bind Pagination
+    content.querySelector('#prod-prev-page')?.addEventListener('click', () => {
+      if (currentPage > 1) {
+        currentPage--;
+        renderView();
+      }
+    });
+
+    content.querySelector('#prod-next-page')?.addEventListener('click', () => {
+      if (currentPage < totalPages) {
+        currentPage++;
+        renderView();
+      }
+    });
+
     // Fallback to gallon icon if a custom photo URL fails to load
-    content.querySelectorAll('.admin-product-art-img').forEach((img) => {
+    content.querySelectorAll('.prod-table-thumb-img').forEach((img) => {
       img.addEventListener('error', () => {
-        const holder = img.closest('.admin-product-art');
+        const holder = img.closest('.prod-table-thumb-wrap');
         if (!holder) return;
-        holder.classList.remove('has-photo');
         img.replaceWith(
           Object.assign(document.createElement('div'), {
-            className: 'admin-product-art-circle',
+            className: 'prod-table-thumb-fallback',
             innerHTML: getGallonIconSvg(),
           })
         );
       });
     });
 
+    // Toggle Product Visibility
     content.querySelectorAll('[data-toggle-prod]').forEach((sw) => {
       sw.addEventListener('click', async () => {
         const id = sw.getAttribute('data-toggle-prod');
@@ -1117,6 +1294,7 @@ export async function mount() {
       });
     });
 
+    // Quick Price Modal
     content.querySelectorAll('[data-quick-price]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-quick-price');
@@ -1125,6 +1303,7 @@ export async function mount() {
       });
     });
 
+    // Full Details Modal
     content.querySelectorAll('[data-edit-prod]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-edit-prod');
@@ -1133,6 +1312,7 @@ export async function mount() {
       });
     });
 
+    // Photo Modal
     content.querySelectorAll('[data-edit-photo]').forEach((el) => {
       el.addEventListener('click', () => {
         const id = el.getAttribute('data-edit-photo');
@@ -1141,6 +1321,7 @@ export async function mount() {
       });
     });
 
+    // Delivery Service Charge Form
     const chargeForm = content.querySelector('#service-charge-form');
     const chargeInput = content.querySelector('#service-charge-input');
     const saveChargeBtn = content.querySelector('#btn-save-charge');

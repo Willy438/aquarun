@@ -589,7 +589,7 @@
 }
 
 .pipeline-fill.is-amber {
-  background: #d97706;
+  background: var(--blue-app, #1d5bd6);
 }
 
 .pipeline-fill.is-green {
@@ -650,14 +650,10 @@
   color: var(--success-text);
 }
 
-.dash-avatar.is-amber {
-  background: var(--warning-bg);
-  color: var(--warning-text);
-}
-
+.dash-avatar.is-amber,
 .dash-avatar.is-purple {
-  background: #ede9fe;
-  color: #5b21b6;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
 }
 
 .dash-rider-name {

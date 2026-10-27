@@ -1,4 +1,7 @@
 // Toast, modal, date and peso formatting.
+export function getPesoIconSvg({ size = 20, strokeWidth = 2, className = '' } = {}) {
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round" class="${className}" style="display:inline-block;vertical-align:middle;"><path d="M6 3h7a5 5 0 0 1 0 10H6V3z"/><path d="M6 21V3"/><path d="M3 7h15"/><path d="M3 11h15"/></svg>`;
+}
 export function formatPeso(value, { decimals = false } = {}) {
   const num = Number(value ?? 0);
   const hasCents = Math.round(num * 100) % 100 !== 0;

@@ -64,7 +64,7 @@
 }
 
 .slot-cap-fill.is-full {
-  background: #d97706;
+  background: var(--blue-app, #1d5bd6);
 }
 
 .slot-cap-fill.is-closed {
