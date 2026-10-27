@@ -320,7 +320,7 @@ export async function mount(me) {
       }
       if (totalItems > slotRemaining) {
         showToast(
-          `This delivery window only has ${slotRemaining} remaining ${slotRemaining === 1 ? 'spot' : 'spots'} (max capacity: ${slotMax}). Please adjust your order quantity.`,
+          `Window limit: only ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} available for this time slot.`,
           'warning'
         );
       }
@@ -611,7 +611,7 @@ export async function mount(me) {
       hintEl.textContent = 'This delivery window has passed for today. Please pick a later window or tomorrow.';
       hintEl.style.color = '#d97706';
     } else if (currentTotalItems > remaining) {
-      hintEl.innerHTML = `<span style="color: #dc2626; font-weight: 700;">Capacity limit exceeded:</span> This window only has <strong>${remaining} ${remaining === 1 ? 'spot' : 'spots'} remaining</strong> (window limit: ${maxOrders}), but your order has <strong>${currentTotalItems} items</strong>. Please reduce quantity or choose another window.`;
+      hintEl.innerHTML = `<span style="color: #dc2626; font-weight: 700;">Over limit:</span> Only <strong>${remaining} ${remaining === 1 ? 'item' : 'items'}</strong> left for this window (${currentTotalItems} in cart).`;
     } else if (remaining <= 3) {
       hintEl.textContent = `Window capacity: High demand · only ${remaining} ${remaining === 1 ? 'spot' : 'spots'} left (${booked}/${maxOrders} booked).`;
       hintEl.style.color = '#b45309';
@@ -1027,8 +1027,7 @@ export async function mount(me) {
         drawerCapacityNoticeEl.hidden = false;
       }
     } else if (isCapacityExceeded) {
-      const slotLabel = selectedSlot?.label ? selectedSlot.label.replace(/\s*-\s*/g, '–') : 'Selected window';
-      const msg = `<strong>Delivery Slot Capacity Exceeded</strong>The delivery window "<strong>${escapeHtml(slotLabel)}</strong>" only has <strong>${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} remaining</strong> (capacity limit: ${slotMax}, ${slotBooked} booked). Your order contains <strong>${totalOrderItems} items</strong>. Please reduce your order to at most <strong>${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}</strong>, or select another delivery window or date.`;
+      const msg = `<div class="slot-capacity-title">Window limit: max ${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}</div>Your cart has ${totalOrderItems} items. Please reduce to ${slotRemaining} or choose another time slot.`;
       if (capacityNoticeEl) {
         capacityNoticeEl.innerHTML = msg;
         capacityNoticeEl.hidden = false;
@@ -1068,7 +1067,7 @@ export async function mount(me) {
       btnText = 'Select an available delivery slot';
       isBtnDisabled = true;
     } else if (isCapacityExceeded) {
-      btnText = `Exceeds slot capacity (max ${slotRemaining})`;
+      btnText = `Exceeds limit (max ${slotRemaining} items)`;
       isBtnDisabled = true;
     }
 
@@ -1587,9 +1586,9 @@ export async function mount(me) {
 
       if (totalOrderItems > slotRemaining) {
         await confirmModal({
-          title: 'Delivery Slot Capacity Exceeded',
-          message: `The selected delivery window "${currentSlot.label.replace(/\s*-\s*/g, '–')}" only has ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} remaining (maximum capacity: ${slotMax} orders).\n\nYour order currently has ${totalOrderItems} items, which exceeds the delivery limit for this window.\n\nPlease reduce your order quantity to at most ${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}, or select a different delivery window or date.`,
-          confirmText: 'Adjust quantity',
+          title: `Slot Limit: Max ${slotRemaining} ${slotRemaining === 1 ? 'Item' : 'Items'}`,
+          message: `This delivery window only has ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} left, but your cart has ${totalOrderItems} items.\n\nPlease reduce your order to ${slotRemaining} or pick another time slot.`,
+          confirmText: 'Adjust order',
           cancelText: 'Cancel',
         });
         renderSlotsSelect();
@@ -1654,9 +1653,9 @@ export async function mount(me) {
 
       if (totalItems > slotRemaining) {
         await confirmModal({
-          title: 'Delivery Window Capacity Exceeded',
-          message: `The selected delivery window "${selectedSlot.label.replace(/\s*-\s*/g, '–')}" only has ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} remaining (maximum capacity: ${slotMax} orders).\n\nYour order currently has ${totalItems} items, which exceeds the delivery limit for this window.\n\nPlease reduce your order quantity to at most ${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}, or select another delivery window or date.`,
-          confirmText: 'Adjust quantity',
+          title: `Slot Limit: Max ${slotRemaining} ${slotRemaining === 1 ? 'Item' : 'Items'}`,
+          message: `This delivery window only has ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} left, but your cart has ${totalItems} items.\n\nPlease reduce your order to ${slotRemaining} or pick another time slot.`,
+          confirmText: 'Adjust order',
           cancelText: 'Cancel',
         });
       }
