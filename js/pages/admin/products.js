@@ -1092,9 +1092,8 @@ export async function mount() {
                   <!-- Actions -->
                   <td style="text-align: right;">
                     <div class="prod-table-actions">
-                      <button type="button" class="btn btn-primary btn-sm" data-quick-price="${escapeHtml(prod.id)}">Edit prices</button>
-                      <button type="button" class="btn btn-secondary btn-sm" data-edit-prod="${escapeHtml(prod.id)}">Details</button>
-                      <button type="button" class="btn btn-secondary btn-sm" data-edit-photo="${escapeHtml(prod.id)}">${hasPhoto ? 'Photo' : 'Upload'}</button>
+                      <button type="button" class="btn btn-primary btn-sm" data-edit-prod="${escapeHtml(prod.id)}">Edit</button>
+                      <button type="button" class="btn btn-secondary btn-sm" data-view-prod="${escapeHtml(prod.id)}">View</button>
                     </div>
                   </td>
                 </tr>
@@ -1308,30 +1307,30 @@ export async function mount() {
       });
     });
 
-    // Quick Price Modal
-    content.querySelectorAll('[data-quick-price]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-quick-price');
-        const prod = products.find((p) => p.id === id);
-        if (prod) openQuickPriceModal(prod);
-      });
-    });
-
-    // Full Details Modal
+    // Edit Product Modal (All fields including Photo)
     content.querySelectorAll('[data-edit-prod]').forEach((btn) => {
       btn.addEventListener('click', () => {
         const id = btn.getAttribute('data-edit-prod');
-        const prod = products.find((p) => p.id === id);
-        if (prod) openProductModal(prod, { focusField: 'name' });
+        const prod = products.find((p) => String(p.id) === String(id));
+        if (prod) openProductModal(prod, { isReadOnly: false, focusField: 'name' });
       });
     });
 
-    // Photo Modal
+    // View Product Modal (Read-Only)
+    content.querySelectorAll('[data-view-prod]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-view-prod');
+        const prod = products.find((p) => String(p.id) === String(id));
+        if (prod) openProductModal(prod, { isReadOnly: true });
+      });
+    });
+
+    // Photo Thumbnail Click (Edit Modal focused on photo)
     content.querySelectorAll('[data-edit-photo]').forEach((el) => {
       el.addEventListener('click', () => {
         const id = el.getAttribute('data-edit-photo');
-        const prod = products.find((p) => p.id === id);
-        if (prod) openProductModal(prod, { focusField: 'photo' });
+        const prod = products.find((p) => String(p.id) === String(id));
+        if (prod) openProductModal(prod, { isReadOnly: false, focusField: 'photo' });
       });
     });
 
