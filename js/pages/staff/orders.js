@@ -4,7 +4,9 @@ import { subscribeStaffWorkspace } from '../../core/realtime.js';
 import {
   confirmModal,
   escapeHtml,
+  formatDateShort,
   formatPeso,
+  formatTimeShort,
   getTodayManila,
   matchesDateFilter,
   paginateList,
@@ -13,9 +15,12 @@ import {
   showToast,
 } from '../../core/ui.js';
 import {
+  formatAddressFull,
   formatSlotCompact,
+  formatSlotWindow,
   getAllOrdersForStaff,
   getEffectiveSlot,
+  getOrderItemPricingTag,
   getRiderRemittanceSummary,
   isOrderItemNewContainer,
   staffAcceptRiderRemittance,
@@ -853,3 +858,4 @@ export async function mount() {
 }
 
 bootStaffPage('orders', mount);
+
