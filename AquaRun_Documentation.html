@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>AquaRun — System Documentation & Technical Specification</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 14mm 16mm 14mm 16mm;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: #0f172a;
+      background: #ffffff;
+      line-height: 1.45;
+      font-size: 10.5pt;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .page-break {
+      page-break-before: always;
+      break-before: page;
+    }
+
+    /* Header styling */
+    .doc-header {
+      border-bottom: 2px solid #2563eb;
+      padding-bottom: 10px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+
+    .brand-title {
+      font-size: 22pt;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      color: #0f172a;
+    }
+
+    .brand-title span {
+      color: #2563eb;
+    }
+
+    .doc-subtitle {
+      font-size: 9.5pt;
+      color: #64748b;
+      margin-top: 2px;
+      font-weight: 500;
+    }
+
+    .meta-badge {
+      text-align: right;
+      font-size: 8pt;
+      color: #475569;
+      background: #f1f5f9;
+      padding: 5px 10px;
+      border-radius: 6px;
+      border: 1px solid #e2e8f0;
+      line-height: 1.35;
+    }
+
+    /* Section styling */
+    .section {
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 12pt;
+      font-weight: 700;
+      color: #0f172a;
+      letter-spacing: -0.01em;
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .section-title::before {
+      content: "";
+      display: inline-block;
+      width: 4px;
+      height: 13pt;
+      background: #2563eb;
+      border-radius: 2px;
+    }
+
+    p {
+      margin-bottom: 8px;
+      font-size: 9.2pt;
+      color: #334155;
+      line-height: 1.5;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 6px;
+      margin-bottom: 10px;
+      font-size: 8.5pt;
+    }
+
+    th, td {
+      padding: 6px 9px;
+      text-align: left;
+      border: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+
+    th {
+      background: #f8fafc;
+      font-weight: 700;
+      color: #0f172a;
+      text-transform: uppercase;
+      font-size: 7.5pt;
+      letter-spacing: 0.05em;
+    }
+
+    tr:nth-child(even) td {
+      background: #fafbfc;
+    }
+
+    /* Grids & Cards */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 9px 11px;
+    }
+
+    .card h4 {
+      font-size: 9pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+
+    .card p {
+      font-size: 8.2pt;
+      color: #475569;
+      margin: 0;
+      line-height: 1.4;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 7pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }
+
+    .badge-blue { background: #dbeafe; color: #1e40af; }
+    .badge-green { background: #dcfce7; color: #166534; }
+    .badge-purple { background: #f3e8ff; color: #6b21a8; }
+    .badge-amber { background: #fef3c7; color: #92400e; }
+
+    /* Flow Step Blocks */
+    .flow-step {
+      border-left: 3px solid #2563eb;
+      padding: 6px 0 6px 12px;
+      margin-bottom: 8px;
+      background: #f8fafc;
+      border-radius: 0 6px 6px 0;
+    }
+
+    .flow-step small {
+      display: block;
+      color: #2563eb;
+      font-size: 7.2pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .flow-step h4 {
+      font-size: 9.2pt;
+      font-weight: 700;
+      color: #0f172a;
+      margin: 1px 0 2px 0;
+    }
+
+    .flow-step p {
+      font-size: 8.3pt;
+      color: #475569;
+      margin: 0;
+      line-height: 1.35;
+    }
+
+    ul {
+      margin-left: 18px;
+      margin-bottom: 6px;
+      font-size: 8.8pt;
+      color: #334155;
+    }
+
+    li {
+      margin-bottom: 3px;
+    }
+
+    .code-pill {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 7.8pt;
+      background: #f1f5f9;
+      padding: 1px 4px;
+      border-radius: 3px;
+      border: 1px solid #e2e8f0;
+      color: #0f172a;
+    }
+
+    .footer-bar {
+      margin-top: 18px;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.5pt;
+      color: #94a3b8;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ==================== PAGE 1: OVERVIEW & TECH STACK ==================== -->
+  <div class="doc-header">
+    <div>
+      <div class="brand-title">Aqua<span>Run</span></div>
+      <div class="doc-subtitle">Automated Community Water Refill, Dispatch &amp; Bottle Ledger System</div>
+    </div>
+    <div class="meta-badge">
+      <strong>System Documentation</strong><br>
+      Version 2.0 &middot; October 2026<br>
+      University of Caloocan City
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">1. System Summary &amp; Purpose</div>
+    <p>
+      <strong>AquaRun</strong> is a lightweight, responsive web application engineered specifically for community water refilling stations operating within urban Philippine settings (specifically Caloocan City). The system automates and integrates five essential refilling station operations:
+    </p>
+    <div class="grid-4">
+      <div class="card">
+        <h4>Online Refill Booking</h4>
+        <p>Customer self-service ordering for 5-gallon container refills and bottle purchases with flexible slot scheduling.</p>
+      </div>
+      <div class="card">
+        <h4>Station Workflow</h4>
+        <p>Order queue monitoring, slot window capacity balancing, and washing/refilling station status transitions.</p>
+      </div>
+      <div class="card">
+        <h4>Batch Dispatch</h4>
+        <p>Barangay-clustered order assignment for riders, optimizing multi-stop neighborhood delivery routes.</p>
+      </div>
+      <div class="card">
+        <h4>Bottle &amp; Cash Ledger</h4>
+        <p>Exact gallon exchange tracking (delivered vs empties) and two-stage cash turnover reconciliation.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">2. Complete Technology Stack</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 20%;">Component</th>
+          <th style="width: 32%;">Technology / Library</th>
+          <th>Implementation Details &amp; Architectural Role</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Frontend Architecture</strong></td>
+          <td>Vanilla JavaScript (ES Modules), HTML5, CSS3 Variables</td>
+          <td>
+            Pure, zero-dependency client architecture. Modular ES6 imports (<span class="code-pill">/core</span>, <span class="code-pill">/services</span>, <span class="code-pill">/pages</span>) offering ultra-fast page load times (&lt;0.5s) without bundle compilation or virtual DOM overhead.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Database &amp; Storage</strong></td>
+          <td>Supabase (PostgreSQL 15+ Cluster)</td>
+          <td>
+            Relational storage with strict foreign keys, atomic transactions, row-level locks (<span class="code-pill">FOR UPDATE</span>), check constraints, and computed SQL views for balances and sales.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Authentication</strong></td>
+          <td>Supabase Auth (GoTrue) + JWT</td>
+          <td>
+            Stateless JSON Web Tokens with client-side session caching, encrypted credentials, automated email confirmation, and metadata-driven user profiling.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Access Control (RBAC)</strong></td>
+          <td>PostgreSQL Row Level Security (RLS)</td>
+          <td>
+            SQL security policies enforced natively at the database level. Ensures customer isolation and prevents unauthorized role impersonation.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Real-Time Synchronization</strong></td>
+          <td>Supabase Realtime (WebSockets) + Web BroadcastChannel</td>
+          <td>
+            PostgreSQL change-data-capture (CDC) pushes live updates to connected clients, while the HTML5 BroadcastChannel API synchronizes state across open browser tabs instantly.
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Cloud Hosting &amp; CI/CD</strong></td>
+          <td>Vercel &amp; Netlify Edge Infrastructure</td>
+          <td>
+            Atomic Git deployments from <span class="code-pill">main</span> branch with global edge routing and HTTP cache headers to prevent stale assets.
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">3. Architectural Principles</div>
+    <div class="grid-3">
+      <div class="card">
+        <h4>Jamstack &amp; Serverless</h4>
+        <p>Static markup served from edge CDN paired with serverless PostgreSQL queries via client SDK—zero backend server maintenance.</p>
+      </div>
+      <div class="card">
+        <h4>ACID Data Guarantees</h4>
+        <p>Inventory, bottle balances, and remittances are processed in atomic PL/pgSQL procedures to eliminate race conditions.</p>
+      </div>
+      <div class="card">
+        <h4>Mobile-First Responsive</h4>
+        <p>Optimized for mobile touchscreens (rider delivery runsheet &amp; customer checkout) with zero horizontal overflow.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span>AquaRun &middot; System Documentation &middot; Section 1 &ndash; 3</span>
+    <span>Page 1 of 4</span>
+  </div>
+
+  <!-- ==================== PAGE 2: APIS & ROLES ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div>
+      <div class="brand-title">Aqua<span>Run</span></div>
+      <div class="doc-subtitle">APIs, Security Protocols &amp; Role Access Matrix</div>
+    </div>
+    <div class="meta-badge">
+      <strong>System Documentation</strong><br>
+      Security &amp; Integration Specs
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">4. APIs &amp; Communication Protocols</div>
+    <div class="grid-2">
+      <div class="card">
+        <h4>1. Supabase Client SDK (@supabase/supabase-js)</h4>
+        <p>Connects securely via public anon key to perform parameterized REST queries, schema filtering, pagination, and multi-table joins.</p>
+      </div>
+      <div class="card">
+        <h4>2. Database RPC (Remote Procedure Calls)</h4>
+        <p>Calls stored SQL routines for transactional operations: <span class="code-pill">create_order()</span>, <span class="code-pill">mark_ready()</span>, <span class="code-pill">record_delivery()</span>, <span class="code-pill">staff_approve_remittance()</span>.</p>
+      </div>
+      <div class="card">
+        <h4>3. Browser BroadcastChannel API</h4>
+        <p>Communicates on channel <span class="code-pill">aquarun_sync</span>. When staff or admin updates products, orders, or slots, all open tabs refresh live data instantly.</p>
+      </div>
+      <div class="card">
+        <h4>4. Native Device Telephony Protocols</h4>
+        <p>Integrates <span class="code-pill">tel:+63...</span> and <span class="code-pill">sms:+63...</span> URIs on rider delivery cards for instant voice and SMS customer coordination without leaving the web app.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">5. Role-Based Access Control (RBAC) Matrix</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Role</th>
+          <th>Workspace Base</th>
+          <th>Allowed Capabilities</th>
+          <th>Data Access Boundaries</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-blue">Customer</span></td>
+          <td><span class="code-pill">/customer/*.html</span></td>
+          <td>
+            Browse catalog, save delivery addresses, submit refill bookings, track active orders in real time, view container balance ledger.
+          </td>
+          <td>Can only read and modify records where <span class="code-pill">customer_id = auth.uid()</span>.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-green">Station Staff</span></td>
+          <td><span class="code-pill">/staff/*.html</span></td>
+          <td>
+            Confirm orders, adjust scheduled slots, fast-track refilling, batch assign orders to active riders, verify and accept cash remittances.
+          </td>
+          <td>Operational access across all station orders and rider remittances; cannot modify administrative settings.</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-amber">Rider</span></td>
+          <td><span class="code-pill">/rider/*.html</span></td>
+          <td>
+            View assigned delivery run sheet, toggle station availability, log delivered gallons and collected empties, submit cash remittance.
+          </td>
+          <td>Can only read and update orders assigned directly to their rider account (<span class="code-pill">rider_id = auth.uid()</span>).</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-purple">Admin</span></td>
+          <td><span class="code-pill">/admin/*.html</span></td>
+          <td>
+            Executive analytics, 7-day/30-day hourly pattern charts, revenue reports, slot capacity controls, product catalog pricing, staff/rider accounts.
+          </td>
+          <td>Full administrative privileges across all system tables, configurations, and user records.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">6. Security &amp; Data Integrity Safeguards</div>
+    <ul>
+      <li><strong>PostgreSQL Row Level Security (RLS):</strong> Every database table has RLS enabled with distinct policies for <span class="code-pill">select</span>, <span class="code-pill">insert</span>, <span class="code-pill">update</span>, and <span class="code-pill">delete</span>.</li>
+      <li><strong>Public Key Isolation:</strong> Only the public Supabase Anon key is bundled in client scripts. The Service Role key is strictly prohibited, ensuring zero privilege escalation risks.</li>
+      <li><strong>Atomic Ledger Triggers:</strong> Bottle balances are never manually edited; they are computed dynamically via SQL view (<span class="code-pill">customer_bottle_balance</span>) from immutable ledger transactions.</li>
+    </ul>
+  </div>
+
+  <div class="footer-bar">
+    <span>AquaRun &middot; System Documentation &middot; Section 4 &ndash; 6</span>
+    <span>Page 2 of 4</span>
+  </div>
+
+  <!-- ==================== PAGE 3: WORKFLOW LIFECYCLE ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div>
+      <div class="brand-title">Aqua<span>Run</span></div>
+      <div class="doc-subtitle">Operational Lifecycle &amp; Business Process Flow</div>
+    </div>
+    <div class="meta-badge">
+      <strong>System Documentation</strong><br>
+      Workflow Architecture
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">7. End-to-End Operational Workflow</div>
+    <div class="flow-step">
+      <small>Step 1 &middot; Order Placement (Customer)</small>
+      <h4>Customer Selects Refill Type &amp; Delivery Window</h4>
+      <p>Customer chooses water product (Round Gallon, Slim Gallon, or Bottle), specifies whether it is a standard 1:1 container swap (&#8369;30-&#8369;35) or a new gallon purchase (+container deposit), selects delivery address and preferred slot.</p>
+    </div>
+
+    <div class="flow-step">
+      <small>Step 2 &middot; Queue Ingestion &amp; Slot Confirmation (Staff)</small>
+      <h4>Station Confirms &amp; Validates Slot Capacity</h4>
+      <p>The order appears on the Staff Orders queue in real time. Staff verifies queue capacity, confirms the scheduled window, or adjusts the delivery time slot if the window is fully booked.</p>
+    </div>
+
+    <div class="flow-step">
+      <small>Step 3 &middot; Water Purification &amp; Packaging (Staff)</small>
+      <h4>Washing, Refilling &amp; Ready Status</h4>
+      <p>Staff washes and sanitizes empty containers, refills them with purified drinking water via the station's reverse osmosis/UV equipment, seals the caps, and marks the order as "Ready" for delivery.</p>
+    </div>
+
+    <div class="flow-step">
+      <small>Step 4 &middot; Smart Batch Dispatch (Staff &rarr; Rider)</small>
+      <h4>Clustering by Barangay &amp; Route Assignment</h4>
+      <p>Staff groups ready orders located in the same barangay or delivery corridor into an optimized batch run and assigns them to an active, available rider. The order transitions to "Out for Delivery".</p>
+    </div>
+
+    <div class="flow-step">
+      <small>Step 5 &middot; Doorstep Fulfillment &amp; Ledger Recording (Rider)</small>
+      <h4>Gallon Handover, Empty Collection &amp; COD Payment</h4>
+      <p>Rider delivers purified gallons to the doorstep, collects empty swapped bottles, and receives cash payment. On the mobile workbench, the rider records the exact count of delivered bottles and collected empties, creating an immutable ledger entry.</p>
+    </div>
+
+    <div class="flow-step">
+      <small>Step 6 &middot; Shift Reconciliation &amp; Remittance Turnover (Rider &rarr; Staff)</small>
+      <h4>Cash Turnover &amp; Ledger Settlement</h4>
+      <p>At the end of the shift or delivery run, the rider returns to the station and submits their cash remittance report. Station staff counts the physical cash against the digital total in the Cash &amp; Sales workbench and accepts the remittance with 1 click.</p>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">8. Specialized Business Rules</div>
+    <div class="grid-2">
+      <div class="card">
+        <h4>1:1 Empty Gallon Exchange Rule</h4>
+        <p>If a customer returns fewer empty bottles than gallons ordered, the difference is logged into their container ledger. The customer's net balance of station bottles held increases automatically.</p>
+      </div>
+      <div class="card">
+        <h4>Dual Pricing Engine</h4>
+        <p>Seamlessly handles two price points per product: Refill price (for customers providing empties) vs. Full Container Price (refill + brand new container purchase fee).</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer-bar">
+    <span>AquaRun &middot; System Documentation &middot; Section 7 &ndash; 8</span>
+    <span>Page 3 of 4</span>
+  </div>
+
+  <!-- ==================== PAGE 4: SCHEMA & DEPLOYMENT ==================== -->
+  <div class="page-break"></div>
+
+  <div class="doc-header">
+    <div>
+      <div class="brand-title">Aqua<span>Run</span></div>
+      <div class="doc-subtitle">Database Schema, Key Highlights &amp; Deployment</div>
+    </div>
+    <div class="meta-badge">
+      <strong>System Documentation</strong><br>
+      Schema &amp; Infrastructure
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">9. Relational Database Schema</div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 22%;">Table / View</th>
+          <th style="width: 10%;">Type</th>
+          <th>Columns &amp; Relational Functionality</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><span class="code-pill">profiles</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id (PK, FK auth.users), full_name, phone, role, is_active, is_available, created_at</span> &mdash; Core user identities.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">addresses</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id, customer_id (FK), label, street, barangay, city, landmark, is_default</span> &mdash; Delivery destination geodata.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">products</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id, name, description, refill_price, new_container_price, is_active</span> &mdash; Refill product catalog.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">orders</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id, order_number, customer_id (FK), rider_id (FK), status, subtotal, service_charge, total, payment_status, remittance_status</span></td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">order_items</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id, order_id (FK), product_id (FK), quantity, unit_price, is_new_container</span> &mdash; Itemized transaction details.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">bottle_ledger</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id, customer_id (FK), order_id (FK), bottles_delivered, empties_collected, recorded_by</span> &mdash; Container ledger log.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">time_slots</span></td>
+          <td>Table</td>
+          <td><span class="code-pill">id, label, start_time, end_time, max_orders, is_active</span> &mdash; Operating capacity and slot schedule.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">customer_bottle_balance</span></td>
+          <td>View</td>
+          <td>Computes net balance: <span class="code-pill">&Sigma;(bottles_delivered) - &Sigma;(empties_collected)</span> per customer profile.</td>
+        </tr>
+        <tr>
+          <td><span class="code-pill">daily_report</span></td>
+          <td>View</td>
+          <td>Calculates daily paid orders, refill sales, service charge totals, and pending cash collections.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">10. Key Innovations</div>
+    <div class="grid-2">
+      <div class="card">
+        <h4>Live Order Tracking Without AI Clutter</h4>
+        <p>Real-time visual timeline showing confirmed, refilling, out for delivery, and completed stages without generic mockups.</p>
+      </div>
+      <div class="card">
+        <h4>Two-Stage Remittance Security</h4>
+        <p>Riders submit digital remittance reports upon station return; staff must physically verify the cash before marking settled.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">11. Production Environment &amp; Hosting Specs</div>
+    <ul>
+      <li><strong>Live Production URL:</strong> <a href="https://aquarun-puce.vercel.app" style="color:#2563eb; text-decoration:none;">https://aquarun-puce.vercel.app</a></li>
+      <li><strong>Database Infrastructure:</strong> Supabase Cloud PostgreSQL Cluster (Asia-Southeast / Singapore region).</li>
+      <li><strong>Edge Invalidation:</strong> Configured with <span class="code-pill">vercel.json</span> cache-control rules ensuring zero client caching issues during deployments.</li>
+      <li><strong>Repository &amp; CI/CD:</strong> GitHub repository (<span class="code-pill">Willy438/aquarun</span>) with automatic production webhooks.</li>
+    </ul>
+  </div>
+
+  <div class="footer-bar">
+    <span>AquaRun &middot; Computer Studies &middot; University of Caloocan City</span>
+    <span>Page 4 of 4 &middot; End of Documentation</span>
+  </div>
+
+</body>
+</html>
