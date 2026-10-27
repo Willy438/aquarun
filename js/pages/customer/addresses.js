@@ -140,6 +140,8 @@ export async function mount(me) {
   let miniMap = null;
   let customerMarker = null;
   let autoPinTimeout = null;
+  let activeTypeFilter = 'all';
+  let searchKeyword = '';
 
   let stationSettings = {
     lat: 14.7565,
