@@ -74,6 +74,7 @@ export async function mount() {
     let currentLat = savedLat;
     let currentLng = savedLng;
     let currentAddress = savedAddress;
+    let savedCharge = serviceCharge;
     let currentRadiusKm = savedRadiusKm;
     let currentOpen = isStationOpen;
     let currentCharge = serviceCharge;
@@ -726,10 +727,18 @@ export async function mount() {
     });
 
     // Service Charge Input
-    document.querySelector('#service-charge-input')?.addEventListener('input', (e) => {
+    const chargeInpEl = document.querySelector('#service-charge-input');
+    chargeInpEl?.addEventListener('input', (e) => {
       currentCharge = Math.max(0, Number(e.target.value || 0));
       setUnsavedState(true);
       updateLiveLabels();
+    });
+    chargeInpEl?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const saveBtn = document.querySelector('#save-settings-btn');
+        handleSaveSettings(saveBtn);
+      }
     });
 
     async function handleSaveSettings(triggerBtn) {
@@ -746,6 +755,25 @@ export async function mount() {
           cancelText: 'Cancel',
         });
         if (!confirmed) return;
+      }
+
+      const feeChanged = Math.abs(currentCharge - savedCharge) > 0.01;
+      if (feeChanged) {
+        const confirmed = await confirmModal({
+          title: 'Update Customer Delivery Fee?',
+          message: `Delivery fee will change from ${formatPeso(savedCharge)} to ${formatPeso(currentCharge)} per order. This fee immediately applies to all customer refill orders at checkout. Continue?`,
+          confirmText: `Confirm ${formatPeso(currentCharge)} fee`,
+          cancelText: 'Keep current fee',
+          variant: 'warning',
+        });
+        if (!confirmed) {
+          currentCharge = savedCharge;
+          const chargeInp = document.querySelector('#service-charge-input');
+          if (chargeInp) chargeInp.value = String(savedCharge);
+          updateLiveLabels();
+          setUnsavedState(false);
+          return;
+        }
       }
 
       if (triggerBtn) setBusy(triggerBtn, true, 'Saving...');
@@ -765,12 +793,13 @@ export async function mount() {
         savedLng = currentLng;
         savedAddress = addressVal;
         savedRadiusKm = currentRadiusKm;
+        savedCharge = currentCharge;
         currentAddress = addressVal;
 
         setUnsavedState(false);
         updateLiveLabels();
 
-        showToast(`Settings saved! Station address: ${addressVal}`, 'success');
+        showToast(`Settings saved! Delivery fee: ${formatPeso(savedCharge)}, Station: ${addressVal}`, 'success');
       } catch (err) {
         showToast(err.message || 'Could not save settings.', 'error');
       } finally {

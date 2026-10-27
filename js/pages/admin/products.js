@@ -1391,6 +1391,21 @@ export async function mount() {
         showToast('Enter a valid delivery service charge.', 'error');
         return;
       }
+
+      if (Math.abs(amount - Number(serviceCharge || 0)) > 0.01) {
+        const confirmed = await confirmModal({
+          title: 'Update Customer Delivery Fee?',
+          message: `Delivery fee will change from ${formatPeso(serviceCharge)} to ${formatPeso(amount)} per order. This fee immediately applies to all customer refill orders at checkout. Continue?`,
+          confirmText: `Confirm ${formatPeso(amount)} fee`,
+          cancelText: 'Keep current fee',
+          variant: 'warning',
+        });
+        if (!confirmed) {
+          if (chargeInput) chargeInput.value = Number(serviceCharge || 0).toFixed(0);
+          return;
+        }
+      }
+
       setBusy(saveChargeBtn, true, 'Saving...');
       try {
         serviceCharge = await saveServiceCharge(amount);

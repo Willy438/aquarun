@@ -421,7 +421,7 @@ export async function mount() {
               return `
                 <tr>
                   <td>
-                    <span class="slot-code-badge ${codeInfo.tone}">${escapeHtml(codeInfo.code)}</span>
+                    <span class="slot-code-badge">${escapeHtml(codeInfo.code)}</span>
                   </td>
                   <td>
                     <strong style="color: #0f172a;">${escapeHtml(canonicalWindow || slot.label)}</strong>
