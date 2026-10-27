@@ -1,5 +1,5 @@
 import { getCurrentProfile, homeFor, logIn } from '../../core/auth.js';
-import { supabase } from '../../core/supabase.js';
+import { supabase } from '../../config/supabaseClient.js';
 import { enablePasswordToggles, setBusy, showToast } from '../../core/ui.js';
 
 const form = document.querySelector('#login-form');
