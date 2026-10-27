@@ -203,6 +203,62 @@ export async function mount(me) {
         </tr>
       `;
 
+    const mobileCardsHtml = paged.items.length
+      ? paged.items
+          .map((o) => {
+            const l = getLedgerEntry(o);
+            const delivered = l?.bottles_delivered ?? getOrderTotalGallons(o.items);
+            const empties = l?.empties_collected ?? 0;
+            const isPaid = o.payment_status === 'paid';
+            const customerName = o.customer?.full_name || 'Customer';
+            const dateStr = formatDateShort(o.delivered_at || o.delivery_date);
+
+            return `
+              <div class="rider-history-card is-clickable" data-delivery-id="${escapeHtml(o.id)}">
+                <div class="rider-history-card-header">
+                  <div>
+                    <span class="rider-history-card-num">#${escapeHtml(o.order_number)}</span>
+                    <span class="text-muted" style="font-size: 12px; margin-left: 6px;">${escapeHtml(dateStr)}</span>
+                  </div>
+                  <div style="display: flex; gap: 6px;">
+                    <span class="pill ${isPaid ? 'pill-green' : 'pill-amber'}">
+                      ${isPaid ? 'Paid' : 'Pending'}
+                    </span>
+                    <span class="pill ${o.status === 'completed' ? 'pill-green' : 'pill-blue'}">
+                      ${escapeHtml(STATUS_LABELS[o.status] || o.status)}
+                    </span>
+                  </div>
+                </div>
+                <div class="rider-history-card-cust">${escapeHtml(customerName)}</div>
+                <div class="rider-history-card-meta">
+                  <div class="rider-history-meta-col">
+                    <span class="rider-history-meta-label">Delivered</span>
+                    <span class="rider-history-meta-val" style="font-weight: 700; color: var(--blue-app);">${escapeHtml(delivered)} gal</span>
+                  </div>
+                  <div class="rider-history-meta-col">
+                    <span class="rider-history-meta-label">Empties</span>
+                    <span class="rider-history-meta-val" style="font-weight: 700; color: #0f766e;">${escapeHtml(empties)}</span>
+                  </div>
+                  <div class="rider-history-meta-col" style="text-align: right;">
+                    <span class="rider-history-meta-label">Total</span>
+                    <span class="rider-history-card-total">${escapeHtml(formatPeso(o.total))}</span>
+                  </div>
+                </div>
+                <div class="rider-history-card-footer">
+                  <button type="button" class="btn btn-sm btn-light" data-view-delivery="${escapeHtml(o.id)}" onclick="event.stopPropagation();" style="width: 100%;">
+                    View Details
+                  </button>
+                </div>
+              </div>
+            `;
+          })
+          .join('')
+      : `
+        <div class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+          No past deliveries match your current filters.
+        </div>
+      `;
+
     content.innerHTML = `
       <div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
@@ -318,7 +374,7 @@ export async function mount(me) {
           </div>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap desktop-only-table">
           <table class="table">
             <thead>
               <tr>
@@ -336,6 +392,10 @@ export async function mount(me) {
               ${rowsHtml}
             </tbody>
           </table>
+        </div>
+
+        <div class="rider-history-cards mobile-only-cards">
+          ${mobileCardsHtml}
         </div>
 
         ${renderPaginationHtml(paged)}
@@ -383,7 +443,7 @@ export async function mount(me) {
       });
     });
 
-    content.querySelectorAll('tr[data-delivery-id]').forEach((row) => {
+    content.querySelectorAll('[data-delivery-id]').forEach((row) => {
       row.addEventListener('click', () => {
         const id = row.dataset.deliveryId;
         const target = historyOrders.find((o) => o.id === id);
@@ -450,7 +510,7 @@ export async function mount(me) {
 
           <div>
             <p style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px; letter-spacing: 0.5px;">Orders Breakdown</p>
-            <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div style="max-height: 220px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
               <table style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0;">
                   <tr>

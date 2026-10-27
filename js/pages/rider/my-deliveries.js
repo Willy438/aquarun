@@ -528,6 +528,90 @@ export async function mount(initialMe) {
           </tr>
         `;
 
+      const upNextCardsHtml = upNextList.length
+        ? upNextList
+            .map((order, idx) => {
+              const stopNumber = idx + 2;
+              const slotText = formatSlotWindow(getEffectiveSlot(order));
+              const custName = order.customer?.full_name || 'Customer';
+              const brgyCity = [
+                order.address?.barangay && order.address.barangay !== 'N/A'
+                  ? order.address.barangay
+                  : null,
+                order.address?.city,
+              ]
+                .filter(Boolean)
+                .join(', ');
+              const distText = order._distFromHub !== null ? `${order._distFromHub} km` : '—';
+              const mapUrl = getAddressMapUrl(order.address, { navigate: true });
+
+              return `
+                <div class="route-mobile-card is-clickable" data-order-id="${escapeHtml(order.id)}">
+                  <div class="route-mobile-card-top">
+                    <span class="stop-sequence-badge">${ICONS.pin} Stop #${stopNumber} (${distText})</span>
+                    <span class="pill pill-neutral" style="font-size: 11px;">${escapeHtml(slotText)}</span>
+                  </div>
+                  <div class="route-mobile-card-main">
+                    <div class="route-mobile-cust">${escapeHtml(custName)}</div>
+                    ${brgyCity ? `<div class="route-mobile-address">${escapeHtml(brgyCity)}</div>` : ''}
+                    <div class="route-mobile-items">${escapeHtml(summarizeOrderItems(order.items))}</div>
+                  </div>
+                  <div class="route-mobile-card-footer">
+                    <div class="route-mobile-order-num">#${escapeHtml(order.order_number)} · <strong style="color: var(--blue-app);">${escapeHtml(formatPeso(order.total))}</strong></div>
+                    <a class="btn btn-sm btn-outline-blue" href="${mapUrl}" target="_blank" rel="noopener" onclick="event.stopPropagation();" style="font-size: 11.5px; padding: 4px 10px;">
+                      ${ICONS.map} Open Maps
+                    </a>
+                  </div>
+                </div>
+              `;
+            })
+            .join('')
+        : `
+          <div class="empty-state" style="padding: 24px 16px; text-align: center; color: #64748b;">
+            No other deliveries queued behind your current one.
+          </div>
+        `;
+
+      const allTodayCardsHtml = todayOrders.length
+        ? todayOrders
+            .map((order) => {
+              const slotText = formatSlotWindow(getEffectiveSlot(order));
+              const custName = order.customer?.full_name || 'Customer';
+              const statusClass =
+                order.status === 'delivered' || order.status === 'completed'
+                  ? 'pill-green'
+                  : order.status === 'out_for_delivery'
+                  ? 'pill-blue'
+                  : order.status === 'attempted'
+                  ? 'pill-amber'
+                  : 'pill-neutral';
+
+              return `
+                <div class="route-mobile-card is-clickable" data-order-id="${escapeHtml(order.id)}">
+                  <div class="route-mobile-card-top">
+                    <span class="pill ${statusClass}" style="font-size: 11px; font-weight: 700;">
+                      ${escapeHtml(STATUS_LABELS[order.status] || order.status)}
+                    </span>
+                    <span class="pill pill-neutral" style="font-size: 11px;">${escapeHtml(slotText)}</span>
+                  </div>
+                  <div class="route-mobile-card-main">
+                    <div class="route-mobile-cust">${escapeHtml(custName)}</div>
+                    <div class="route-mobile-items">${escapeHtml(summarizeOrderItems(order.items))}</div>
+                  </div>
+                  <div class="route-mobile-card-footer">
+                    <span class="route-mobile-order-num">#${escapeHtml(order.order_number)}</span>
+                    <strong style="color: var(--blue-app);">${escapeHtml(formatPeso(order.total))}</strong>
+                  </div>
+                </div>
+              `;
+            })
+            .join('')
+        : `
+          <div class="empty-state" style="padding: 24px 16px; text-align: center; color: #64748b;">
+            No orders assigned to you yet today.
+          </div>
+        `;
+
       const upNextRowsHtml = upNextList.length
         ? upNextList
             .map((order, idx) => {
@@ -686,7 +770,7 @@ export async function mount(initialMe) {
               ${
                 riderView === 'all_today'
                   ? `
-                    <div class="table-wrap">
+                    <div class="table-wrap desktop-only-table">
                       <table class="table">
                         <thead>
                           <tr>
@@ -703,10 +787,13 @@ export async function mount(initialMe) {
                         </tbody>
                       </table>
                     </div>
+                    <div class="route-mobile-cards mobile-only-cards">
+                      ${allTodayCardsHtml}
+                    </div>
                   `
                   : upNextList.length > 0
                   ? `
-                    <div class="table-wrap">
+                    <div class="table-wrap desktop-only-table">
                       <table class="table">
                         <thead>
                           <tr>
@@ -722,6 +809,9 @@ export async function mount(initialMe) {
                           ${upNextRowsHtml}
                         </tbody>
                       </table>
+                    </div>
+                    <div class="route-mobile-cards mobile-only-cards">
+                      ${upNextCardsHtml}
                     </div>
                   `
                   : `
@@ -934,7 +1024,7 @@ export async function mount(initialMe) {
 
           <div>
             <p style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px; letter-spacing: 0.5px;">Orders Breakdown</p>
-            <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div style="max-height: 220px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
               <table style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0;">
                   <tr>

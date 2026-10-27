@@ -27,7 +27,7 @@ export async function mount(me) {
         getCustomerShapeBalance(me.id).catch(() => null),
       ]);
 
-      const cardsHtml = activity.length
+      const mobileCardsHtml = activity.length
         ? activity
             .map((entry) => {
               const delivered = Number(entry.bottles_delivered || 0);
@@ -133,7 +133,7 @@ export async function mount(me) {
             <strong>1-to-1 Swap:</strong> Swap up to <strong>${escapeHtml(summary.balance)}</strong> ${Number(summary.balance) === 1 ? 'gallon' : 'gallons'} at the refill price. Extra gallons include a new container and add to your balance on delivery.
           </div>
 
-          <div class="table-wrap">
+          <div class="table-wrap desktop-only-table">
             <table class="table">
               <thead>
                 <tr>
@@ -148,6 +148,9 @@ export async function mount(me) {
                 ${rowsHtml}
               </tbody>
             </table>
+          </div>
+          <div class="bottle-cards-list">
+            ${mobileCardsHtml}
           </div>
         </div>
       `;

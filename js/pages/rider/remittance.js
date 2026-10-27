@@ -159,6 +159,73 @@ export async function mount(me) {
         </tr>
       `;
 
+    const mobileCardsHtml = paged.items.length
+      ? paged.items
+          .map((o) => {
+            const orderNum = o.order_number || '—';
+            const custName = o.customer?.full_name || 'Customer';
+            const note = String(o.slot_note || '');
+
+            const isSettled =
+              Boolean(o.rider_remitted) ||
+              note.includes('[REMITTED]') ||
+              o.remittance_status === 'approved';
+            const isSubmitted =
+              !isSettled &&
+              (o.remittance_status === 'submitted' || note.includes('[REMITTANCE_SUBMITTED]'));
+
+            const deliveredTime = o.delivered_at
+              ? `${formatDateShort(o.delivered_at)} ${formatTimeShort(o.delivered_at)}`
+              : '—';
+
+            const turnedOverTime = o.remitted_at || o.remittance_submitted_at
+              ? `${formatDateShort(o.remitted_at || o.remittance_submitted_at)} ${formatTimeShort(o.remitted_at || o.remittance_submitted_at)}`
+              : isSubmitted
+                ? 'Turnover sent'
+                : '—';
+
+            const statusBadge = isSettled
+              ? `<span class="pill pill-green" style="font-size: 11px;">Approved</span>`
+              : isSubmitted
+                ? `<span class="pill pill-amber" style="font-size: 11px;">Waiting for check</span>`
+                : `<span class="pill pill-neutral" style="font-size: 11px;">In pocket</span>`;
+
+            return `
+              <div class="rider-cash-card">
+                <div class="rider-cash-card-header">
+                  <span class="rider-cash-card-num">#${escapeHtml(orderNum)}</span>
+                  ${statusBadge}
+                </div>
+                <div class="rider-cash-card-body">
+                  <div class="rider-cash-card-row">
+                    <span class="rider-cash-card-label">Customer</span>
+                    <strong class="rider-cash-card-cust">${escapeHtml(custName)}</strong>
+                  </div>
+                  <div class="rider-cash-card-row">
+                    <span class="rider-cash-card-label">Amount</span>
+                    <strong class="rider-cash-card-amount">${escapeHtml(formatPeso(o.total))}</strong>
+                  </div>
+                  <div class="rider-cash-card-meta">
+                    <div>
+                      <span class="rider-cash-meta-label">Delivered:</span>
+                      <span>${escapeHtml(deliveredTime)}</span>
+                    </div>
+                    <div>
+                      <span class="rider-cash-meta-label">Turnover:</span>
+                      <span>${escapeHtml(turnedOverTime)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+          })
+          .join('')
+      : `
+        <div class="empty-state" style="padding: 28px 16px; text-align: center; color: #64748b;">
+          No cash records match your current filters.
+        </div>
+      `;
+
     content.innerHTML = `
       <!-- Action Banner -->
       <div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
@@ -290,7 +357,7 @@ export async function mount(me) {
           </div>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap desktop-only-table">
           <table class="table">
             <thead>
               <tr>
@@ -306,6 +373,10 @@ export async function mount(me) {
               ${rowsHtml}
             </tbody>
           </table>
+        </div>
+
+        <div class="rider-cash-cards mobile-only-cards">
+          ${mobileCardsHtml}
         </div>
 
         ${renderPaginationHtml(paged)}
@@ -401,7 +472,7 @@ export async function mount(me) {
 
           <div>
             <p style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: #64748b; margin-bottom: 6px; letter-spacing: 0.5px;">Orders Breakdown</p>
-            <div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
+            <div style="max-height: 220px; overflow: auto; border: 1px solid #e2e8f0; border-radius: 8px;">
               <table style="width: 100%; border-collapse: collapse; text-align: left;">
                 <thead style="background: #f8fafc; font-size: 11px; text-transform: uppercase; color: #64748b; border-bottom: 1px solid #e2e8f0;">
                   <tr>

@@ -265,6 +265,49 @@ export async function mount(me) {
         </tr>
       `;
 
+    const mobileCardsHtml = paged.items.length
+      ? paged.items
+          .map((order) => {
+            const slotWindow = formatSlotWindow(getEffectiveSlot(order));
+            const isActive = isActiveOrder(order);
+            const dateStr = formatDateShort(order.delivery_date || order.created_at);
+
+            return `
+              <div class="customer-order-card is-clickable" data-order-id="${escapeHtml(order.id)}" data-is-active="${isActive}">
+                <div class="customer-order-card-header">
+                  <span class="customer-order-card-num">#${escapeHtml(order.order_number)}</span>
+                  <span class="pill status-${escapeHtml(order.status)}">
+                    ${escapeHtml(STATUS_LABELS[order.status] || order.status)}
+                  </span>
+                </div>
+                <div class="customer-order-card-items">${escapeHtml(summarizeOrderItems(order.items))}</div>
+                <div class="customer-order-card-meta">
+                  <div class="customer-order-meta-col">
+                    <span class="customer-order-meta-label">Schedule</span>
+                    <span class="customer-order-meta-val">${escapeHtml(dateStr)} · ${escapeHtml(slotWindow)}</span>
+                  </div>
+                  <div class="customer-order-meta-col" style="text-align: right;">
+                    <span class="customer-order-meta-label">Total</span>
+                    <span class="customer-order-card-total">${escapeHtml(formatPeso(order.total))}</span>
+                  </div>
+                </div>
+                <div class="customer-order-card-actions">
+                  ${
+                    isActive
+                      ? `<a class="btn btn-sm btn-primary" href="track-order.html?id=${encodeURIComponent(order.id)}" onclick="event.stopPropagation();">Track order →</a>`
+                      : `<button type="button" class="btn btn-sm btn-light" data-open-receipt="${escapeHtml(order.id)}" onclick="event.stopPropagation();">View receipt</button>`
+                  }
+                </div>
+              </div>
+            `;
+          })
+          .join('')
+      : `
+        <div class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
+          No orders match your current filters.
+        </div>
+      `;
+
     content.innerHTML = `
       <div class="card" style="border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
         <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; flex-wrap: wrap; gap: 12px; display: flex; justify-content: space-between; align-items: center;">
@@ -313,7 +356,7 @@ export async function mount(me) {
           </div>
         </div>
 
-        <div class="table-wrap">
+        <div class="table-wrap desktop-only-table">
           <table class="table">
             <thead>
               <tr>
@@ -330,6 +373,10 @@ export async function mount(me) {
               ${rowsHtml}
             </tbody>
           </table>
+        </div>
+
+        <div class="customer-order-cards">
+          ${mobileCardsHtml}
         </div>
 
         ${renderPaginationHtml(paged)}
@@ -385,7 +432,7 @@ export async function mount(me) {
     });
 
     // Row clicks
-    content.querySelectorAll('tr[data-order-id]').forEach((row) => {
+    content.querySelectorAll('[data-order-id]').forEach((row) => {
       row.addEventListener('click', () => {
         const orderId = row.dataset.orderId;
         const isActive = row.dataset.isActive === 'true';

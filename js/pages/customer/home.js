@@ -212,7 +212,7 @@ export async function mount(me) {
             </div>
             <a class="card-link" href="order-history.html">View all</a>
           </div>
-          <div class="table-wrap">
+          <div class="table-wrap desktop-only-table">
             <table class="table">
               <thead>
                 <tr>
@@ -227,6 +227,9 @@ export async function mount(me) {
                 ${recentRowsHtml}
               </tbody>
             </table>
+          </div>
+          <div class="mobile-only-cards">
+            ${recentCardsHtml}
           </div>
         </div>
       `;
