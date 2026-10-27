@@ -151,3 +151,24 @@
   .decor-1 { left: 380px; top: 380px; }
   .decor-3 { left: 520px; }
 }
+
+/* Zero Layout Shift: field feedback message stays in pre-reserved gap */
+.field.field-has-feedback {
+  position: relative;
+}
+
+.field-feedback {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  font-size: 12px;
+  line-height: 1.25;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.field-row.has-feedback-row {
+  margin-bottom: 8px;
+}

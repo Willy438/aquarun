@@ -164,12 +164,20 @@ form.addEventListener('submit', async (event) => {
     }
 
     // Double check email availability via RPC before proceeding
-    const { data: alreadyRegistered } = await supabase.rpc('check_email_exists', {
-      email_to_check: emailRes.email,
-    }).catch(() => ({ data: false }));
+    let alreadyRegistered = false;
+    try {
+      const { data, error } = await supabase.rpc('check_email_exists', {
+        email_to_check: emailRes.email,
+      });
+      if (!error && data === true) {
+        alreadyRegistered = true;
+      }
+    } catch {
+      alreadyRegistered = false;
+    }
 
     if (alreadyRegistered === true) {
-      errorBox.textContent = 'This email is already registered.';
+      errorBox.textContent = 'This email is already registered. Please log in instead.';
       form.email.focus();
       setBusy(button, false);
       return;
