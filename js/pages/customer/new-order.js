@@ -57,6 +57,21 @@ export async function mount(me) {
   let customerOrders = null;
   let isStationOpen = true;
   const cart = new Map();
+  function persistCart() {
+    try {
+      const obj = Object.fromEntries(cart);
+      sessionStorage.setItem('aquarun_customer_cart', JSON.stringify(obj));
+    } catch {}
+  }
+  try {
+    const savedCart = sessionStorage.getItem('aquarun_customer_cart');
+    if (savedCart) {
+      const parsed = JSON.parse(savedCart);
+      for (const [k, v] of Object.entries(parsed)) {
+        if (v > 0) cart.set(k, Number(v));
+      }
+    }
+  } catch {}
 
   let selectedAddressId = '';
   let selectedDate = getTodayManila();
@@ -1095,11 +1110,16 @@ export async function mount(me) {
           notes: deliveryNote.trim(),
           items: itemsPayload,
         });
+        sessionStorage.removeItem('aquarun_customer_cart');
         updateCustomerActiveOrderBadge(me.id).catch(() => {});
         showToast('Order placed!', 'success');
         navigateCustomerSpa(`track-order.html?id=${encodeURIComponent(orderId)}`);
       } catch (err) {
-        showToast(err.message || 'Could not place order.', 'error');
+        let msg = err.message || 'Could not place order.';
+        if (/failed to fetch/i.test(msg) || err.name === 'TypeError') {
+          msg = 'Connection to the server timed out or session expired. Please refresh the page or sign in again.';
+        }
+        showToast(msg, 'error');
         setBusy(btn, false);
         await refreshSlotsForDate(selectedDate).catch(() => {});
         renderSlotsSelect();

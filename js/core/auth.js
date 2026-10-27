@@ -73,6 +73,27 @@ async function ensureInitialAddress(user) {
   return !error;
 }
 
+export async function ensureActiveSession() {
+  try {
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session) {
+      const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession().catch(() => ({ data: {}, error: true }));
+      if (refreshErr || !refreshData?.session) {
+        return null;
+      }
+      return refreshData.session;
+    }
+    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
+    if (expiresAt && Date.now() > expiresAt - 120000) {
+      const { data: refreshData } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
+      return refreshData?.session || session;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
 export async function getCurrentProfile() {
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;

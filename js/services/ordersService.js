@@ -1,5 +1,6 @@
 // Create, cancel, advance status, assign rider. Pages never call Supabase directly, they call this file.
 import { supabase } from '../config/supabaseClient.js';
+import { ensureActiveSession } from '../core/auth.js';
 import {
   CUSTOMER_STEPS,
   CUSTOMER_STEP_OF,
@@ -864,13 +865,36 @@ export async function getNextOrderForProcessing() {
 }
 
 export async function createOrder({ addressId, deliveryDate, slotId, notes, items }) {
-  const { data, error } = await supabase.rpc('create_order', {
-    p_address_id: addressId,
-    p_delivery_date: deliveryDate,
-    p_slot_id: slotId,
-    p_notes: notes || null,
-    p_items: items,
-  });
+  const session = await ensureActiveSession();
+  if (!session) {
+    throw new Error('Your session has expired. Please refresh the page or log in again to place your order.');
+  }
+
+  let res;
+  try {
+    res = await supabase.rpc('create_order', {
+      p_address_id: addressId,
+      p_delivery_date: deliveryDate,
+      p_slot_id: slotId,
+      p_notes: notes || null,
+      p_items: items,
+    });
+  } catch (err) {
+    if (err.name === 'TypeError' || /fetch/i.test(err.message)) {
+      await supabase.auth.refreshSession().catch(() => {});
+      res = await supabase.rpc('create_order', {
+        p_address_id: addressId,
+        p_delivery_date: deliveryDate,
+        p_slot_id: slotId,
+        p_notes: notes || null,
+        p_items: items,
+      });
+    } else {
+      throw err;
+    }
+  }
+
+  const { data, error } = res || {};
   if (error) throw new Error(error.message || 'Could not place your order.');
   invalidateDataCache();
   return data;
