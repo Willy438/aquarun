@@ -323,16 +323,43 @@ export async function mount() {
           if (addrInput) addrInput.value = overrideName;
         } else {
           try {
-            const resp = await fetch(
-              `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLng}`
-            );
-            const data = await resp.json();
-            if (data && data.display_name) {
-              const parts = data.display_name.split(',').map((s) => s.trim());
-              const cleanName = parts.slice(0, 3).join(', ');
-              currentAddress = cleanName;
+            // Dual provider lookup (Nominatim + BigDataCloud fallback)
+            let detected = '';
+            try {
+              const controller = new AbortController();
+              const timeout = setTimeout(() => controller.abort(), 2000);
+              const resp = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLng}&addressdetails=1&email=aquarun.ph@gmail.com`,
+                { signal: controller.signal }
+              );
+              clearTimeout(timeout);
+              if (resp.ok) {
+                const data = await resp.json();
+                if (data?.display_name) {
+                  const parts = data.display_name.split(',').map((s) => s.trim());
+                  detected = parts.slice(0, 3).join(', ');
+                }
+              }
+            } catch {}
+
+            if (!detected) {
+              try {
+                const bdcResp = await fetch(
+                  `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${currentLat}&longitude=${currentLng}&localityLanguage=en`
+                );
+                if (bdcResp.ok) {
+                  const bdc = await bdcResp.json();
+                  const admin = bdc.localityInfo?.administrative || [];
+                  const sub = admin.filter((a) => a.order >= 7).map((a) => a.name);
+                  detected = sub.slice(0, 2).concat([bdc.locality || 'Caloocan']).filter(Boolean).join(', ');
+                }
+              } catch {}
+            }
+
+            if (detected) {
+              currentAddress = detected;
               const addrInput = document.querySelector('#station-address-input');
-              if (addrInput) addrInput.value = cleanName;
+              if (addrInput) addrInput.value = detected;
             }
           } catch {}
         }
@@ -410,56 +437,78 @@ export async function mount() {
         try {
           const sLat = currentLat || DEFAULT_STATION_COORDS.lat;
           const sLng = currentLng || DEFAULT_STATION_COORDS.lng;
-          const left = (sLng - 0.25).toFixed(4);
-          const top = (sLat + 0.20).toFixed(4);
-          const right = (sLng + 0.25).toFixed(4);
-          const bottom = (sLat - 0.20).toFixed(4);
+          let items = [];
 
-          const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(query)}&limit=10&addressdetails=1`;
-          const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
-          if (!resp.ok) throw new Error('API failed');
-          let data = await resp.json();
+          // 1. Photon search (unmetered, fast, location-biased to station)
+          try {
+            const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${sLat}&lon=${sLng}&limit=8`;
+            const pResp = await fetch(photonUrl);
+            if (pResp.ok) {
+              const pData = await pResp.json();
+              const features = pData.features || [];
+              items = features.map((f) => {
+                const [lon, lat] = f.geometry.coordinates;
+                const p = f.properties || {};
+                const primary = p.name || p.street || query;
+                const secParts = [p.street && p.street !== primary ? p.street : '', p.locality || p.district, p.city].filter(Boolean);
+                const secondary = secParts.join(', ') || p.country || 'Philippines';
+                const d = calculateDistanceKm(sLat, sLng, lat, lon);
+                return {
+                  lat,
+                  lon,
+                  primary,
+                  secondary,
+                  distanceKm: Number.isFinite(d) ? d : 99999,
+                };
+              });
+            }
+          } catch {}
 
-          const hasLocalMatch = Array.isArray(data) && data.some((item) => {
-            const d = calculateDistanceKm(sLat, sLng, parseFloat(item.lat), parseFloat(item.lon));
-            return d !== null && d <= 15;
-          });
-
-          if (!hasLocalMatch && !/caloocan|manila|quezon/i.test(query)) {
+          // 2. Nominatim fallback
+          if (items.length === 0) {
             try {
-              const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query + ' Caloocan')}&limit=5&addressdetails=1`;
-              const fallbackResp = await fetch(fallbackUrl, { headers: { 'Accept': 'application/json' } });
-              if (fallbackResp.ok) {
-                const fallbackData = await fallbackResp.json();
-                if (Array.isArray(fallbackData) && fallbackData.length > 0) {
-                  const existingPlaceIds = new Set((data || []).map((x) => x.place_id));
-                  const newItems = fallbackData.filter((x) => !existingPlaceIds.has(x.place_id));
-                  data = [...newItems, ...(data || [])];
+              const left = (sLng - 0.25).toFixed(4);
+              const top = (sLat + 0.20).toFixed(4);
+              const right = (sLng + 0.25).toFixed(4);
+              const bottom = (sLat - 0.20).toFixed(4);
+              const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(query)}&limit=6&email=aquarun.ph@gmail.com`;
+              const nResp = await fetch(nomUrl, { headers: { 'Accept': 'application/json' } });
+              if (nResp.ok) {
+                const nData = await nResp.json();
+                if (Array.isArray(nData)) {
+                  items = nData.map((item) => {
+                    const lat = parseFloat(item.lat);
+                    const lon = parseFloat(item.lon);
+                    const parts = (item.display_name || '').split(',');
+                    const primary = parts[0]?.trim() || 'Location';
+                    const secondary = parts.slice(1, 4).join(',').trim();
+                    const d = calculateDistanceKm(sLat, sLng, lat, lon);
+                    return {
+                      lat,
+                      lon,
+                      primary,
+                      secondary,
+                      distanceKm: Number.isFinite(d) ? d : 99999,
+                    };
+                  });
                 }
               }
             } catch {}
           }
 
-          if (!data || data.length === 0) {
+          if (!items || items.length === 0) {
             if (stationSuggestionsBox) {
               stationSuggestionsBox.innerHTML = '<div class="suggestion-empty">No matching places found. Try another landmark or street.</div>';
             }
             return;
           }
 
-          data.forEach((item) => {
-            const d = calculateDistanceKm(sLat, sLng, parseFloat(item.lat), parseFloat(item.lon));
-            item.distanceKm = Number.isFinite(d) ? d : 99999;
-          });
-          data.sort((a, b) => a.distanceKm - b.distanceKm);
+          items.sort((a, b) => a.distanceKm - b.distanceKm);
 
           if (stationSuggestionsBox) {
-            stationSuggestionsBox.innerHTML = data
+            stationSuggestionsBox.innerHTML = items
               .slice(0, 6)
               .map((item) => {
-                const parts = (item.display_name || '').split(',');
-                const primary = parts[0]?.trim() || 'Location';
-                const secondary = parts.slice(1, 4).join(',').trim();
                 const distLabel = item.distanceKm < 9999 ? `${item.distanceKm.toFixed(1)} km` : '';
                 return `
                   <div class="suggestion-item" data-lat="${item.lat}" data-lon="${item.lon}">
@@ -468,10 +517,10 @@ export async function mount() {
                     </span>
                     <div class="suggestion-text" style="flex:1; min-width:0;">
                       <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
-                        <span class="suggestion-primary">${escapeHtml(primary)}</span>
+                        <span class="suggestion-primary">${escapeHtml(item.primary)}</span>
                         ${distLabel ? `<span class="suggestion-distance-tag" style="font-size:11px; font-weight:700; color:#1d5bd6; background:#ebf2ff; padding:1px 6px; border-radius:999px; white-space:nowrap; flex-shrink:0;">${distLabel}</span>` : ''}
                       </div>
-                      <span class="suggestion-secondary">${escapeHtml(secondary)}</span>
+                      <span class="suggestion-secondary">${escapeHtml(item.secondary)}</span>
                     </div>
                   </div>
                 `;
@@ -527,35 +576,64 @@ export async function mount() {
         try {
           const sLat = currentLat || DEFAULT_STATION_COORDS.lat;
           const sLng = currentLng || DEFAULT_STATION_COORDS.lng;
-          const left = (sLng - 0.25).toFixed(4);
-          const top = (sLat + 0.20).toFixed(4);
-          const right = (sLng + 0.25).toFixed(4);
-          const bottom = (sLat - 0.20).toFixed(4);
+          let results = [];
 
-          let resp = await fetch(
-            `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(q)}&limit=10&addressdetails=1`
-          );
-          let results = await resp.json();
+          // 1. Photon search (unmetered, location-biased to station)
+          try {
+            const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(q)}&lat=${sLat}&lon=${sLng}&limit=5`;
+            const pResp = await fetch(photonUrl);
+            if (pResp.ok) {
+              const pData = await pResp.json();
+              const features = pData.features || [];
+              results = features.map((f) => {
+                const [lon, lat] = f.geometry.coordinates;
+                const p = f.properties || {};
+                const d = calculateDistanceKm(sLat, sLng, lat, lon);
+                return {
+                  lat,
+                  lon,
+                  display_name: [p.name, p.street, p.locality || p.district, p.city].filter(Boolean).join(', '),
+                  distanceKm: Number.isFinite(d) ? d : 99999,
+                };
+              });
+            }
+          } catch {}
 
-          if ((!results || results.length === 0) && !/caloocan|manila|quezon/i.test(q)) {
-            const fResp = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(q + ' Caloocan')}&limit=5&addressdetails=1`
-            );
-            results = await fResp.json();
+          // 2. Nominatim fallback
+          if (results.length === 0) {
+            try {
+              const left = (sLng - 0.25).toFixed(4);
+              const top = (sLat + 0.20).toFixed(4);
+              const right = (sLng + 0.25).toFixed(4);
+              const bottom = (sLat - 0.20).toFixed(4);
+              const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(q)}&limit=5&email=aquarun.ph@gmail.com`;
+              const nResp = await fetch(nomUrl, { headers: { 'Accept': 'application/json' } });
+              if (nResp.ok) {
+                const nData = await nResp.json();
+                if (Array.isArray(nData)) {
+                  results = nData.map((item) => {
+                    const lat = parseFloat(item.lat);
+                    const lon = parseFloat(item.lon);
+                    const d = calculateDistanceKm(sLat, sLng, lat, lon);
+                    return {
+                      lat,
+                      lon,
+                      display_name: item.display_name,
+                      distanceKm: Number.isFinite(d) ? d : 99999,
+                    };
+                  });
+                }
+              }
+            } catch {}
           }
 
           if (results && results.length > 0) {
-            results.forEach((item) => {
-              const d = calculateDistanceKm(sLat, sLng, parseFloat(item.lat), parseFloat(item.lon));
-              item.distanceKm = Number.isFinite(d) ? d : 99999;
-            });
             results.sort((a, b) => a.distanceKm - b.distanceKm);
 
             const first = results[0];
             const lat = Number(first.lat);
             const lon = Number(first.lon);
-            const parts = first.display_name.split(',').map((s) => s.trim());
-            const resolvedName = parts.slice(0, 3).join(', ');
+            const resolvedName = first.display_name.split(',').slice(0, 3).join(', ');
 
             mapInstance.flyTo([lat, lon], 16);
             onLocationChanged(lat, lon, resolvedName);
