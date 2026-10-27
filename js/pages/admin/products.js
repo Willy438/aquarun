@@ -23,7 +23,7 @@ const CROP_HEIGHT = 600;
 
 function getGallonIconSvg() {
   return `
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M9 3h6" />
       <path d="M10 3v3l-3 3.5V19a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V9.5L14 6V3" />
       <path d="M7 13h10" />
@@ -34,7 +34,7 @@ function getGallonIconSvg() {
 
 function getCameraIconSvg() {
   return `
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
       <circle cx="12" cy="13" r="4"/>
     </svg>
@@ -72,7 +72,7 @@ export async function mount() {
     }
   }
 
-  function openProductModal(product, { focusField = 'name' } = {}) {
+  function openProductModal(product, { focusField = 'name', isReadOnly = false } = {}) {
     const isEdit = Boolean(product?.id);
     let currentPhotoData = product?.photo_url || '';
 
@@ -729,6 +729,20 @@ export async function mount() {
 
     applyCategoryUI(false);
 
+    if (isReadOnly) {
+      backdrop.querySelectorAll('input, select, textarea').forEach((el) => {
+        el.disabled = true;
+        el.readOnly = true;
+      });
+      backdrop.querySelectorAll('.prod-type-tab, .prod-preset-chip, .prod-fit-btn, #btn-upload-file, #btn-clear-photo, #btn-reset-crop, .prod-photo-presets').forEach((el) => {
+        el.style.display = 'none';
+      });
+      const cropControls = backdrop.querySelector('.prod-crop-controls');
+      if (cropControls) cropControls.style.display = 'none';
+      const urlField = backdrop.querySelector('#prod-photo')?.closest('.field');
+      if (urlField) urlField.style.display = 'none';
+    }
+
     const form = backdrop.querySelector('#prod-modal-form');
     const submitBtn = backdrop.querySelector('#btn-save-prod');
     form.addEventListener('submit', async (e) => {
@@ -1095,7 +1109,7 @@ export async function mount() {
           <div class="delivery-charge-top-inner">
             <div class="delivery-charge-top-left">
               <span class="delivery-charge-top-icon">
-                ${getPesoIconSvg({ size: 20, strokeWidth: 2 })}
+                ${getPesoIconSvg({ size: 20, strokeWidth: 1.4 })}
               </span>
               <div>
                 <h2 class="card-title" style="font-size: 15px; margin: 0 0 2px 0;">Delivery service charge</h2>
@@ -1106,7 +1120,7 @@ export async function mount() {
               <label class="label" for="service-charge-input" style="font-size: 13px; font-weight: 700; margin: 0; white-space: nowrap;">Charge per order:</label>
               <div class="charge-input-wrap">
                 <span class="charge-input-prefix">
-                  ${getPesoIconSvg({ size: 14, strokeWidth: 2 })}
+                  ${getPesoIconSvg({ size: 14, strokeWidth: 1.4 })}
                 </span>
                 <input
                   class="input charge-input-field"
@@ -1127,7 +1141,7 @@ export async function mount() {
         <div class="prod-table-toolbar">
           <div class="prod-search-field">
             <span class="prod-search-icon">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
               </svg>
             </span>

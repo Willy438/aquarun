@@ -104,49 +104,26 @@ export async function mount(me) {
         content.innerHTML = `
           ${renderCustomerOrderHero(pastTerminalOrder, { showTrackButton: false })}
 
-          <div class="card" style="border-left: 4px solid ${isCancelled ? '#ef4444' : '#22c55e'}; background: ${isCancelled ? '#fef2f2' : '#f0fdf4'}; padding: 18px 22px; margin: 18px 0;">
-            <div style="display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
-              <div>
-                <span class="pill ${isCancelled ? 'pill-danger' : 'pill-green'}" style="margin-bottom: 8px;">
+          <div class="card" style="padding: 12px 18px; margin-top: 14px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                <span class="pill ${isCancelled ? 'pill-danger' : 'pill-green'}" style="font-size: 11.5px;">
                   ${isCancelled ? 'Cancelled' : 'Completed'}
                 </span>
-                <h3 style="font-size: 17px; font-weight: 800; color: var(--ink-navy); margin: 0 0 4px 0;">
+                <span style="font-size: 13.5px; font-weight: 700; color: var(--ink-navy);">
                   Order #${escapeHtml(pastTerminalOrder.order_number)}
-                </h3>
-                <p style="font-size: 13.5px; color: var(--muted-blue); margin: 0; line-height: 1.5;">
+                </span>
+                <span style="font-size: 12.5px; color: var(--muted-blue);">
                   ${
                     isCancelled
-                      ? 'This order was cancelled while Submitted. You have no active orders in flight right now.'
-                      : `This order was delivered and completed on ${escapeHtml(formatDateShort(pastTerminalOrder.delivered_at || pastTerminalOrder.delivery_date))}.`
+                      ? 'Order was cancelled.'
+                      : `Delivered on ${escapeHtml(formatDateShort(pastTerminalOrder.delivered_at || pastTerminalOrder.delivery_date))}.`
                   }
-                </p>
+                </span>
               </div>
-              <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+              <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
                 <a class="btn btn-primary btn-sm" href="new-order.html">Place refill order</a>
                 <a class="btn btn-light btn-sm" href="order-history.html?viewOrder=${encodeURIComponent(pastTerminalOrder.id)}">View full receipt</a>
-              </div>
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <span class="card-icon">${ICONS.pin}</span>
-                <h3 class="card-title">Order summary</h3>
-              </div>
-            </div>
-            <div class="kv-list">
-              <div class="kv-row">
-                <span class="kv-label">Items</span>
-                <span class="kv-value">${escapeHtml(summarizeOrderItems(pastTerminalOrder.items))}</span>
-              </div>
-              <div class="kv-row">
-                <span class="kv-label">Delivery address</span>
-                <span class="kv-value">${escapeHtml(formatAddressLine(pastTerminalOrder.address))}</span>
-              </div>
-              <div class="kv-row">
-                <span class="kv-label">Total</span>
-                <span class="kv-value" style="font-weight: 700;">${escapeHtml(formatPeso(pastTerminalOrder.total))} · Cash on delivery</span>
               </div>
             </div>
           </div>

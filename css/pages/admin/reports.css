@@ -118,3 +118,10 @@
     padding: 0 !important;
   }
 }
+
+
+/* Thin stat value peso sign */
+.admin-stat-card .stat-value {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}

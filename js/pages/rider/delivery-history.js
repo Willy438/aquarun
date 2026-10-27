@@ -94,18 +94,18 @@ export async function mount(me) {
           <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; background:#f8fafc; padding:12px; border-radius:10px; border:1px solid #e2e8f0;">
             <div>
               <p style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin:0 0 2px;">Delivered Gallons</p>
-              <p style="font-size:18px; font-weight:800; color:#1d5bd6; margin:0;">${escapeHtml(delivered)}</p>
+              <p style="font-size:18px; font-weight: 600; color:#1d5bd6; margin:0;">${escapeHtml(delivered)}</p>
             </div>
             <div>
               <p style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin:0 0 2px;">Empties Collected</p>
-              <p style="font-size:18px; font-weight:800; color:#0f766e; margin:0;">${escapeHtml(empties)}</p>
+              <p style="font-size:18px; font-weight: 600; color:#0f766e; margin:0;">${escapeHtml(empties)}</p>
             </div>
           </div>
 
           <div>
             <p class="label" style="font-size:11px; text-transform:uppercase; color:var(--muted-blue); margin-bottom:4px;">Items Delivered</p>
             ${itemsHtml || '<p class="text-muted">No items</p>'}
-            <div style="display:flex; justify-content:space-between; padding-top:8px; font-size:15px; font-weight:800; color:var(--ink-navy);">
+            <div style="display:flex; justify-content:space-between; padding-top:8px; font-size:15px; font-weight: 600; color:var(--ink-navy);">
               <span>Cash collected:</span>
               <span style="color:var(--blue-app);">${escapeHtml(formatPeso(order.total))}</span>
             </div>
@@ -208,14 +208,14 @@ export async function mount(me) {
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 14px;">
             <div style="width: 42px; height: 42px; border-radius: 10px; background: var(--brand-soft, #ebf2ff); color: var(--blue-app, #1d5bd6); display: flex; align-items: center; justify-content: center;">
-              ${getPesoIconSvg({ size: 20, strokeWidth: 2 })}
+              ${getPesoIconSvg({ size: 20, strokeWidth: 1.4 })}
             </div>
             <div>
               <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted-blue);">
                 Cash on Hand &amp; Turnovers
               </p>
               <div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 3px;">
-                <span style="font-size: 19px; font-weight: 800; color: var(--ink-navy);">
+                <span style="font-size: 19px; font-weight: 600; color: var(--ink-navy);">
                   ${formatPeso(remittance.unsubmittedCash || 0)}
                   <span style="font-size: 12.5px; font-weight: 500; color: var(--muted-blue);">in pocket (${remittance.unsubmittedCount || 0} ${remittance.unsubmittedCount === 1 ? 'order' : 'orders'})</span>
                 </span>
@@ -261,7 +261,7 @@ export async function mount(me) {
             <p class="stat-label-top">Reconciled Sales</p>
             <p class="stat-value" style="color: var(--ink-navy); font-size: 20px;">${formatPeso(remittance.settledCash || 0)}</p>
           </div>
-          <span class="stat-icon">${getPesoIconSvg({ size: 18, strokeWidth: 2 })}</span>
+          <span class="stat-icon">${getPesoIconSvg({ size: 18, strokeWidth: 1.4 })}</span>
         </div>
 
         <div class="stat-card stat-card-between">
@@ -434,7 +434,7 @@ export async function mount(me) {
       <div class="modal-card" style="max-width: 520px; width: 100%; border-radius: 12px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 8px 10px -6px rgba(0,0,0,0.1); background: #ffffff;">
         <div class="modal-header" style="display: flex; align-items: center; justify-content: space-between; padding: 18px 22px; border-bottom: 1px solid #e2e8f0;">
           <div>
-            <h3 class="modal-title" style="margin: 0; font-size: 17px; font-weight: 800; color: #0f172a;">Turn Over &amp; Remit Cash</h3>
+            <h3 class="modal-title" style="margin: 0; font-size: 17px; font-weight: 600; color: #0f172a;">Turn Over &amp; Remit Cash</h3>
             <p style="margin: 2px 0 0; font-size: 12.5px; color: #64748b;">Turn over Cash on Delivery (COD) collections to station cashier</p>
           </div>
           <button type="button" class="modal-close" data-action="cancel" style="border: none; background: transparent; font-size: 22px; line-height: 1; cursor: pointer; color: #94a3b8; padding: 4px;">×</button>
@@ -443,7 +443,7 @@ export async function mount(me) {
           <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center;">
             <div>
               <p style="margin: 0; font-size: 11px; text-transform: uppercase; font-weight: 700; color: var(--muted-blue); letter-spacing: 0.5px;">Total Cash to Turn Over</p>
-              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 800; color: var(--ink-navy);">${formatPeso(cashToRemit)}</p>
+              <p style="margin: 2px 0 0; font-size: 24px; font-weight: 600; color: var(--ink-navy);">${formatPeso(cashToRemit)}</p>
             </div>
             <span class="pill pill-blue" style="font-weight: 700; font-size: 12px; padding: 6px 14px;">${ordersToRemit.length} ${ordersToRemit.length === 1 ? 'Order' : 'Orders'}</span>
           </div>

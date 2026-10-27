@@ -58,7 +58,7 @@
 
 .admin-stat-card .stat-value {
   font-size: clamp(20px, 2.4vw, 30px);
-  font-weight: 800;
+  font-weight: 600;
   color: var(--ink-navy);
   line-height: 1.1;
   letter-spacing: -0.02em;
@@ -430,7 +430,7 @@
 
 .modern-bar-val {
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 5px;
   line-height: 1;
@@ -443,7 +443,7 @@
 .modern-bar-col.is-peak .modern-bar-val {
   color: #1d4ed8;
   background: #dbeafe;
-  font-weight: 800;
+  font-weight: 600;
 }
 
 .modern-bar-fill {

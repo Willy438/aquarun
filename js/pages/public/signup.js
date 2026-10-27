@@ -44,8 +44,8 @@ async function checkRealtimeEmail(rawEmail) {
   }
 
   if (emailFeedback) {
-    emailFeedback.style.display = 'block';
-    emailFeedback.innerHTML = '<span style="color: #64748b; font-size: 12px;">Checking availability...</span>';
+    emailFeedback.style.display = 'none';
+    emailFeedback.innerHTML = '';
   }
 
   try {
@@ -54,7 +54,6 @@ async function checkRealtimeEmail(rawEmail) {
     });
 
     if (error) {
-      // If RPC is not created yet in Supabase, fail silently so normal signup continues
       if (emailFeedback) {
         emailFeedback.style.display = 'none';
         emailFeedback.innerHTML = '';
@@ -73,21 +72,17 @@ async function checkRealtimeEmail(rawEmail) {
         emailFeedback.innerHTML = '<span style="color: #dc2626; font-weight: 600;">This email is already registered.</span>';
       }
     } else {
+      // When available: completely normal field, no prompt, no green border
       emailTaken = false;
-      emailInput?.classList.remove('is-invalid');
-      emailInput?.classList.add('is-valid');
+      emailInput?.classList.remove('is-invalid', 'is-valid');
       if (emailFeedback) {
-        emailFeedback.style.display = 'block';
-        emailFeedback.innerHTML = `
-          <span style="color: #16a34a; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-            Email is available
-          </span>
-        `;
+        emailFeedback.style.display = 'none';
+        emailFeedback.innerHTML = '';
       }
     }
   } catch {
     if (emailFeedback) emailFeedback.style.display = 'none';
+    emailInput?.classList.remove('is-invalid', 'is-valid');
     emailTaken = false;
   }
 }
