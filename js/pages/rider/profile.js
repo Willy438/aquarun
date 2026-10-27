@@ -58,6 +58,10 @@ export async function mount(initialMe) {
               <input class="input" id="confirm-password" name="confirmPassword" type="password" autocomplete="new-password" placeholder="Confirm new password">
             </div>
           </div>
+          <p class="field-hint" style="font-size: 11.5px; color: var(--muted-blue, #64748b); margin: -4px 0 2px 0;">
+            Must be at least 8 characters, including at least 1 number and 1 special character.
+          </p>
+          <p class="form-error" id="password-error" role="alert" style="margin: 2px 0 4px 0; font-size: 12.5px; color: #dc2626; font-weight: 600;" hidden></p>
 
           <div>
             <button type="submit" class="btn btn-primary" id="save-profile-btn">Save changes</button>
@@ -120,16 +124,38 @@ export async function mount(initialMe) {
     const newPass = form.newPassword.value;
     const confirmPass = form.confirmPassword.value;
 
+    const passError = form.querySelector('#password-error');
+    if (passError) {
+      passError.textContent = '';
+      passError.hidden = true;
+    }
+    form.newPassword?.classList.remove('is-invalid', 'is-valid');
+    form.confirmPassword?.classList.remove('is-invalid', 'is-valid');
+
     if (newPass) {
       const passRes = validatePassword(newPass);
       if (!passRes.valid) {
+        if (passError) {
+          passError.textContent = passRes.message;
+          passError.hidden = false;
+        }
+        form.newPassword?.classList.add('is-invalid');
+        form.newPassword?.focus();
         showToast(passRes.message, 'error');
         return;
       }
       if (newPass !== confirmPass) {
+        if (passError) {
+          passError.textContent = 'The two passwords do not match.';
+          passError.hidden = false;
+        }
+        form.confirmPassword?.classList.add('is-invalid');
+        form.confirmPassword?.focus();
         showToast('The two passwords do not match.', 'error');
         return;
       }
+      form.newPassword?.classList.add('is-valid');
+      form.confirmPassword?.classList.add('is-valid');
       const confirmed = await confirmModal({
         title: 'Change password?',
         message: 'Are you sure you want to update your password? You will need to use this new password next time you sign in.',

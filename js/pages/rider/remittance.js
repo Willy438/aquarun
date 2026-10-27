@@ -4,6 +4,7 @@ import {
   escapeHtml,
   formatDateShort,
   formatPeso,
+  getPesoIconSvg,
   formatTimeShort,
   getTodayManila,
   matchesDateFilter,
@@ -145,7 +146,7 @@ export async function mount(me) {
                 <td style="color: #64748b;">${escapeHtml(deliveredTime)}</td>
                 <td style="color: #64748b;">${escapeHtml(turnedOverTime)}</td>
                 <td>${statusBadge}</td>
-                <td style="text-align: right; font-weight: 800; color: #0f172a;">${escapeHtml(formatPeso(o.total))}</td>
+                <td style="text-align: right; font-weight: 700; color: #0f172a;">${escapeHtml(formatPeso(o.total))}</td>
               </tr>
             `;
           })
@@ -163,8 +164,8 @@ export async function mount(me) {
       <div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; color: var(--ink-navy); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
-              ₱
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: var(--brand-soft, #ebf2ff); color: var(--blue-app, #1d5bd6); display: flex; align-items: center; justify-content: center;">
+              ${getPesoIconSvg({ size: 20, strokeWidth: 2 })}
             </div>
             <div>
               <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted-blue);">
@@ -293,12 +294,12 @@ export async function mount(me) {
           <table class="table">
             <thead>
               <tr>
-                <th>Order</th>
-                <th>Customer</th>
-                <th>Delivered</th>
-                <th>Turned over</th>
-                <th>Status</th>
-                <th style="text-align: right;">Amount</th>
+                <th style="width: 120px;">Order</th>
+                <th style="width: 200px;">Customer</th>
+                <th style="width: 150px;">Delivered</th>
+                <th style="width: 150px;">Turned over</th>
+                <th style="width: 130px;">Status</th>
+                <th style="width: 110px; text-align: right;">Amount</th>
               </tr>
             </thead>
             <tbody>

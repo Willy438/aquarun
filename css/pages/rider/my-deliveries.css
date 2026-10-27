@@ -3,22 +3,22 @@
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  background: var(--surface);
-  border: 1px solid var(--line-app);
-  padding: 5px 10px 5px 12px;
-  border-radius: 999px;
-  min-height: 44px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  border-radius: 0;
+  min-height: auto;
 }
 
 .avail-pill {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  min-height: 32px;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 700;
+  background: transparent !important;
+  padding: 0;
+  border-radius: 0;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .avail-pill::before {
@@ -30,13 +30,11 @@
 }
 
 .avail-pill.is-on {
-  background: #dff6e8;
-  color: #13794b;
+  color: #16a34a;
 }
 
 .avail-pill.is-off {
-  background: #e2e8f0;
-  color: #475569;
+  color: #64748b;
 }
 
 .stat-card-between {
@@ -221,16 +219,17 @@
 
 /* Rider Profile availability switch */
 .avail-switch-box {
-  background: var(--brand-soft, #ebf2ff);
-  border: 1px solid #d6e4ff;
-  border-radius: 13px;
-  padding: 15px 16px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line-app, #e2e8f0);
+  border-radius: 0;
+  padding: 10px 0 16px 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 12px 14px;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
   min-width: 0;
 }
 

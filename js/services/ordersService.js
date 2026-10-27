@@ -268,8 +268,8 @@ export function promptDeliveryTimingModal({
     }
 
     if (isEarly) {
-      badgeBg = '#fef3c7';
-      badgeColor = '#92400e';
+      badgeBg = '#ebf2ff';
+      badgeColor = '#1d5bd6';
     } else {
       badgeBg = '#fee2e2';
       badgeColor = '#991b1b';
@@ -279,10 +279,10 @@ export function promptDeliveryTimingModal({
     if (actionType === 'depart' || actionType === 'batch_depart') {
       if (isEarly) {
         presets = [
-          'Customer requested early delivery',
-          'Batch route optimization (nearby customer)',
-          'Station early dispatch schedule',
-          'Other reason (specify below)',
+          'Batch route optimization (nearby stop)',
+          'Station advance batch dispatch',
+          'Consolidated timeslot route delivery',
+          'Other operational reason (specify below)',
         ];
       } else {
         presets = [
@@ -295,10 +295,9 @@ export function promptDeliveryTimingModal({
     } else {
       if (isEarly) {
         presets = [
-          'Customer confirmed present and received early',
-          'Customer contacted station to deliver immediately',
-          'Customer requested drop-off ahead of schedule',
-          'Other reason (specify below)',
+          'Batch route completed ahead of schedule',
+          'Direct delivery sequence completed early',
+          'Other operational reason (specify below)',
         ];
       } else {
         presets = [

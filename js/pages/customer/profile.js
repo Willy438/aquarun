@@ -67,6 +67,7 @@ export async function mount(initialMe) {
           <div class="notice">
             Must be at least 8 characters, with at least 1 letter, 1 number, and 1 special character.
           </div>
+          <p class="form-error" id="password-error" role="alert" style="margin: 4px 0 0 0; font-size: 12.5px; color: #dc2626; font-weight: 600;" hidden></p>
 
           <div>
             <button type="submit" class="btn btn-primary" id="update-password-btn">Update password</button>
@@ -119,14 +120,37 @@ export async function mount(initialMe) {
     const newPass = form.newPassword.value;
     const confirmPass = form.confirmPassword.value;
 
-    if (newPass.length < 8) {
-      showToast('Use at least 8 characters for your password.', 'error');
+    const passError = form.querySelector('#password-error');
+    if (passError) {
+      passError.textContent = '';
+      passError.hidden = true;
+    }
+    form.newPassword?.classList.remove('is-invalid', 'is-valid');
+    form.confirmPassword?.classList.remove('is-invalid', 'is-valid');
+
+    const passRes = validatePassword(newPass);
+    if (!passRes.valid) {
+      if (passError) {
+        passError.textContent = passRes.message;
+        passError.hidden = false;
+      }
+      form.newPassword?.classList.add('is-invalid');
+      form.newPassword?.focus();
+      showToast(passRes.message, 'error');
       return;
     }
     if (newPass !== confirmPass) {
+      if (passError) {
+        passError.textContent = 'The two passwords do not match.';
+        passError.hidden = false;
+      }
+      form.confirmPassword?.classList.add('is-invalid');
+      form.confirmPassword?.focus();
       showToast('The two passwords do not match.', 'error');
       return;
     }
+    form.newPassword?.classList.add('is-valid');
+    form.confirmPassword?.classList.add('is-valid');
 
     const confirmed = await confirmModal({
       title: 'Change password?',

@@ -207,8 +207,8 @@ export async function mount(me) {
       <div class="card" style="padding: 16px 20px; margin-bottom: 16px;">
         <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;">
           <div style="display: flex; align-items: center; gap: 14px;">
-            <div style="width: 42px; height: 42px; border-radius: 10px; background: #f1f5f9; color: var(--ink-navy); display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800;">
-              ₱
+            <div style="width: 42px; height: 42px; border-radius: 10px; background: var(--brand-soft, #ebf2ff); color: var(--blue-app, #1d5bd6); display: flex; align-items: center; justify-content: center;">
+              ${getPesoIconSvg({ size: 20, strokeWidth: 2 })}
             </div>
             <div>
               <p style="margin: 0; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted-blue);">
