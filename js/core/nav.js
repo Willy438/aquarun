@@ -65,7 +65,7 @@ const NAV_SECTIONS = {
         { key: 'orders', label: 'Orders', icon: 'cart', badgeId: 'nav-staff-orders-badge' },
         { key: 'order-processing', label: 'Order processing', icon: 'check' },
         { key: 'remittance', label: 'Cash & sales', icon: 'cash', badgeId: 'nav-staff-remittance-badge' },
-        { key: 'bottle-ledger', label: 'Bottle ledger', icon: 'bookmark' },
+        { key: 'bottle-ledger', label: 'Container ledger', icon: 'bookmark' },
         { key: 'customers', label: 'Customers', icon: 'user' },
       ],
     },
@@ -169,9 +169,9 @@ const STAFF_PAGE_META = {
     sub: 'Verify rider cash turnovers and track reconciled sales.',
   },
   'bottle-ledger': {
-    title: 'Bottle ledger',
-    docTitle: 'Bottle ledger | AquaRun',
-    sub: 'Bottle movements recorded per delivered order and customer.',
+    title: 'Container ledger',
+    docTitle: 'Container ledger | AquaRun',
+    sub: 'Container movements recorded per delivered order and customer.',
   },
   customers: {
     title: 'Customers',

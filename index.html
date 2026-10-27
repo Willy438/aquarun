@@ -9,32 +9,36 @@
   <link rel="stylesheet" href="css/pages/public/landing.css">
 </head>
 <body>
-  <div class="wrap hero-panel" id="home">
-  <header class="nav" id="public-nav">
-    <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-    <button type="button" class="nav-hamburger" id="public-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="public-nav-menu">
-      <svg class="hamburger-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-      <svg class="hamburger-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-    </button>
-    <div class="nav-backdrop" id="public-nav-backdrop" aria-hidden="true"></div>
-    <div class="nav-collapsible" id="public-nav-menu" role="dialog" aria-label="Navigation menu">
-      <div class="nav-drawer-head">
+  <header class="public-nav-bar" id="public-header">
+    <div class="wrap">
+      <div class="nav" id="public-nav">
         <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-        <button type="button" class="nav-drawer-close" id="public-nav-close" aria-label="Close navigation menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+        <button type="button" class="nav-hamburger" id="public-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="public-nav-menu">
+          <svg class="hamburger-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+          <svg class="hamburger-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
         </button>
-      </div>
-      <nav class="nav-links" aria-label="Main">
-        <a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a>
-      </nav>
-      <div class="nav-actions">
-        <a class="btn btn-light" href="login.html" data-login>Log in</a>
-        <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+        <div class="nav-backdrop" id="public-nav-backdrop" aria-hidden="true"></div>
+        <div class="nav-collapsible" id="public-nav-menu" role="dialog" aria-label="Navigation menu">
+          <div class="nav-drawer-head">
+            <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
+            <button type="button" class="nav-drawer-close" id="public-nav-close" aria-label="Close navigation menu">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+            </button>
+          </div>
+          <nav class="nav-links" aria-label="Main">
+            <a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a>
+          </nav>
+          <div class="nav-actions">
+            <a class="btn btn-light" href="login.html" data-login>Log in</a>
+            <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+          </div>
+        </div>
       </div>
     </div>
   </header>
 
-    <section class="hero">
+  <section class="hero hero-fullscreen" id="home">
+    <div class="wrap hero-content">
       <p class="hero-kicker">WATER REFILL &amp; DELIVERY PORTAL</p>
       <h1 class="hero-title">water, delivered <span>on time.</span></h1>
       <p class="hero-text">Order refills, pick a delivery slot, and follow every gallon from the station to your door.</p>
@@ -42,15 +46,15 @@
         <a class="btn btn-primary btn-lg" href="signup.html">Order a refill</a>
         <a class="btn btn-white btn-lg" href="login.html">Track order</a>
       </div>
-    </section>
-  </div>
+    </div>
+  </section>
 
   <main>
     <section class="wrap highlights" aria-label="Highlights">
       <div class="highlight"><span class="icon-wrap"></span><div><strong>Refill orders</strong><small>Gallons and bottles, your way</small></div></div>
       <div class="highlight"><span class="icon-wrap"></span><div><strong>Daily delivery</strong><small>Pick a date and time slot</small></div></div>
       <div class="highlight"><span class="icon-wrap"></span><div><strong>Live order status</strong><small>From refill to doorstep</small></div></div>
-      <div class="highlight"><span class="icon-wrap"></span><div><strong>Bottle ledger</strong><small>Empties and refills, counted</small></div></div>
+      <div class="highlight"><span class="icon-wrap"></span><div><strong>Container ledger</strong><small>Empties and refills, counted</small></div></div>
     </section>
 
     <section class="wrap section" id="services">
@@ -58,15 +62,15 @@
       <p class="section-sub">Choose what you need, we handle the rest.</p>
       <div class="products">
         <article>
-          <img class="product-img" src="assets/images/round-gallon-refill.png" alt="Round gallon refill">
+          <img class="product-img" src="assets/images/round-gallon.jpg" alt="Round gallon refill">
           <div class="product-meta"><div><strong>Round Gallon Refill</strong><small>Refilled at the station</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
         </article>
         <article>
-          <img class="product-img" src="assets/images/slim-gallon-refill.png" alt="Slim gallon refill">
+          <img class="product-img" src="assets/images/slim-gallon.jpg" alt="Slim gallon refill">
           <div class="product-meta"><div><strong>Slim Gallon Refill</strong><small>Refilled at the station</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
         </article>
         <article>
-          <img class="product-img" src="assets/images/bottle-delivery.png" alt="Bottle delivery">
+          <img class="product-img" src="assets/images/empty-round-gallon.jpg" alt="Bottle delivery">
           <div class="product-meta"><div><strong>Bottle Delivery</strong><small>Delivered to your door</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
         </article>
       </div>
@@ -74,25 +78,11 @@
 
     <section class="wrap section section-center" id="how">
       <h2 class="section-title">Refills made simple</h2>
-      <p class="section-sub">From the first tap to the last empty bottle, every step is tracked.</p>
+      <p class="section-sub">From the first tap to the last empty container, every step is tracked.</p>
       <div class="steps">
-        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">01</span></div><h3>Place your order</h3><p>Choose your product, number of bottles or gallons, delivery address, and a preferred date and time slot.</p></article>
-        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">02</span></div><h3>Station refills</h3><p>Staff confirm the order, refill the bottles, and update the status as it moves along.</p></article>
-        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">03</span></div><h3>Rider delivers &amp; logs bottles</h3><p>An assigned rider delivers your order, then records the bottles delivered and empties collected.</p></article>
-      </div>
-    </section>
-
-    <section class="wrap closing" id="contact">
-      <div>
-        <img class="station-photo" src="assets/images/station-photo.png" alt="Water refilling station">
-        <div class="hours"><b>Mon–Sat</b><span>7:00 AM – 6:00 PM<br>Sample hours</span></div>
-      </div>
-      <div class="closing-copy">
-        <div>
-          <h2>Never miss a refill with AquaRun</h2>
-          <p>Order in under a minute, pick a time slot that suits you, and let the station and riders take it from there.</p>
-        </div>
-        <a class="cta-big" href="signup.html">Request a refill now <span aria-hidden="true">→</span></a>
+        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">01</span></div><h3>Place your order</h3><p>Choose your product, number of containers or gallons, delivery address, and a preferred date and time slot.</p></article>
+        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">02</span></div><h3>Station refills</h3><p>Staff confirm the order, refill the containers, and update the status as it moves along.</p></article>
+        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">03</span></div><h3>Rider delivers &amp; logs containers</h3><p>An assigned rider delivers your order, then records the containers delivered and empties collected.</p></article>
       </div>
     </section>
   </main>
@@ -100,7 +90,7 @@
   <footer class="footer">
     <div class="wrap footer-row">
       <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-      <nav class="footer-links" aria-label="Footer"><a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a></nav>
+      <nav class="footer-links" aria-label="Footer"><a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a></nav>
       <small>Computer Studies · University of Caloocan City</small>
     </div>
   </footer>

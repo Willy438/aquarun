@@ -30,7 +30,7 @@ export async function mount() {
       rawEntries = await getStaffLedgerEntries({ limit: 150 });
       renderView();
     } catch (err) {
-      showToast(err.message || 'Could not load bottle ledger.', 'error');
+      showToast(err.message || 'Could not load container ledger.', 'error');
     }
   }
 
@@ -77,7 +77,7 @@ export async function mount() {
       : `
         <tr>
           <td colspan="7" class="empty-state" style="padding: 32px 16px; text-align: center; color: #64748b;">
-            No bottle ledger entries match your search.
+            No container ledger entries match your search.
           </td>
         </tr>
       `;
@@ -96,7 +96,7 @@ export async function mount() {
           <span class="stat-icon">${ICONS.drop}</span>
           <div>
             <p class="stat-value">${escapeHtml(totalRefilled)}</p>
-            <p class="stat-label">Bottles refilled</p>
+            <p class="stat-label">Containers refilled</p>
           </div>
         </div>
 
@@ -104,7 +104,7 @@ export async function mount() {
           <span class="stat-icon">${ICONS.pin}</span>
           <div>
             <p class="stat-value">${escapeHtml(totalDelivered)}</p>
-            <p class="stat-label">Bottles delivered</p>
+            <p class="stat-label">Containers delivered</p>
           </div>
         </div>
 
@@ -121,7 +121,7 @@ export async function mount() {
         <div class="card-header" style="border-bottom: 1px solid #e2e8f0; padding: 14px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
           <div class="card-title-group">
             <span class="card-icon">${ICONS.clock}</span>
-            <h2 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">Recent bottle transactions</h2>
+            <h2 class="card-title" style="margin: 0; font-size: 15px; font-weight: 700; color: #0f172a;">Recent container transactions</h2>
           </div>
           <span class="pill pill-neutral" style="font-size: 11.5px; font-weight: 700;">
             ${filtered.length} ${filtered.length === 1 ? 'entry' : 'entries'}

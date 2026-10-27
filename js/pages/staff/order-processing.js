@@ -290,7 +290,7 @@ export async function mount(me) {
             ${formatSlotNotes(order.slot_note)}
 
             <div class="notice proc-ledger-notice">
-              <strong>Bottle ledger:</strong> Delivered and collected counts are entered by the rider at delivery.
+              <strong>Container ledger:</strong> Delivered and collected counts are entered by the rider at delivery.
             </div>
           </div>
 
