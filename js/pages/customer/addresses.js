@@ -174,76 +174,49 @@ export async function mount(me) {
       chosenLng = null;
     }
 
-    // Generate Cards List
-    const cardsHtml = addresses.length
-      ? `
-        <div class="addr-grid">
-          ${addresses
-            .map((addr) => {
-              const hasCoords = addr.latitude && addr.longitude;
-              const dist = hasCoords
-                ? calculateDistanceKm(
-                    stationSettings.lat,
-                    stationSettings.lng,
-                    Number(addr.latitude),
-                    Number(addr.longitude)
-                  )
-                : null;
-              const isWithinZone = dist !== null && dist <= stationSettings.radiusKm;
+    // Calculate filter counts
+    const homeCount = addresses.filter((a) => /home|house|residence/i.test(a.label || '')).length;
+    const workCount = addresses.filter((a) => /work|office|branch|store|shop|warehouse/i.test(a.label || '')).length;
+    const defaultCount = addresses.filter((a) => a.is_default).length;
 
-              let badgeHtml = '';
-              if (dist !== null) {
-                badgeHtml = isWithinZone
-                  ? `<span class="address-distance-badge in-zone">${ICONS.check} ${dist} km · In delivery zone</span>`
-                  : `<span class="address-distance-badge out-zone">${ICONS.alert} ${dist} km · Outside station zone</span>`;
-              } else {
-                badgeHtml = `<span class="address-distance-badge no-coords">${ICONS.pin} Map pin required to order</span>`;
-              }
+    // Filter addresses based on category and search
+    const filtered = addresses.filter((addr) => {
+      if (activeTypeFilter === 'default' && !addr.is_default) return false;
+      if (activeTypeFilter === 'home' && !/home|house|residence/i.test(addr.label || '')) return false;
+      if (activeTypeFilter === 'work' && !/work|office|branch|store|shop|warehouse/i.test(addr.label || '')) return false;
 
-              return `
-                <div class="addr-card ${addr.is_default ? 'is-default' : ''}">
-                  <div class="addr-card-top">
-                    <div class="addr-card-label-badge">
-                      <span class="addr-card-icon">${getAddressIcon(addr.label)}</span>
-                      <span>${escapeHtml(addr.label || 'Address')}</span>
-                    </div>
-                    ${addr.is_default ? `<span class="pill pill-green" style="font-size: 11px; padding: 2px 8px;">Default</span>` : ''}
-                  </div>
+      if (searchKeyword.trim()) {
+        const q = searchKeyword.trim().toLowerCase();
+        const text = `${addr.label || ''} ${addr.street || ''} ${addr.barangay || ''} ${addr.city || ''} ${addr.landmark || ''}`.toLowerCase();
+        if (!text.includes(q)) return false;
+      }
+      return true;
+    });
 
-                  <h3 class="addr-card-street">${escapeHtml(addr.street || 'Address details')}</h3>
-                  <p class="addr-card-area">
-                    ${escapeHtml(addr.barangay ? `${addr.barangay}, ` : '')}${escapeHtml(addr.city || 'Caloocan')}
-                  </p>
-                  ${
-                    addr.landmark
-                      ? `<p class="addr-card-landmark">Landmark: ${escapeHtml(addr.landmark)}</p>`
-                      : ''
-                  }
+    // Helper to generate status badge for an address
+    function getAddressStatusBadge(addr) {
+      const hasCoords = addr.latitude && addr.longitude;
+      const dist = hasCoords
+        ? calculateDistanceKm(
+            stationSettings.lat,
+            stationSettings.lng,
+            Number(addr.latitude),
+            Number(addr.longitude)
+          )
+        : null;
+      const isWithinZone = dist !== null && dist <= stationSettings.radiusKm;
 
-                  <div class="addr-card-status">${badgeHtml}</div>
+      if (dist !== null) {
+        return isWithinZone
+          ? `<span class="address-distance-badge in-zone">${ICONS.check} ${dist} km · In delivery zone</span>`
+          : `<span class="address-distance-badge out-zone">${ICONS.alert} ${dist} km · Outside station zone</span>`;
+      }
+      return `<span class="address-distance-badge no-coords">${ICONS.pin} Map pin required</span>`;
+    }
 
-                  <div class="addr-card-actions">
-                    <button type="button" class="btn btn-light btn-sm" data-edit-id="${escapeHtml(addr.id)}">
-                      ${ICONS.edit} <span>Edit</span>
-                    </button>
-                    ${
-                      !addr.is_default
-                        ? `<button type="button" class="btn btn-light btn-sm" data-default-id="${escapeHtml(addr.id)}">
-                            Set default
-                          </button>`
-                        : ''
-                    }
-                    <button type="button" class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(addr.id)}" title="Delete address" style="margin-left: auto;">
-                      ${ICONS.trash} <span>Delete</span>
-                    </button>
-                  </div>
-                </div>
-              `;
-            })
-            .join('')}
-        </div>
-      `
-      : `
+    let cardsHtml = '';
+    if (addresses.length === 0) {
+      cardsHtml = `
         <div class="addr-empty-card">
           <div class="addr-empty-icon">${ICONS.pin}</div>
           <h2 class="addr-empty-title">No saved addresses yet</h2>
@@ -255,6 +228,153 @@ export async function mount(me) {
           </button>
         </div>
       `;
+    } else {
+      const toolbarHtml = `
+        <div class="addr-toolbar">
+          <div class="addr-search-field">
+            <span class="addr-search-icon">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </span>
+            <input type="text" id="addr-search-input" class="input addr-search-box" placeholder="Search by label, street, barangay..." value="${escapeHtml(searchKeyword)}">
+            ${searchKeyword ? `<button type="button" class="addr-search-clear" id="addr-search-clear" aria-label="Clear search">×</button>` : ''}
+          </div>
+          <div class="addr-filter-tabs" role="tablist">
+            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'all' ? 'is-active' : ''}" data-addr-filter="all">
+              All <span class="addr-tab-num">${addresses.length}</span>
+            </button>
+            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'home' ? 'is-active' : ''}" data-addr-filter="home">
+              Home <span class="addr-tab-num">${homeCount}</span>
+            </button>
+            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'work' ? 'is-active' : ''}" data-addr-filter="work">
+              Work <span class="addr-tab-num">${workCount}</span>
+            </button>
+            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'default' ? 'is-active' : ''}" data-addr-filter="default">
+              Default <span class="addr-tab-num">${defaultCount}</span>
+            </button>
+          </div>
+        </div>
+      `;
+
+      if (filtered.length === 0) {
+        cardsHtml = `
+          ${toolbarHtml}
+          <div class="card" style="padding: 32px 18px; text-align: center; color: #64748b;">
+            <p style="margin: 0 0 6px 0; font-weight: 700; color: #0f172a; font-size: 15px;">No addresses match your filter</p>
+            <p style="margin: 0; font-size: 13px;">Try switching tabs or searching another keyword.</p>
+          </div>
+        `;
+      } else {
+        // 1. Desktop Table Setup (min-width: 1024px)
+        const tableRowsHtml = filtered
+          .map((addr) => {
+            const badgeHtml = getAddressStatusBadge(addr);
+            return `
+              <tr class="${addr.is_default ? 'is-default-row' : ''}">
+                <td>
+                  <div class="addr-table-label-cell">
+                    <span class="addr-card-icon">${getAddressIcon(addr.label)}</span>
+                    <div>
+                      <strong class="addr-table-label-name">${escapeHtml(addr.label || 'Address')}</strong>
+                      ${addr.is_default ? `<span class="pill pill-green" style="font-size: 10.5px; padding: 1px 6px; margin-left: 6px;">Default</span>` : ''}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div class="addr-table-street">${escapeHtml(addr.street || '–')}</div>
+                  ${addr.landmark ? `<span class="addr-table-landmark">Landmark: ${escapeHtml(addr.landmark)}</span>` : ''}
+                </td>
+                <td>
+                  <div class="addr-table-area">${escapeHtml(addr.barangay ? `${addr.barangay}, ` : '')}${escapeHtml(addr.city || 'Caloocan')}</div>
+                </td>
+                <td>
+                  ${badgeHtml}
+                </td>
+                <td style="text-align: right;">
+                  <div class="addr-table-actions">
+                    ${!addr.is_default ? `<button type="button" class="btn btn-light btn-sm" data-default-id="${escapeHtml(addr.id)}" title="Set as default delivery address">Set default</button>` : ''}
+                    <button type="button" class="btn btn-light btn-sm" data-edit-id="${escapeHtml(addr.id)}">${ICONS.edit} <span>Edit</span></button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(addr.id)}" title="Delete address">${ICONS.trash}</button>
+                  </div>
+                </td>
+              </tr>
+            `;
+          })
+          .join('');
+
+        const tableViewHtml = `
+          <div class="card addr-table-card addr-table-view">
+            <div class="table-wrap">
+              <table class="addr-table">
+                <thead>
+                  <tr>
+                    <th style="min-width: 170px;">Label / Type</th>
+                    <th>Street Address</th>
+                    <th>Barangay &amp; City</th>
+                    <th style="min-width: 200px;">Delivery Coverage</th>
+                    <th style="min-width: 220px; text-align: right;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${tableRowsHtml}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+
+        // 2. Mobile Responsive Cards View (< 1024px)
+        const mobileCardsHtml = `
+          <div class="addr-mobile-view">
+            ${filtered
+              .map((addr) => {
+                const badgeHtml = getAddressStatusBadge(addr);
+                return `
+                  <div class="addr-card ${addr.is_default ? 'is-default' : ''}">
+                    <div class="addr-card-top">
+                      <div class="addr-card-label-badge">
+                        <span class="addr-card-icon">${getAddressIcon(addr.label)}</span>
+                        <span>${escapeHtml(addr.label || 'Address')}</span>
+                      </div>
+                      ${addr.is_default ? `<span class="pill pill-green" style="font-size: 11px; padding: 2px 8px;">Default</span>` : ''}
+                    </div>
+
+                    <h3 class="addr-card-street">${escapeHtml(addr.street || 'Address details')}</h3>
+                    <p class="addr-card-area">
+                      ${escapeHtml(addr.barangay ? `${addr.barangay}, ` : '')}${escapeHtml(addr.city || 'Caloocan')}
+                    </p>
+                    ${addr.landmark ? `<p class="addr-card-landmark">Landmark: ${escapeHtml(addr.landmark)}</p>` : ''}
+
+                    <div class="addr-card-status">${badgeHtml}</div>
+
+                    <div class="addr-card-actions">
+                      <button type="button" class="btn btn-light btn-sm" data-edit-id="${escapeHtml(addr.id)}">
+                        ${ICONS.edit} <span>Edit</span>
+                      </button>
+                      ${
+                        !addr.is_default
+                          ? `<button type="button" class="btn btn-light btn-sm" data-default-id="${escapeHtml(addr.id)}">
+                              Set default
+                            </button>`
+                          : ''
+                      }
+                      <button type="button" class="btn btn-outline-danger btn-sm" data-delete-id="${escapeHtml(addr.id)}" title="Delete address" style="margin-left: auto;">
+                        ${ICONS.trash} <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              })
+              .join('')}
+          </div>
+        `;
+
+        cardsHtml = `
+          ${toolbarHtml}
+          ${tableViewHtml}
+          ${mobileCardsHtml}
+        `;
+      }
+    }
 
     // Modal Form (when isModalOpen is true)
     let defaultLabel = '';
@@ -879,6 +999,30 @@ export async function mount(me) {
     }
 
     // Event Listeners: Open Modal
+    // Address Toolbar Event Listeners
+    content.querySelectorAll('[data-addr-filter]').forEach((tab) => {
+      tab.addEventListener('click', () => {
+        activeTypeFilter = tab.dataset.addrFilter || 'all';
+        renderPage();
+      });
+    });
+
+    const searchInput = content.querySelector('#addr-search-input');
+    searchInput?.addEventListener('input', (e) => {
+      searchKeyword = e.target.value;
+      renderPage();
+      const nextInput = content.querySelector('#addr-search-input');
+      if (nextInput) {
+        nextInput.focus();
+        nextInput.setSelectionRange(nextInput.value.length, nextInput.value.length);
+      }
+    });
+
+    content.querySelector('#addr-search-clear')?.addEventListener('click', () => {
+      searchKeyword = '';
+      renderPage();
+    });
+
     content.querySelector('#add-new-addr-btn')?.addEventListener('click', () => openModal(null));
     content.querySelector('#empty-add-addr-btn')?.addEventListener('click', () => openModal(null));
 

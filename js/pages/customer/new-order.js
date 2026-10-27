@@ -507,15 +507,40 @@ export async function mount(me) {
       }
     }
 
-    if (cartItemsEl) {
-      if (!activeEntries.length) {
-        cartItemsEl.innerHTML = `
-          <div class="empty-state">
-            Click <strong>+ Add</strong> on any refill option to build your order.
-          </div>
-        `;
+    const drawerCartItemsEl = document.querySelector('#drawer-cart-items');
+    const drawerCartCountEl = document.querySelector('#drawer-cart-count');
+    const drawerSubtotalEl = document.querySelector('#drawer-subtotal');
+    const drawerChargeEl = document.querySelector('#drawer-charge');
+    const drawerTotalEl = document.querySelector('#drawer-total');
+    const drawerPlaceOrderBtn = document.querySelector('#drawer-place-order-btn');
+
+    const mobileFabEl = document.querySelector('#mobile-cart-fab');
+    const mobileFabBadgeEl = document.querySelector('#mobile-cart-fab-badge');
+    const mobileFabTotalEl = document.querySelector('#mobile-cart-fab-total');
+
+    if (mobileFabEl) {
+      if (totalOrderItems > 0) {
+        if (mobileFabBadgeEl) {
+          mobileFabBadgeEl.textContent = String(totalOrderItems);
+          mobileFabBadgeEl.hidden = false;
+        }
+        if (mobileFabTotalEl) {
+          mobileFabTotalEl.textContent = formatPeso(grandTotal);
+          mobileFabTotalEl.hidden = false;
+        }
       } else {
-        cartItemsEl.innerHTML = activeEntries
+        if (mobileFabBadgeEl) mobileFabBadgeEl.hidden = true;
+        if (mobileFabTotalEl) mobileFabTotalEl.hidden = true;
+      }
+    }
+
+    const itemsHtml = !activeEntries.length
+      ? `
+        <div class="empty-state">
+          Click <strong>+ Add</strong> on any refill option to build your order.
+        </div>
+      `
+      : activeEntries
           .map(
             ({ key, product, qty, modeLabel, lineTotal }) => `
             <div class="cart-item">
@@ -539,22 +564,23 @@ export async function mount(me) {
           )
           .join('');
 
-        cartItemsEl.querySelectorAll('[data-cart-delta]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const id = btn.dataset.cartDelta;
-            const delta = Number(btn.dataset.delta);
-            const next = (cart.get(id) || 0) + delta;
-            if (next <= 0) {
-              cart.delete(id);
-            } else {
-              cart.set(id, next);
-            }
-            renderProductsSection();
-            renderCartSection();
-          });
-        });
-      }
-    }
+    if (cartItemsEl) cartItemsEl.innerHTML = itemsHtml;
+    if (drawerCartItemsEl) drawerCartItemsEl.innerHTML = itemsHtml;
+
+    document.querySelectorAll('[data-cart-delta]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.cartDelta;
+        const delta = Number(btn.dataset.delta);
+        const next = (cart.get(id) || 0) + delta;
+        if (next <= 0) {
+          cart.delete(id);
+        } else {
+          cart.set(id, next);
+        }
+        renderProductsSection();
+        renderCartSection();
+      });
+    });
 
     if (swapRowEl && swapSubtotalEl && newGallonRowEl && newGallonSubtotalEl) {
       if (totalNewGallons > 0 || totalEmptyContainers > 0) {
@@ -578,11 +604,21 @@ export async function mount(me) {
     if (chargeEl) chargeEl.textContent = formatPeso(effectiveCharge);
     if (totalEl) totalEl.textContent = formatPeso(grandTotal);
 
+    if (drawerCartCountEl) drawerCartCountEl.textContent = `${totalOrderItems} ${totalOrderItems === 1 ? 'item' : 'items'}`;
+    if (drawerSubtotalEl) drawerSubtotalEl.textContent = formatPeso(subtotal);
+    if (drawerChargeEl) drawerChargeEl.textContent = formatPeso(effectiveCharge);
+    if (drawerTotalEl) drawerTotalEl.textContent = formatPeso(grandTotal);
+
+    const btnText = totalOrderItems > 0 ? `Place order · ${formatPeso(grandTotal)}` : 'Place order';
+    const isBtnDisabled = totalOrderItems === 0 || !selectedAddressId || !selectedSlotId;
+
     if (submitBtn) {
-      submitBtn.textContent =
-        totalOrderItems > 0 ? `Place order · ${formatPeso(grandTotal)}` : 'Place order';
-      submitBtn.disabled =
-        totalOrderItems === 0 || !selectedAddressId || !selectedSlotId;
+      submitBtn.textContent = btnText;
+      submitBtn.disabled = isBtnDisabled;
+    }
+    if (drawerPlaceOrderBtn) {
+      drawerPlaceOrderBtn.textContent = btnText;
+      drawerPlaceOrderBtn.disabled = isBtnDisabled;
     }
 
     const swapNoticeEl = document.querySelector('#bottle-swap-notice');
@@ -813,6 +849,69 @@ export async function mount(me) {
           Review & Order →
         </button>
       </div>
+
+      <!-- Mobile Floating Cart Button FAB (< 1024px) -->
+      <button type="button" class="mobile-cart-fab" id="mobile-cart-fab" aria-label="Open cart">
+        <span class="mobile-cart-fab-icon">${ICONS.cart}</span>
+        <span class="mobile-cart-fab-badge" id="mobile-cart-fab-badge" hidden>0</span>
+        <span class="mobile-cart-fab-total" id="mobile-cart-fab-total" hidden>₱0</span>
+      </button>
+
+      <!-- Mobile Cart Bottom Sheet Drawer (< 1024px) -->
+      <div class="mobile-cart-drawer-backdrop" id="mobile-cart-backdrop"></div>
+      <div class="mobile-cart-drawer" id="mobile-cart-drawer">
+        <div class="mobile-cart-drawer-header">
+          <div class="mobile-cart-drawer-title-group">
+            <span class="card-icon">${ICONS.cart}</span>
+            <h2 class="card-title">Your order</h2>
+            <span class="cart-count" id="drawer-cart-count">0 items</span>
+          </div>
+          <button type="button" class="drawer-close-btn" id="mobile-cart-close" aria-label="Close cart">×</button>
+        </div>
+
+        <div class="mobile-cart-drawer-body">
+          <div class="cart-items" id="drawer-cart-items"></div>
+
+          <div class="cart-summary">
+            <div class="cart-summary-row" id="drawer-swap-row" hidden>
+              <span>Swap refills (water only)</span>
+              <strong id="drawer-swap-subtotal">₱0</strong>
+            </div>
+            <div class="cart-summary-row" id="drawer-new-gallon-row" hidden>
+              <span id="drawer-new-gallon-label">New gallon + water</span>
+              <strong id="drawer-new-gallon-subtotal">₱0</strong>
+            </div>
+            <div class="cart-summary-row">
+              <span>Items subtotal</span>
+              <strong id="drawer-subtotal">₱0</strong>
+            </div>
+            <div class="cart-summary-row">
+              <span>Delivery service charge</span>
+              <strong id="drawer-charge">${escapeHtml(formatPeso(serviceCharge))}</strong>
+            </div>
+            <div class="cart-summary-row">
+              <span>Payment</span>
+              <strong>Cash on delivery</strong>
+            </div>
+            <div class="cart-summary-row cart-summary-total">
+              <span>Total</span>
+              <strong id="drawer-total">₱0</strong>
+            </div>
+          </div>
+
+          <div class="notice cart-notice" id="drawer-swap-notice" hidden></div>
+          <div class="notice cart-notice" id="drawer-radius-notice" style="border-color: #fca5a5; background: #fef2f2; color: #991b1b;" hidden></div>
+
+          <button
+            type="button"
+            class="btn btn-primary btn-block"
+            id="drawer-place-order-btn"
+            ${!isStationOpen || addresses.length === 0 ? 'disabled' : ''}
+          >
+            ${!isStationOpen ? 'Station closed' : addresses.length === 0 ? 'Add delivery address first' : 'Place order'}
+          </button>
+        </div>
+      </div>
     `;
 
     let addressDistanceCheck = null;
@@ -911,15 +1010,32 @@ export async function mount(me) {
       deliveryNote = e.target.value;
     });
 
-    document.querySelector('#mobile-bar-review-btn')?.addEventListener('click', () => {
-    const cartCard = document.querySelector('.cart-card') || document.querySelector('#place-order-btn');
-    if (cartCard) {
-      cartCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    function openMobileCartDrawer() {
+      const drawer = document.querySelector('#mobile-cart-drawer');
+      const backdrop = document.querySelector('#mobile-cart-backdrop');
+      if (drawer && backdrop) {
+        drawer.classList.add('is-open');
+        backdrop.classList.add('is-open');
+        document.body.style.overflow = 'hidden';
+      }
     }
-  });
 
-  document.querySelector('#place-order-btn')?.addEventListener('click', async (e) => {
-      const btn = e.currentTarget;
+    function closeMobileCartDrawer() {
+      const drawer = document.querySelector('#mobile-cart-drawer');
+      const backdrop = document.querySelector('#mobile-cart-backdrop');
+      if (drawer && backdrop) {
+        drawer.classList.remove('is-open');
+        backdrop.classList.remove('is-open');
+        document.body.style.overflow = '';
+      }
+    }
+
+    document.querySelector('#mobile-cart-fab')?.addEventListener('click', openMobileCartDrawer);
+    document.querySelector('#mobile-bar-review-btn')?.addEventListener('click', openMobileCartDrawer);
+    document.querySelector('#mobile-cart-close')?.addEventListener('click', closeMobileCartDrawer);
+    document.querySelector('#mobile-cart-backdrop')?.addEventListener('click', closeMobileCartDrawer);
+
+  async function handlePlaceOrder(btn) {
       if (!isStationOpen) {
         showToast('The station is currently closed for new orders.', 'error');
         return;
@@ -987,7 +1103,10 @@ export async function mount(me) {
         renderSlotsSelect();
         renderCartSection();
       }
-    });
+    }
+
+    document.querySelector('#place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
+    document.querySelector('#drawer-place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
   } catch (err) {
     showToast(err.message || 'Could not load order form.', 'error');
   }
