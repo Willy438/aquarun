@@ -60,7 +60,7 @@ export async function mount(me) {
         allOrders: [],
       }));
       renderView();
-      updateRiderRemittanceBadge(me.id).catch(() => {});
+      updateRiderRemittanceBadge(me.id, summary.unremittedCount).catch(() => {});
     } catch (err) {
       showToast(err.message || 'Could not load cash records.', 'error');
     }

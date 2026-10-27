@@ -249,6 +249,9 @@ body.is-drawer-open {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.18);
+  margin-left: auto;
 }
 
 .sidebar-badge[hidden] {
@@ -256,7 +259,11 @@ body.is-drawer-open {
 }
 
 .sidebar-link.is-active .sidebar-badge {
-  background: rgba(255, 255, 255, 0.24);
+  background: #ffffff;
+  color: var(--blue-app, #1d5bd6);
+  font-weight: 800;
+  border-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .sidebar-footer {

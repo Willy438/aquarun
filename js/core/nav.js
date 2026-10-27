@@ -372,35 +372,43 @@ export async function updateRiderCurrentBadge(riderId) {
   }
 }
 
-export async function updateStaffRemittanceBadge() {
+export async function updateStaffRemittanceBadge(overrideCount = null) {
   const badge = document.querySelector('#nav-staff-remittance-badge');
   if (!badge) return;
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('id, rider_id, remittance_status, slot_note, rider_remitted')
-      .eq('status', 'delivered')
-      .is('rider_remitted', false);
+    let num = overrideCount;
+    if (typeof num !== 'number') {
+      let { data, error } = await supabase
+        .from('orders')
+        .select('id, rider_id, remittance_status, slot_note, rider_remitted, status')
+        .in('status', ['delivered', 'completed']);
 
-    if (error) return;
-
-    const awaitingRiderIds = new Set();
-    for (const o of data || []) {
-      const note = String(o.slot_note || '');
-      const isSettled =
-        Boolean(o.rider_remitted) ||
-        note.includes('[REMITTED]') ||
-        o.remittance_status === 'approved';
-      const isSubmitted =
-        !isSettled &&
-        (o.remittance_status === 'submitted' || note.includes('[REMITTANCE_SUBMITTED]'));
-
-      if (isSubmitted && o.rider_id) {
-        awaitingRiderIds.add(o.rider_id);
+      if (error) {
+        const fallback = await supabase
+          .from('orders')
+          .select('id, rider_id, slot_note, status')
+          .in('status', ['delivered', 'completed']);
+        data = fallback.data;
       }
+
+      const awaitingKeys = new Set();
+      for (const o of data || []) {
+        const note = String(o.slot_note || '');
+        const isSettled =
+          Boolean(o.rider_remitted) ||
+          note.includes('[REMITTED]') ||
+          o.remittance_status === 'approved';
+        const isSubmitted =
+          !isSettled &&
+          (o.remittance_status === 'submitted' || note.includes('[REMITTANCE_SUBMITTED]'));
+
+        if (isSubmitted) {
+          awaitingKeys.add(o.rider_id || o.id);
+        }
+      }
+      num = awaitingKeys.size;
     }
 
-    const num = awaitingRiderIds.size;
     try {
       sessionStorage.setItem(STAFF_REMITTANCE_BADGE_CACHE_KEY, String(num));
     } catch {}
@@ -419,28 +427,37 @@ export async function updateStaffRemittanceBadge() {
   } catch {}
 }
 
-export async function updateRiderRemittanceBadge(riderId) {
+export async function updateRiderRemittanceBadge(riderId, overrideCount = null) {
   const badge = document.querySelector('#nav-rider-remittance-badge');
   if (!badge || !riderId) return;
   try {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('id, remittance_status, slot_note, rider_remitted')
-      .eq('rider_id', riderId)
-      .eq('status', 'delivered')
-      .is('rider_remitted', false);
+    let count = overrideCount;
+    if (typeof count !== 'number') {
+      let { data, error } = await supabase
+        .from('orders')
+        .select('id, remittance_status, slot_note, rider_remitted, status')
+        .eq('rider_id', riderId)
+        .in('status', ['delivered', 'completed']);
 
-    if (error) return;
+      if (error) {
+        const fallback = await supabase
+          .from('orders')
+          .select('id, slot_note, status')
+          .eq('rider_id', riderId)
+          .in('status', ['delivered', 'completed']);
+        data = fallback.data;
+      }
 
-    let count = 0;
-    for (const o of data || []) {
-      const note = String(o.slot_note || '');
-      const isSettled =
-        Boolean(o.rider_remitted) ||
-        note.includes('[REMITTED]') ||
-        o.remittance_status === 'approved';
-      if (!isSettled) {
-        count++;
+      count = 0;
+      for (const o of data || []) {
+        const note = String(o.slot_note || '');
+        const isSettled =
+          Boolean(o.rider_remitted) ||
+          note.includes('[REMITTED]') ||
+          o.remittance_status === 'approved';
+        if (!isSettled) {
+          count++;
+        }
       }
     }
 
