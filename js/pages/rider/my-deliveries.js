@@ -112,6 +112,9 @@ export async function mount(initialMe) {
   renderTopbarShiftToggle();
 
   const checkedSet = new Set([0]);
+  let slotFilter = 'all';
+  let sortBy = 'time_first';
+  let riderView = 'active';
 
   async function loadAndRender({ forceRefresh = false } = {}) {
     try {
@@ -129,24 +132,63 @@ export async function mount(initialMe) {
       const stLat = stationSettings.lat || 14.7565;
       const stLng = stationSettings.lng || 121.0437;
 
-      // Extract active deliveries
+      // Extract active deliveries and all orders today
       const rawActive = allDeliveries.filter((o) =>
         ['rider_assigned', 'out_for_delivery'].includes(o.status)
       );
 
-      // Closeness / Nearest-neighbor sorting:
-      // Sort orders by distance from station hub so rider saves gas
-      const activeDeliveries = rawActive
-        .map((order) => {
-          const dist = calculateDistanceKm(
-            stLat,
-            stLng,
-            order.address?.latitude,
-            order.address?.longitude
+      const todayOrders = allDeliveries.filter((o) =>
+        matchesDateFilter(o.delivered_at || o.delivery_date, 'today')
+      );
+
+      // Extract unique time slots across active orders
+      const slotMap = new Map();
+      rawActive.forEach((o) => {
+        const slot = getEffectiveSlot(o);
+        const sId = slot?.id || 'standard';
+        const label = formatSlotWindow(slot);
+        const startTime = slot?.start_time || '99:99';
+        if (!slotMap.has(sId)) {
+          slotMap.set(sId, { id: sId, label, startTime, count: 0 });
+        }
+        slotMap.get(sId).count += 1;
+      });
+      const activeTimeSlots = Array.from(slotMap.values()).sort((a, b) =>
+        a.startTime.localeCompare(b.startTime)
+      );
+
+      // Filter active orders by selected time window
+      let filteredActive = rawActive;
+      if (slotFilter !== 'all') {
+        const hasSlot = rawActive.some((o) => (getEffectiveSlot(o)?.id || 'standard') === slotFilter);
+        if (hasSlot) {
+          filteredActive = rawActive.filter(
+            (o) => (getEffectiveSlot(o)?.id || 'standard') === slotFilter
           );
-          return { ...order, _distFromHub: dist };
-        })
-        .sort((a, b) => {
+        } else {
+          slotFilter = 'all';
+        }
+      }
+
+      // Add distance from station hub
+      const mappedActive = filteredActive.map((order) => {
+        const dist = calculateDistanceKm(
+          stLat,
+          stLng,
+          order.address?.latitude,
+          order.address?.longitude
+        );
+        return { ...order, _distFromHub: dist };
+      });
+
+      // Sort: Time window first (recommended default) vs Shortest distance
+      if (sortBy === 'time_first') {
+        mappedActive.sort((a, b) => {
+          const slotA = getEffectiveSlot(a);
+          const slotB = getEffectiveSlot(b);
+          const timeA = slotA?.start_time || '99:99';
+          const timeB = slotB?.start_time || '99:99';
+          if (timeA !== timeB) return timeA.localeCompare(timeB);
           if (a._distFromHub !== null && b._distFromHub !== null) {
             return a._distFromHub - b._distFromHub;
           }
@@ -154,6 +196,18 @@ export async function mount(initialMe) {
           if (b._distFromHub !== null) return 1;
           return 0;
         });
+      } else {
+        mappedActive.sort((a, b) => {
+          if (a._distFromHub !== null && b._distFromHub !== null) {
+            return a._distFromHub - b._distFromHub;
+          }
+          if (a._distFromHub !== null) return -1;
+          if (b._distFromHub !== null) return 1;
+          return 0;
+        });
+      }
+
+      const activeDeliveries = mappedActive;
 
       const completedToday = allDeliveries.filter(
         (o) =>
@@ -228,6 +282,44 @@ export async function mount(initialMe) {
         }
       }
 
+      const activeSlotObj = activeTimeSlots.find((x) => x.id === slotFilter);
+      const activeSlotLabel = activeSlotObj ? activeSlotObj.label : 'All Windows';
+
+      let timeFilterBarHtml = '';
+      if (rawActive.length > 0) {
+        timeFilterBarHtml = `
+          <div class="card" style="border: 1px solid var(--border-color, #e2e8f0); background: #ffffff; padding: 12px 16px; margin-bottom: 14px;">
+            <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+              <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                <span style="font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; display: inline-flex; align-items: center; gap: 5px;">
+                  ${ICONS.clock} Filter by Window:
+                </span>
+                <button type="button" class="btn btn-sm ${slotFilter === 'all' ? 'btn-primary' : 'btn-light'}" data-slot-filter="all" style="font-weight: 600; font-size: 12px; padding: 4px 10px;">
+                  All Windows (${rawActive.length})
+                </button>
+                ${activeTimeSlots
+                  .map(
+                    (slot) => `
+                  <button type="button" class="btn btn-sm ${slotFilter === slot.id ? 'btn-primary' : 'btn-light'}" data-slot-filter="${escapeHtml(slot.id)}" style="font-weight: 600; font-size: 12px; padding: 4px 10px;">
+                    ${escapeHtml(slot.label)} (${slot.count})
+                  </button>
+                `
+                  )
+                  .join('')}
+              </div>
+
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 12px; font-weight: 600; color: #64748b;">Route order:</span>
+                <select class="select" id="rider-sort-select" style="font-size: 12px; height: 32px; padding: 2px 24px 2px 8px; width: auto; border-radius: 6px;">
+                  <option value="time_first" ${sortBy === 'time_first' ? 'selected' : ''}>Time window first</option>
+                  <option value="distance" ${sortBy === 'distance' ? 'selected' : ''}>Shortest distance from station</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
       // Batch Trip Manifest Card - only shown if batch has multiple stops
       let tripManifestHtml = '';
       if (activeDeliveries.length > 1) {
@@ -241,7 +333,7 @@ export async function mount(initialMe) {
             <div class="trip-manifest-top">
               <div class="trip-manifest-title">
                 ${ICONS.truck}
-                <span>Batch Run Manifest (${activeDeliveries.length} Stops)</span>
+                <span>Batch Run Manifest (${activeDeliveries.length} Stops${slotFilter !== 'all' ? ` · ${activeTimeSlots.find((x) => x.id === slotFilter)?.label || ''}` : ''})</span>
               </div>
               <span class="pill pill-neutral" style="font-weight: 700; font-size: 11.5px;">Nearest-Stop Route</span>
             </div>
@@ -388,6 +480,54 @@ export async function mount(initialMe) {
         `;
       }
 
+      const allTodayRowsHtml = todayOrders.length
+        ? todayOrders
+            .map((order) => {
+              const slotText = formatSlotWindow(getEffectiveSlot(order));
+              const custName = order.customer?.full_name || 'Customer';
+              const brgyCity = [
+                order.address?.barangay && order.address.barangay !== 'N/A'
+                  ? order.address.barangay
+                  : null,
+                order.address?.city,
+              ]
+                .filter(Boolean)
+                .join(', ');
+              const statusPill = STATUS_LABELS[order.status] || order.status;
+              const statusClass =
+                order.status === 'completed'
+                  ? 'pill-green'
+                  : order.status === 'out_for_delivery'
+                  ? 'pill-blue'
+                  : order.status === 'attempted'
+                  ? 'pill-amber'
+                  : 'pill-neutral';
+
+              return `
+                <tr class="is-clickable" data-order-id="${escapeHtml(order.id)}">
+                  <td>
+                    <span class="pill ${statusClass}" style="font-size: 11px; font-weight: 700;">
+                      ${escapeHtml(statusPill)}
+                    </span>
+                  </td>
+                  <td class="table-strong">${escapeHtml(slotText)}</td>
+                  <td>
+                    <div class="table-strong">${escapeHtml(custName)}</div>
+                    ${brgyCity ? `<div class="table-sub">${escapeHtml(brgyCity)}</div>` : ''}
+                  </td>
+                  <td>${escapeHtml(summarizeOrderItems(order.items))}</td>
+                  <td>#${escapeHtml(order.order_number)}</td>
+                  <td class="table-strong">${escapeHtml(formatPeso(order.total))}</td>
+                </tr>
+              `;
+            })
+            .join('')
+        : `
+          <tr>
+            <td colspan="6" class="empty-state">No orders assigned to you yet today.</td>
+          </tr>
+        `;
+
       const upNextRowsHtml = upNextList.length
         ? upNextList
             .map((order, idx) => {
@@ -523,6 +663,7 @@ export async function mount(initialMe) {
           </div>
         </div>
 
+        ${timeFilterBarHtml}
         ${tripManifestHtml}
 
         <div class="grid-split">
@@ -530,12 +671,42 @@ export async function mount(initialMe) {
             ${heroHtml}
 
             <div class="card">
-              <div class="card-header">
-                <h2 class="card-title">Route sequence (Up next)</h2>
+              <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                  <h2 class="card-title" style="margin: 0;">Route sequence</h2>
+                  <div style="display: inline-flex; background: #f1f5f9; padding: 2px; border-radius: 8px; gap: 2px;">
+                    <button type="button" class="btn btn-sm ${riderView === 'active' ? 'btn-primary' : 'btn-light'}" data-rider-tab="active" style="border: none; font-size: 11.5px; padding: 3px 10px; border-radius: 6px;">
+                      Active (${rawActive.length})
+                    </button>
+                    <button type="button" class="btn btn-sm ${riderView === 'all_today' ? 'btn-primary' : 'btn-light'}" data-rider-tab="all_today" style="border: none; font-size: 11.5px; padding: 3px 10px; border-radius: 6px;">
+                      All Today (${todayOrders.length})
+                    </button>
+                  </div>
+                </div>
                 <a class="card-link" href="delivery-history.html">Delivery history</a>
               </div>
               ${
-                upNextList.length > 0
+                riderView === 'all_today'
+                  ? `
+                    <div class="table-wrap">
+                      <table class="table">
+                        <thead>
+                          <tr>
+                            <th>Status</th>
+                            <th>Time slot</th>
+                            <th>Customer</th>
+                            <th>Items</th>
+                            <th>Order</th>
+                            <th>Cash</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          ${allTodayRowsHtml}
+                        </tbody>
+                      </table>
+                    </div>
+                  `
+                  : upNextList.length > 0
                   ? `
                     <div class="table-wrap">
                       <table class="table">
@@ -672,6 +843,25 @@ export async function mount(initialMe) {
           showToast(err.message || 'Could not start delivery.', 'error');
           setBusy(btn, false);
         }
+      });
+
+      content.querySelectorAll('[data-slot-filter]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          slotFilter = btn.dataset.slotFilter;
+          loadAndRender();
+        });
+      });
+
+      content.querySelector('#rider-sort-select')?.addEventListener('change', (e) => {
+        sortBy = e.target.value;
+        loadAndRender();
+      });
+
+      content.querySelectorAll('[data-rider-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          riderView = btn.dataset.riderTab;
+          loadAndRender();
+        });
       });
 
       content.querySelectorAll('[data-check-idx]').forEach((item) => {

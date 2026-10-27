@@ -2,14 +2,14 @@
 import { supabase } from '../config/supabaseClient.js';
 import { cachedQuery, invalidateDataCache } from '../core/ui.js';
 
-export async function getSlotAvailability(dateStr) {
+export async function getSlotAvailability(dateStr, { forceRefresh = false } = {}) {
   return cachedQuery(`slots:avail:${dateStr}`, async () => {
     const { data, error } = await supabase.rpc('slot_availability', {
       p_date: dateStr,
     });
     if (error) throw error;
     return data ?? [];
-  });
+  }, { forceRefresh });
 }
 
 export async function getAllTimeSlotsForAdmin(dateStr) {

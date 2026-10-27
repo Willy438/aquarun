@@ -44,3 +44,36 @@
     font-size: 16px;
   }
 }
+
+.counter-input {
+  width: 46px;
+  min-width: 36px;
+  height: 38px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 0 4px;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.15s ease;
+  -moz-appearance: textfield;
+}
+
+.counter-input::-webkit-outer-spin-button,
+.counter-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.counter-input:hover {
+  border-color: #94a3b8;
+}
+
+.counter-input:focus {
+  border-color: var(--blue-app, #1d5bd6);
+  box-shadow: 0 0 0 3px rgba(29, 91, 214, 0.15);
+}

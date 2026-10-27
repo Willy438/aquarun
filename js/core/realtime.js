@@ -188,3 +188,27 @@ export function subscribeAdminWorkspace(onUpdate) {
     supabase.removeChannel(channel);
   };
 }
+
+export function subscribeSlotAvailability(onUpdate) {
+  if (typeof onUpdate !== 'function') return () => {};
+  const handle = (p) => {
+    invalidateDataCache();
+    onUpdate(p);
+  };
+  const channelName = `slots-avail-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const channel = supabase
+    .channel(channelName)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'order_status_log' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slots' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'slot_closures' }, handle)
+    .subscribe((status, err) => {
+      if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Realtime Slots warning]:', status, err);
+      }
+    });
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}

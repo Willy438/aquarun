@@ -1,5 +1,5 @@
 import { bootCustomerPage, navigateCustomerSpa, updateCustomerActiveOrderBadge } from '../../core/nav.js';
-import { subscribeCustomerOrders } from '../../core/realtime.js';
+import { subscribeCustomerOrders, subscribeSlotAvailability } from '../../core/realtime.js';
 import {
   confirmModal,
   escapeHtml,
@@ -239,8 +239,8 @@ export async function mount(me) {
     return currentMinutes >= slotMinutes;
   }
 
-  async function refreshSlotsForDate(dateStr) {
-    slots = await getSlotAvailability(dateStr);
+  async function refreshSlotsForDate(dateStr, { force = false } = {}) {
+    slots = await getSlotAvailability(dateStr, { forceRefresh: force });
     const stillAvailable = slots.find(
       (s) => s.slot_id === selectedSlotId && !s.is_closed && !s.is_full && !isSlotPassed(s, dateStr)
     );
@@ -382,7 +382,7 @@ export async function mount(me) {
                   qty > 0
                     ? `<div class="qty-counter">
                         <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="-1" aria-label="Decrease quantity">−</button>
-                        <span class="qty-num">${qty}</span>
+                        <input type="number" min="0" max="999" class="qty-input" data-prod-input="${escapeHtml(item.key)}" value="${qty}" aria-label="Quantity" />
                         <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="1" aria-label="Increase quantity">+</button>
                       </div>`
                     : `<button type="button" class="btn btn-sm btn-light" data-prod-add="${escapeHtml(item.key)}">+ Add</button>`
@@ -418,6 +418,68 @@ export async function mount(me) {
         renderCartSection();
       });
     });
+
+    grid.querySelectorAll('[data-prod-input]').forEach((inp) => {
+      inp.addEventListener('focus', (e) => e.target.select());
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.target.blur();
+      });
+      inp.addEventListener('change', (e) => {
+        const id = e.target.dataset.prodInput;
+        let next = parseInt(e.target.value, 10);
+        if (isNaN(next) || next <= 0) {
+          cart.delete(id);
+        } else {
+          next = Math.min(999, Math.max(1, next));
+          cart.set(id, next);
+        }
+        renderProductsSection();
+        renderCartSection();
+      });
+    });
+  }
+
+  function updateSlotHint() {
+    let hintEl = document.querySelector('#slot-capacity-hint');
+    if (!hintEl) {
+      const select = document.querySelector('#slot-select');
+      if (select && select.parentElement) {
+        hintEl = document.createElement('p');
+        hintEl.id = 'slot-capacity-hint';
+        hintEl.className = 'field-sub';
+        hintEl.style.fontSize = '12px';
+        hintEl.style.marginTop = '4px';
+        select.parentElement.appendChild(hintEl);
+      }
+    }
+    if (!hintEl) return;
+    const cur = slots.find((s) => s.slot_id === selectedSlotId);
+    if (!cur) {
+      hintEl.textContent = 'Please choose an available delivery window.';
+      hintEl.style.color = '#64748b';
+      return;
+    }
+    const maxOrders = Number(cur.max_orders || 10);
+    const booked = Number(cur.orders_count || 0);
+    const remaining = Math.max(0, maxOrders - booked);
+    const isPassed = isSlotPassed(cur, selectedDate);
+
+    if (cur.is_closed) {
+      hintEl.textContent = 'This delivery window is closed by the station.';
+      hintEl.style.color = '#ef4444';
+    } else if (cur.is_full || remaining === 0) {
+      hintEl.textContent = `This window is fully booked (${booked}/${maxOrders} limit reached). Pick another window.`;
+      hintEl.style.color = '#ef4444';
+    } else if (isPassed) {
+      hintEl.textContent = 'This delivery window has passed for today. Please pick a later window or tomorrow.';
+      hintEl.style.color = '#d97706';
+    } else if (remaining <= 3) {
+      hintEl.textContent = `Window capacity: High demand · only ${remaining} ${remaining === 1 ? 'spot' : 'spots'} left (${booked}/${maxOrders} booked).`;
+      hintEl.style.color = '#b45309';
+    } else {
+      hintEl.textContent = `Window capacity: ${remaining} of ${maxOrders} delivery spots available today.`;
+      hintEl.style.color = '#15803d';
+    }
   }
 
   function renderSlotsSelect() {
@@ -427,6 +489,7 @@ export async function mount(me) {
     if (!slots.length) {
       select.innerHTML = `<option value="">No active delivery slots</option>`;
       select.disabled = true;
+      updateSlotHint();
       return;
     }
 
@@ -435,6 +498,7 @@ export async function mount(me) {
       select.innerHTML = `<option value="">All delivery windows for today have passed or are full — please select tomorrow</option>`;
       select.disabled = true;
       selectedSlotId = '';
+      updateSlotHint();
       return;
     }
 
@@ -442,19 +506,32 @@ export async function mount(me) {
     select.innerHTML = slots
       .map((slot) => {
         const isPassed = isSlotPassed(slot, selectedDate);
-        const disabled = slot.is_closed || slot.is_full || isPassed;
-        const suffix = slot.is_closed
-          ? ' (Closed for date)'
-          : slot.is_full
-          ? ' (Full)'
-          : isPassed
-          ? ' (Window passed)'
-          : '';
+        const maxOrders = Number(slot.max_orders || 10);
+        const booked = Number(slot.orders_count || 0);
+        const remaining = Math.max(0, maxOrders - booked);
+        const isFull = slot.is_full || remaining === 0;
+        const disabled = slot.is_closed || isFull || isPassed;
+
+        let suffix = '';
+        if (slot.is_closed) {
+          suffix = ' (Closed for date)';
+        } else if (isFull) {
+          suffix = ` (Full — ${booked}/${maxOrders} booked)`;
+        } else if (isPassed) {
+          suffix = ' (Window passed)';
+        } else if (remaining <= 3) {
+          suffix = ` (Almost full · ${remaining} left)`;
+        } else {
+          suffix = ` (${remaining} slots left)`;
+        }
+
         const label = slot.label.replace(/\s*-\s*/g, '–') + suffix;
         const selected = slot.slot_id === selectedSlotId ? ' selected' : '';
         return `<option value="${escapeHtml(slot.slot_id)}"${disabled ? ' disabled' : ''}${selected}>${escapeHtml(label)}</option>`;
       })
       .join('');
+
+    updateSlotHint();
   }
 
   function renderCartSection() {
@@ -688,7 +765,7 @@ export async function mount(me) {
               <div class="cart-item-right">
                 <div class="counter">
                   <button type="button" class="counter-btn" data-cart-delta="${escapeHtml(key)}" data-delta="-1" aria-label="Decrease quantity">−</button>
-                  <span class="counter-value">${qty}</span>
+                  <input type="number" min="0" max="999" class="counter-input" data-cart-input="${escapeHtml(key)}" value="${qty}" aria-label="Quantity" />
                   <button type="button" class="counter-btn" data-cart-delta="${escapeHtml(key)}" data-delta="1" aria-label="Increase quantity">+</button>
                 </div>
                 <span class="cart-item-total">${escapeHtml(formatPeso(lineTotal))}</span>
@@ -709,6 +786,25 @@ export async function mount(me) {
         if (next <= 0) {
           cart.delete(id);
         } else {
+          cart.set(id, next);
+        }
+        renderProductsSection();
+        renderCartSection();
+      });
+    });
+
+    document.querySelectorAll('[data-cart-input]').forEach((inp) => {
+      inp.addEventListener('focus', (e) => e.target.select());
+      inp.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') e.target.blur();
+      });
+      inp.addEventListener('change', (e) => {
+        const id = e.target.dataset.cartInput;
+        let next = parseInt(e.target.value, 10);
+        if (isNaN(next) || next <= 0) {
+          cart.delete(id);
+        } else {
+          next = Math.min(999, Math.max(1, next));
           cart.set(id, next);
         }
         renderProductsSection();
@@ -1223,6 +1319,16 @@ export async function mount(me) {
         return;
       }
 
+      // Live verification of slot capacity right before order placement
+      await refreshSlotsForDate(selectedDate, { force: true });
+      const currentSlot = slots.find((s) => s.slot_id === selectedSlotId);
+      if (!currentSlot || currentSlot.is_closed || currentSlot.is_full || isSlotPassed(currentSlot, selectedDate)) {
+        showToast('That delivery window has reached its order limit or passed. Please select another time slot.', 'error');
+        renderSlotsSelect();
+        renderCartSection();
+        return;
+      }
+
       const selectedAddr = addresses.find((a) => a.id === selectedAddressId);
       const selectedSlot = slots.find((s) => s.slot_id === selectedSlotId);
       const slotText = selectedSlot?.label ? selectedSlot.label.replace(/\s*-\s*/g, '–') : 'Scheduled window';
@@ -1313,8 +1419,38 @@ export async function mount(me) {
     };
 
     const unsubRealtime = subscribeCustomerOrders(me.id, refreshCatalogState);
+
+    // Live slot availability listener: auto-update slot spots in real time when any order is submitted
+    const unsubSlots = subscribeSlotAvailability(async () => {
+      try {
+        await refreshSlotsForDate(selectedDate, { force: true });
+        renderSlotsSelect();
+      } catch (err) {
+        console.warn('[Realtime slot update error]:', err);
+      }
+    });
+
+    // 10s fallback polling and visibilitychange focus refresh
+    const pollInterval = setInterval(async () => {
+      if (document.visibilityState === 'visible') {
+        await refreshSlotsForDate(selectedDate, { force: true });
+        renderSlotsSelect();
+      }
+    }, 10000);
+
+    const onVisibilityChange = async () => {
+      if (document.visibilityState === 'visible') {
+        await refreshSlotsForDate(selectedDate, { force: true });
+        renderSlotsSelect();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibilityChange);
+
     return () => {
       unsubRealtime();
+      unsubSlots();
+      clearInterval(pollInterval);
+      document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   } catch (err) {
     showToast(err.message || 'Could not load order form.', 'error');
