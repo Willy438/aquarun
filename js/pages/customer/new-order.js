@@ -1117,7 +1117,7 @@ export async function mount(me) {
       } catch (err) {
         let msg = err.message || 'Could not place order.';
         if (/failed to fetch/i.test(msg) || err.name === 'TypeError') {
-          msg = 'Connection to the server timed out or session expired. Please refresh the page or sign in again.';
+          msg = 'Connection to the server timed out. Please check your connection and try again.';
         }
         showToast(msg, 'error');
         setBusy(btn, false);

@@ -881,6 +881,7 @@ export async function createOrder({ addressId, deliveryDate, slotId, notes, item
     });
   } catch (err) {
     if (err.name === 'TypeError' || /fetch/i.test(err.message)) {
+      await new Promise((r) => setTimeout(r, 400));
       await supabase.auth.refreshSession().catch(() => {});
       res = await supabase.rpc('create_order', {
         p_address_id: addressId,

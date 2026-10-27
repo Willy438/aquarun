@@ -295,65 +295,7 @@ function preloadRoleModules(role, me = null) {
           .catch(() => {});
       }
     });
-
-    // Pre-warm service caches so first click on any tab renders in <2ms
-    Promise.resolve()
-      .then(async () => {
-        const { getTodayManila } = await import('./ui.js');
-        const today = getTodayManila();
-        if (role === 'admin') {
-          const [ordersMod, reportsMod, productsMod, slotsMod, usersMod] = await Promise.all([
-            import('../services/ordersService.js'),
-            import('../services/reportsService.js'),
-            import('../services/productsService.js'),
-            import('../services/slotsService.js'),
-            import('../services/usersService.js'),
-          ]);
-          ordersMod.getAllOrdersForStaff({ limit: 300 }).catch(() => {});
-          reportsMod.getDailyReports({ limit: 14 }).catch(() => {});
-          reportsMod.getMonthlyReports({ limit: 12 }).catch(() => {});
-          reportsMod.getOrderActivityByHour({ days: 1 }).catch(() => {});
-          productsMod.getAllProductsForAdmin().catch(() => {});
-          productsMod.getServiceCharge().catch(() => {});
-          productsMod.getStationOpenStatus().catch(() => {});
-          slotsMod.getAllTimeSlotsForAdmin(today).catch(() => {});
-          usersMod.getStaffAndRidersForAdmin().catch(() => {});
-        } else if (role === 'customer' && me?.id) {
-          const [ordersMod, ledgerMod, addrMod, prodMod, slotsMod] = await Promise.all([
-            import('../services/ordersService.js'),
-            import('../services/ledgerService.js'),
-            import('../services/addressesService.js'),
-            import('../services/productsService.js'),
-            import('../services/slotsService.js'),
-          ]);
-          ordersMod.getCustomerActiveOrder(me.id).catch(() => {});
-          ordersMod.getCustomerOrders(me.id, { limit: 100 }).catch(() => {});
-          ledgerMod.getCustomerBottleBalance(me.id).catch(() => {});
-          ledgerMod.getCustomerLedgerActivity(me.id).catch(() => {});
-          addrMod.getCustomerAddresses(me.id).catch(() => {});
-          prodMod.getActiveProducts().catch(() => {});
-          prodMod.getServiceCharge().catch(() => {});
-          slotsMod.getSlotAvailability(today).catch(() => {});
-        } else if (role === 'staff') {
-          const [ordersMod, ledgerMod, slotsMod, usersMod] = await Promise.all([
-            import('../services/ordersService.js'),
-            import('../services/ledgerService.js'),
-            import('../services/slotsService.js'),
-            import('../services/usersService.js'),
-          ]);
-          ordersMod.getAllOrdersForStaff({ limit: 200 }).catch(() => {});
-          ordersMod.getNextOrderForProcessing().catch(() => {});
-          ledgerMod.getStaffLedgerEntries().catch(() => {});
-          ledgerMod.getAllCustomerBalances().catch(() => {});
-          slotsMod.getSlotAvailability(today).catch(() => {});
-          usersMod.getAvailableRiders().catch(() => {});
-        } else if (role === 'rider' && me?.id) {
-          const delivMod = await import('../services/deliveryService.js');
-          delivMod.getRiderDeliveries(me.id).catch(() => {});
-        }
-      })
-      .catch(() => {});
-  }, 30);
+  }, 100);
 }
 
 export async function updateCustomerActiveOrderBadge(customerId) {
@@ -797,7 +739,14 @@ export async function renderNav(profileOrRole, activeKey) {
       confirmText: 'Log out',
       cancelText: 'Stay logged in',
     });
-    if (confirmed) logOut();
+    if (confirmed) {
+      const logoutBtn = container.querySelector('#sidebar-logout-btn');
+      if (logoutBtn) {
+        logoutBtn.style.pointerEvents = 'none';
+        logoutBtn.style.opacity = '0.5';
+      }
+      await logOut();
+    }
   });
   const toggleBtn = container.querySelector('#sidebar-menu-toggle');
   const closeDrawerBtn = container.querySelector('#sidebar-drawer-close');

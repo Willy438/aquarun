@@ -75,17 +75,29 @@ async function ensureInitialAddress(user) {
 
 export async function ensureActiveSession() {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession();
+    const getSessionPromise = supabase.auth.getSession();
+    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 3000));
+    const { data: { session }, error } = await Promise.race([getSessionPromise, timeoutPromise]).catch(() => ({ data: { session: null }, error: true }));
+
     if (error || !session) {
-      const { data: refreshData, error: refreshErr } = await supabase.auth.refreshSession().catch(() => ({ data: {}, error: true }));
+      const refreshPromise = supabase.auth.refreshSession();
+      const { data: refreshData, error: refreshErr } = await Promise.race([
+        refreshPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 3000))
+      ]).catch(() => ({ data: {}, error: true }));
       if (refreshErr || !refreshData?.session) {
         return null;
       }
       return refreshData.session;
     }
+
     const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
     if (expiresAt && Date.now() > expiresAt - 120000) {
-      const { data: refreshData } = await supabase.auth.refreshSession().catch(() => ({ data: { session } }));
+      const refreshPromise = supabase.auth.refreshSession();
+      const { data: refreshData } = await Promise.race([
+        refreshPromise,
+        new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 2500))
+      ]).catch(() => ({ data: { session } }));
       return refreshData?.session || session;
     }
     return session;
@@ -95,21 +107,34 @@ export async function ensureActiveSession() {
 }
 
 export async function getCurrentProfile() {
-  const { data: { session } } = await supabase.auth.getSession();
-  const user = session?.user;
-  if (!user) {
-    setCachedProfile(null);
-    return null;
+  try {
+    const { data: { session }, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) throw sessionErr;
+    const user = session?.user;
+    if (!user) {
+      setCachedProfile(null);
+      return null;
+    }
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('id, full_name, phone, role, is_active, is_available')
+      .eq('id', user.id)
+      .single();
+    if (error) {
+      const cached = getCachedProfile();
+      if (cached && cached.id === user.id) {
+        return cached;
+      }
+      throw error;
+    }
+    const profile = { ...data, email: user.email ?? '' };
+    setCachedProfile(profile);
+    return profile;
+  } catch (err) {
+    const cached = getCachedProfile();
+    if (cached) return cached;
+    throw err;
   }
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, phone, role, is_active, is_available')
-    .eq('id', user.id)
-    .single();
-  if (error) throw error;
-  const profile = { ...data, email: user.email ?? '' };
-  setCachedProfile(profile);
-  return profile;
 }
 
 export function homeFor(role) {
@@ -126,7 +151,7 @@ export async function logIn(email, password) {
   }
   const profile = await getCurrentProfile();
   if (!profile || !profile.is_active) {
-    await supabase.auth.signOut();
+    await supabase.auth.signOut().catch(() => {});
     setCachedProfile(null);
     throw new Error('This account is not active. Please contact the station.');
   }
@@ -167,8 +192,22 @@ export async function signUpCustomer({ fullName, phone, email, address = null, p
 }
 
 export async function logOut() {
-  setCachedProfile(null);
-  sessionStorage.removeItem('aquarun_active_badge');
-  await supabase.auth.signOut();
-  window.location.href = new URL('../../login.html', import.meta.url);
+  try {
+    setCachedProfile(null);
+    sessionStorage.clear();
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const key = localStorage.key(i);
+      if (key && (key.startsWith('sb-') || key.includes('supabase') || key.startsWith('aquarun_'))) {
+        localStorage.removeItem(key);
+      }
+    }
+    await Promise.race([
+      supabase.auth.signOut(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('SignOut timeout')), 1200))
+    ]).catch(() => {});
+  } catch (err) {
+    console.warn('Logout notice:', err);
+  } finally {
+    window.location.replace('/login.html');
+  }
 }
