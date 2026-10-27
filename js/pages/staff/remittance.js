@@ -174,37 +174,8 @@ export async function mount(me) {
     const orderDate = o.delivered_at
       ? `${formatDateShort(o.delivered_at)} · ${formatTimeShort(o.delivered_at)}`
       : 'Delivered';
-    const note = String(o.slot_note || '');
     const isSub =
-      o.remittance_status === 'submitted' || note.includes('[REMITTANCE_SUBMITTED]');
-
-    const earlyDepartMatch = note.match(/\[EARLY_DEPART:\s*([^\]]+)\]/i);
-    const lateDepartMatch = note.match(/\[LATE_DEPART:\s*([^\]]+)\]/i);
-    const earlyDeliveryMatch = note.match(/\[EARLY_DELIVERY:\s*([^\]]+)\]/i);
-    const lateDeliveryMatch = note.match(/\[LATE_DELIVERY:\s*([^\]]+)\]/i);
-
-    let timingBadgesHtml = '';
-    const reasons = [];
-    if (earlyDepartMatch) {
-      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; font-weight:700; padding: 2px 7px;">Early Depart</span>`;
-      reasons.push(`Early departure: ${earlyDepartMatch[1]}`);
-    }
-    if (lateDepartMatch) {
-      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; font-weight:700; padding: 2px 7px;">Late Depart</span>`;
-      reasons.push(`Late departure: ${lateDepartMatch[1]}`);
-    }
-    if (earlyDeliveryMatch) {
-      timingBadgesHtml += `<span class="pill pill-amber" style="font-size:10px; font-weight:700; padding: 2px 7px;">Early Deliv</span>`;
-      reasons.push(`Early delivery: ${earlyDeliveryMatch[1]}`);
-    }
-    if (lateDeliveryMatch) {
-      timingBadgesHtml += `<span class="pill pill-rose" style="font-size:10px; font-weight:700; padding: 2px 7px;">Late Deliv</span>`;
-      reasons.push(`Late delivery: ${lateDeliveryMatch[1]}`);
-    }
-
-    const reasonsHtml = reasons.length
-      ? `<div style="margin-top: 4px; font-size: 11px; color: #64748b; line-height: 1.4;">${reasons.map((r) => escapeHtml(r)).join(' · ')}</div>`
-      : '';
+      o.remittance_status === 'submitted' || String(o.slot_note || '').includes('[REMITTANCE_SUBMITTED]');
 
     return `
       <div class="remittance-order-row">
@@ -212,17 +183,15 @@ export async function mount(me) {
           <div class="remittance-order-headline">
             <span class="remittance-order-id">#${escapeHtml(o.order_number)}</span>
             <span class="remittance-order-dot">·</span>
-            <span class="remittance-order-customer">${escapeHtml(cust)}</span>
+            <span class="remittance-order-customer" title="${escapeHtml(cust)}">${escapeHtml(cust)}</span>
           </div>
           <div class="remittance-order-meta">
             <span>${escapeHtml(orderDate)}</span>
-            ${timingBadgesHtml}
           </div>
-          ${reasonsHtml}
         </div>
         <div class="remittance-order-end">
           <span class="remittance-order-amount">${escapeHtml(formatPeso(o.total))}</span>
-          <span class="pill ${isSub ? 'pill-amber' : 'pill-neutral'}" style="font-size: 11px;">
+          <span class="pill ${isSub ? 'pill-amber' : 'pill-neutral'}" style="font-size: 10.5px; padding: 2px 7px;">
             ${isSub ? 'Submitted' : 'In Pocket'}
           </span>
         </div>
@@ -233,13 +202,13 @@ export async function mount(me) {
   function renderAwaitingHtml(awaitingRiders) {
     if (!awaitingRiders.length) {
       return `
-        <div class="card empty-state" style="padding: 48px 24px; text-align: center;">
+        <div class="card empty-state" style="padding: 48px 24px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
           <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
           </div>
           <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a;">All cash turnovers cleared</h3>
-          <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 400px; margin: 0 auto;">
-            No cash remittances awaiting cashier verification right now. Any rider turnover will appear here when submitted.
+          <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 420px; margin: 0 auto;">
+            No cash remittances awaiting cashier verification right now. When a rider turns in their cash collection, their card will appear here.
           </p>
         </div>
       `;
@@ -247,44 +216,39 @@ export async function mount(me) {
 
     const cardsHtml = awaitingRiders
       .map((s) => {
-        const ordersHtml = (s.submittedOrders || s.unremittedOrders || [])
-          .map(renderOrderRow)
-          .join('');
+        const orders = s.submittedOrders || s.unremittedOrders || [];
+        const ordersHtml = orders.map(renderOrderRow).join('');
+        const initials = getInitials(s.rider.full_name);
 
         return `
           <div class="remittance-rider-card is-submitted">
             <div class="remittance-rider-header">
-              <div>
-                <h3 class="remittance-rider-name">${escapeHtml(s.rider.full_name)}</h3>
-                <p class="remittance-rider-meta">${escapeHtml(s.rider.phone || 'No phone')} · Delivery Rider</p>
+              <div class="remittance-rider-profile">
+                <div class="remittance-rider-avatar">${escapeHtml(initials)}</div>
+                <div>
+                  <h3 class="remittance-rider-name">${escapeHtml(s.rider.full_name)}</h3>
+                  <p class="remittance-rider-meta">${escapeHtml(s.rider.phone || 'No phone')} · Delivery Rider</p>
+                </div>
               </div>
-              <span class="pill pill-amber" style="font-weight: 700;">
-                Awaiting Approval
+              <span class="pill pill-amber" style="font-weight: 700; font-size: 11px;">
+                Awaiting Check
               </span>
             </div>
 
-            <div class="remittance-metrics-strip">
-              <div class="remittance-metric-item">
-                <span class="remittance-metric-label">Cash to Receive</span>
-                <span class="remittance-metric-val is-highlight">${formatPeso(s.submittedCash)}</span>
+            <div class="remittance-summary-banner">
+              <div>
+                <span class="remittance-summary-label">Cash to Receive</span>
+                <div class="remittance-summary-val">${formatPeso(s.submittedCash)}</div>
               </div>
-              <div class="remittance-metric-item">
-                <span class="remittance-metric-label">Orders Submitted</span>
-                <span class="remittance-metric-val">${s.submittedCount} ${s.submittedCount === 1 ? 'order' : 'orders'}</span>
+              <div style="text-align: right;">
+                <span class="remittance-summary-label">Turnover Volume</span>
+                <div class="remittance-summary-count">${s.submittedCount} ${s.submittedCount === 1 ? 'order' : 'orders'}</div>
               </div>
-              ${
-                s.unsubmittedCash > 0
-                  ? `<div class="remittance-metric-item">
-                      <span class="remittance-metric-label">Still in Pocket</span>
-                      <span class="remittance-metric-val" style="color: #64748b;">${formatPeso(s.unsubmittedCash)}</span>
-                    </div>`
-                  : ''
-              }
             </div>
 
             <div class="remittance-orders-box">
               <div class="remittance-orders-header">
-                <span class="remittance-orders-title">Orders for Verification</span>
+                <span class="remittance-orders-title">Orders for Verification (${orders.length})</span>
                 <span class="remittance-orders-total">${formatPeso(s.submittedCash)}</span>
               </div>
               <div class="remittance-orders-list">
@@ -299,7 +263,7 @@ export async function mount(me) {
                 data-approve-remittance="${escapeHtml(s.rider.id)}"
                 data-rider-name="${escapeHtml(s.rider.full_name)}"
                 data-amount="${s.submittedCash}"
-                style="font-weight: 700; font-size: 14px; padding: 10px 16px;"
+                style="font-weight: 700; font-size: 14px; padding: 11px 16px; justify-content: center; width: 100%;"
               >
                 Verify &amp; Accept Cash (${formatPeso(s.submittedCash)})
               </button>
@@ -319,13 +283,13 @@ export async function mount(me) {
   function renderHoldingHtml(holdingRiders) {
     if (!holdingRiders.length) {
       return `
-        <div class="card empty-state" style="padding: 48px 24px; text-align: center;">
+        <div class="card empty-state" style="padding: 48px 24px; text-align: center; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
           <div style="width: 48px; height: 48px; border-radius: 50%; background: #f1f5f9; display: flex; align-items: center; justify-content: center; margin: 0 auto 12px; color: #64748b;">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4Z"/></svg>
           </div>
           <h3 style="margin: 0 0 6px; font-size: 16px; font-weight: 700; color: #0f172a;">No unsubmitted cash on duty</h3>
-          <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 400px; margin: 0 auto;">
-            All delivery collections have either been turned over to the station cashier or no active cash orders are out.
+          <p style="margin: 0; font-size: 13px; color: #64748b; max-width: 420px; margin: 0 auto;">
+            All delivery collections have either been turned over to the station cashier or no riders are currently carrying collections.
           </p>
         </div>
       `;
@@ -333,40 +297,39 @@ export async function mount(me) {
 
     const cardsHtml = holdingRiders
       .map((s) => {
-        const ordersHtml = (s.unsubmittedOrders || s.unremittedOrders || [])
-          .map(renderOrderRow)
-          .join('');
+        const orders = s.unsubmittedOrders || s.unremittedOrders || [];
+        const ordersHtml = orders.map(renderOrderRow).join('');
+        const initials = getInitials(s.rider.full_name);
 
         return `
           <div class="remittance-rider-card">
             <div class="remittance-rider-header">
-              <div>
-                <h3 class="remittance-rider-name">${escapeHtml(s.rider.full_name)}</h3>
-                <p class="remittance-rider-meta">${escapeHtml(s.rider.phone || 'No phone')} · Delivery Rider</p>
+              <div class="remittance-rider-profile">
+                <div class="remittance-rider-avatar">${escapeHtml(initials)}</div>
+                <div>
+                  <h3 class="remittance-rider-name">${escapeHtml(s.rider.full_name)}</h3>
+                  <p class="remittance-rider-meta">${escapeHtml(s.rider.phone || 'No contact')} · Delivery Rider</p>
+                </div>
               </div>
-              <span class="pill pill-neutral">
+              <span class="pill pill-neutral" style="font-size: 11px;">
                 In Rider's Pocket
               </span>
             </div>
 
-            <div class="remittance-metrics-strip">
-              <div class="remittance-metric-item">
-                <span class="remittance-metric-label">Cash on Hand</span>
-                <span class="remittance-metric-val">${formatPeso(s.unsubmittedCash)}</span>
+            <div class="remittance-summary-banner is-holding">
+              <div>
+                <span class="remittance-summary-label">Cash on Hand</span>
+                <div class="remittance-summary-val">${formatPeso(s.unsubmittedCash)}</div>
               </div>
-              <div class="remittance-metric-item">
-                <span class="remittance-metric-label">Delivered Orders</span>
-                <span class="remittance-metric-val">${s.unsubmittedCount} ${s.unsubmittedCount === 1 ? 'order' : 'orders'}</span>
-              </div>
-              <div class="remittance-metric-item">
-                <span class="remittance-metric-label">Status</span>
-                <span class="remittance-metric-val" style="font-size: 13px; color: #64748b; font-weight: 600;">Shift in progress</span>
+              <div style="text-align: right;">
+                <span class="remittance-summary-label">Delivered Orders</span>
+                <div class="remittance-summary-count">${s.unsubmittedCount} ${s.unsubmittedCount === 1 ? 'order' : 'orders'}</div>
               </div>
             </div>
 
             <div class="remittance-orders-box">
               <div class="remittance-orders-header">
-                <span class="remittance-orders-title">Delivered Orders (Cash Held)</span>
+                <span class="remittance-orders-title">Delivered Orders (Cash Held) (${orders.length})</span>
                 <span class="remittance-orders-total">${formatPeso(s.unsubmittedCash)}</span>
               </div>
               <div class="remittance-orders-list">
@@ -374,14 +337,9 @@ export async function mount(me) {
               </div>
             </div>
 
-            <div class="remittance-action-box">
-              <div class="remittance-waiting-notice">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" style="width:16px;height:16px;display:block;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-                <div>
-                  <span style="font-weight: 600; color: #334155;">Cash not turned over yet.</span>
-                  <span style="color: #64748b;"> Rider is carrying collections. Settlement unlocks once rider submits turnover.</span>
-                </div>
-              </div>
+            <div class="remittance-waiting-notice">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <span>Cash carrying by rider. Settlement unlocks once rider submits turnover.</span>
             </div>
           </div>
         `;

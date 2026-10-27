@@ -95,7 +95,7 @@ export async function mount() {
         </button>
         <a class="orders-view-tab" href="remittance.html" id="tab-rider-remittance">
           ${ICONS.money}
-          <span>Cash Remittance &amp; Sales</span>
+          <span>Cash &amp; Sales</span>
         </a>
       </div>
 
@@ -675,7 +675,7 @@ export async function mount() {
         <div class="card" style="margin-bottom: 16px;">
           <div class="card-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
             <div>
-              <h2 class="card-title">Rider Cash Remittances & Shift Handover</h2>
+              <h2 class="card-title">Rider Cash Turnovers &amp; Sales</h2>
               <p class="text-muted" style="margin: 4px 0 0 0; font-size: 13px;">
                 Verify physical cash envelopes turned in by riders upon returning to the station.
               </p>

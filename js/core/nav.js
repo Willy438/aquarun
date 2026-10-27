@@ -64,7 +64,7 @@ const NAV_SECTIONS = {
         { key: 'dashboard', label: 'Dashboard', icon: 'home' },
         { key: 'orders', label: 'Orders', icon: 'cart', badgeId: 'nav-staff-orders-badge' },
         { key: 'order-processing', label: 'Order processing', icon: 'check' },
-        { key: 'remittance', label: 'Cash remittance', icon: 'cash', badgeId: 'nav-staff-remittance-badge' },
+        { key: 'remittance', label: 'Cash & sales', icon: 'cash', badgeId: 'nav-staff-remittance-badge' },
         { key: 'bottle-ledger', label: 'Bottle ledger', icon: 'bookmark' },
         { key: 'customers', label: 'Customers', icon: 'user' },
       ],
