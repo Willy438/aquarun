@@ -10,6 +10,8 @@ import {
   formatTimeShort,
   getInitials,
   getTodayManila,
+  paginateList,
+  renderPaginationHtml,
   showToast,
 } from '../../core/ui.js';
 import {
@@ -34,14 +36,26 @@ export async function mount() {
     rightEl.innerHTML = `<span class="pill pill-neutral">Read-only</span>`;
   }
 
+  // Immediately show skeleton so stale views (or previous pages) never linger
+  if (content) {
+    content.innerHTML = `
+      <div style="padding: 3rem 1rem; text-align: center;">
+        <div class="spinner" style="margin: 0 auto 0.75rem;"></div>
+        <div class="text-muted" style="font-size: 13.5px; font-weight: 500;">Loading orders...</div>
+      </div>
+    `;
+  }
+
   const params = new URLSearchParams(window.location.search);
   let activeFilter = params.get('filter') || 'all';
   let searchQuery = params.get('search') || '';
+  let currentPage = 1;
+  const pageSize = 10;
   let orders = [];
 
   async function loadOrders() {
     try {
-      orders = await getAllOrdersForStaff({ limit: 300 });
+      orders = await getAllOrdersForStaff({ limit: 500, forceRefresh: true });
       if (subEl) {
         subEl.textContent = `${formatDateHeading(getTodayManila())} · ${orders.length} order${
           orders.length === 1 ? '' : 's'
@@ -49,7 +63,20 @@ export async function mount() {
       }
       renderView();
     } catch (err) {
+      console.error('Could not load orders:', err);
       showToast(err.message || 'Could not load orders.', 'error');
+      if (content && (!orders || orders.length === 0)) {
+        content.innerHTML = `
+          <div class="card" style="padding: 2.5rem 1.5rem; text-align: center; max-width: 480px; margin: 2rem auto;">
+            <div style="color: #ef4444; font-weight: 700; font-size: 16px; margin-bottom: 0.5rem;">Could not load orders</div>
+            <p class="text-muted" style="font-size: 13.5px; margin-bottom: 1.25rem;">${escapeHtml(err.message || 'Please check your connection and try again.')}</p>
+            <button type="button" class="btn btn-primary" id="retry-load-orders-btn">Retry loading</button>
+          </div>
+        `;
+        document.querySelector('#retry-load-orders-btn')?.addEventListener('click', () => {
+          loadOrders();
+        });
+      }
     }
   }
 
@@ -169,11 +196,12 @@ export async function mount() {
     });
 
     const avatarTones = [''];
+    const paged = paginateList(filtered, currentPage, pageSize);
 
     const rowsHtml =
-      filtered.length === 0
+      paged.items.length === 0
         ? `<tr><td colspan="7" class="text-muted" style="text-align:center; padding: 28px;">No orders match your filter.</td></tr>`
-        : filtered
+        : paged.items
             .map((order, idx) => {
               const customerName = order.customer?.full_name || 'Customer';
               const slotText = formatSlotCompact(getEffectiveSlot(order));
@@ -239,12 +267,15 @@ export async function mount() {
             </tbody>
           </table>
         </div>
+
+        ${renderPaginationHtml(paged)}
       </section>
     `;
 
     const searchInput = content.querySelector('#admin-order-search');
     searchInput?.addEventListener('input', (e) => {
       searchQuery = e.target.value;
+      currentPage = 1;
       const pos = searchInput.selectionStart;
       renderView();
       const nextInput = content.querySelector('#admin-order-search');
@@ -257,7 +288,19 @@ export async function mount() {
     content.querySelectorAll('[data-filter]').forEach((btn) => {
       btn.addEventListener('click', () => {
         activeFilter = btn.getAttribute('data-filter') || 'all';
+        currentPage = 1;
         renderView();
+      });
+    });
+
+    content.querySelectorAll('.pagination-btn[data-page]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = parseInt(btn.dataset.page, 10);
+        if (!isNaN(p) && p >= 1 && p <= paged.totalPages && p !== currentPage) {
+          currentPage = p;
+          renderView();
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
       });
     });
 

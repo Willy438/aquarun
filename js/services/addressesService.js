@@ -6,7 +6,7 @@ export async function getCustomerAddresses(customerId) {
   return cachedQuery(`addresses:${customerId}`, async () => {
     let { data, error } = await supabase
       .from('addresses')
-      .select('id, customer_id, label, street, barangay, city, landmark, latitude, longitude, is_default, created_at')
+      .select('id, customer_id, label, street, barangay, city, landmark, is_default, created_at')
       .eq('customer_id', customerId)
       .order('is_default', { ascending: false })
       .order('created_at', { ascending: true });

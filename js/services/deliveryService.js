@@ -25,7 +25,7 @@ const RIDER_ORDER_SELECT = `
   created_at,
   delivered_at,
   customer:profiles!customer_id(id, full_name, phone),
-  address:addresses!address_id(id, label, street, barangay, city, landmark, latitude, longitude),
+  address:addresses!address_id(id, label, street, barangay, city, landmark),
   preferred_slot:time_slots!preferred_slot_id(id, label, start_time, end_time),
   scheduled_slot:time_slots!scheduled_slot_id(id, label, start_time, end_time),
   items:order_items(id, product_id, quantity, unit_price, product:products(id, name, unit, price, is_returnable)),
