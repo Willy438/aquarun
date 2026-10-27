@@ -863,20 +863,38 @@ export async function getNextOrderForProcessing() {
   });
 }
 
-export async function createOrder({ addressId, deliveryDate, slotId, notes, items }) {
-  const { data, error } = await supabase.rpc('create_order', {
-    p_address_id: addressId,
-    p_delivery_date: deliveryDate,
-    p_slot_id: slotId,
-    p_notes: notes || null,
-    p_items: items,
-  });
+export async function createOrder({ addressId, deliveryDate, slotId, notes, items }, onRetry = null) {
+  let lastErr = null;
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      if (attempt > 1 && typeof onRetry === 'function') {
+        onRetry(attempt);
+      }
+      const { data, error } = await supabase.rpc('create_order', {
+        p_address_id: addressId,
+        p_delivery_date: deliveryDate,
+        p_slot_id: slotId,
+        p_notes: notes || null,
+        p_items: items,
+      });
 
-  if (error) {
-    throw new Error(error.message || 'Could not place your order.');
+      if (error) {
+        throw new Error(error.message || 'Could not place your order.');
+      }
+      invalidateDataCache();
+      return data;
+    } catch (err) {
+      lastErr = err;
+      const isNetworkErr =
+        /failed to fetch|network|timeout|connection/i.test(err?.message || '') ||
+        err?.name === 'TypeError';
+      if (!isNetworkErr || attempt === 3) {
+        throw err;
+      }
+      await new Promise((r) => setTimeout(r, attempt * 600));
+    }
   }
-  invalidateDataCache();
-  return data;
+  throw lastErr;
 }
 
 export async function cancelOrder(orderId) {

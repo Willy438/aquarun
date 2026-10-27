@@ -1103,13 +1103,18 @@ export async function mount(me) {
 
       setBusy(btn, true, 'Placing order...');
       try {
-        const orderId = await createOrder({
-          addressId: selectedAddressId,
-          deliveryDate: selectedDate,
-          slotId: selectedSlotId,
-          notes: deliveryNote.trim(),
-          items: itemsPayload,
-        });
+        const orderId = await createOrder(
+          {
+            addressId: selectedAddressId,
+            deliveryDate: selectedDate,
+            slotId: selectedSlotId,
+            notes: deliveryNote.trim(),
+            items: itemsPayload,
+          },
+          (attempt) => {
+            setBusy(btn, true, `Retrying connection (${attempt}/3)...`);
+          }
+        );
         sessionStorage.removeItem('aquarun_customer_cart');
         updateCustomerActiveOrderBadge(me.id).catch(() => {});
         showToast('Order placed!', 'success');
@@ -1119,7 +1124,7 @@ export async function mount(me) {
         const rawMsg = String(err?.message || err || 'Could not place order.');
         let userMsg = rawMsg;
         if (/failed to fetch/i.test(rawMsg)) {
-          userMsg = 'Connection to the server timed out. Please check your internet connection and try again.';
+          userMsg = 'Connection timed out on your current network. Please check your hotspot connection and try again.';
         }
         showToast(userMsg, 'error');
         setBusy(btn, false);
