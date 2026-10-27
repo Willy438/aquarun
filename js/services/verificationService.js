@@ -23,6 +23,15 @@ const DUMMY_SEQUENCES = new Set([
   '09888888888', '09999999999', '09123456789', '09987654321',
 ]);
 
+// Reserved IANA documentation/placeholder domains and disposable services
+const BLOCKED_DOMAINS = new Set([
+  'example.com', 'example.org', 'example.net', 'example.edu',
+  'test.com', 'test.org', 'test.net', 'sample.com', 'sample.org',
+  'invalid.com', 'invalid.org', 'fake.com', 'temp.com', 'none.com',
+  'noemail.com', 'mailinator.com', '10minutemail.com', 'guerrillamail.com',
+  'trashmail.com', 'tempmail.com', 'sharklasers.com', 'yopmail.com'
+]);
+
 const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 /**
@@ -113,7 +122,7 @@ export function verifyPhoneNumber(phone) {
 
 /**
  * Validates email address format, checks against disposable email API,
- * and performs DNS MX record lookup via Google DNS-over-HTTPS.
+ * blocks placeholder/reserved domains, and verifies DNS MX mail server records.
  */
 export async function verifyEmailAddress(email) {
   if (!email || typeof email !== 'string') {
@@ -130,7 +139,21 @@ export async function verifyEmailAddress(email) {
     return { valid: false, message: 'Email domain is incomplete.' };
   }
 
-  // Common typo checks
+  // 1. Block placeholder / test / reserved domains
+  if (
+    BLOCKED_DOMAINS.has(domain) ||
+    domain.endsWith('.example') ||
+    domain.endsWith('.test') ||
+    domain.endsWith('.invalid') ||
+    domain.endsWith('.localhost')
+  ) {
+    return {
+      valid: false,
+      message: `The domain "@${domain}" is a test/placeholder domain and cannot receive email. Please use a real email address (e.g. @gmail.com, @yahoo.com).`,
+    };
+  }
+
+  // 2. Common typo checks
   const commonTypos = {
     'gnail.com': 'gmail.com',
     'gmai.com': 'gmail.com',
@@ -150,7 +173,7 @@ export async function verifyEmailAddress(email) {
     };
   }
 
-  // 1. API Check: Disposable email check via Debounce public API
+  // 3. API Check: Disposable email check via Debounce public API
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3500);
@@ -171,7 +194,7 @@ export async function verifyEmailAddress(email) {
     // Non-blocking if API offline
   }
 
-  // 2. API Check: DNS MX / Mail server verification via Google DNS-over-HTTPS
+  // 4. API Check: DNS MX / Mail server verification via Google DNS-over-HTTPS
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3500);
@@ -188,9 +211,23 @@ export async function verifyEmailAddress(email) {
           message: `The domain "@${domain}" does not exist. Please check for typos.`,
         };
       }
-      // If Status === 0, verify it has MX records or at least A records
+
+      // Check for Null MX (RFC 7505) or empty answer
+      const mxRecords = (dnsData.Answer || []).filter((a) => a.type === 15);
+      const validMx = mxRecords.filter((a) => {
+        const target = String(a.data || '').trim();
+        return target && target !== '0 .' && target !== '.' && target !== '0';
+      });
+
+      if (mxRecords.length > 0 && validMx.length === 0) {
+        return {
+          valid: false,
+          message: `The domain "@${domain}" explicitly does not accept incoming email.`,
+        };
+      }
+
       if (dnsData.Status === 0 && (!dnsData.Answer || dnsData.Answer.length === 0)) {
-        // Fallback check for A record (some domains handle mail directly via A record)
+        // Fallback check for A record
         try {
           const aRes = await fetch(`https://dns.google/resolve?name=${encodeURIComponent(domain)}&type=A`);
           const aData = await aRes.json();
