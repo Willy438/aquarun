@@ -68,6 +68,7 @@ export async function mount(me) {
   let bottleBalanceInfo = null;
   let customerOrders = null;
   let isStationOpen = true;
+  let addressDistanceCheck = null;
   const cart = new Map();
   function persistCart() {
     try {
@@ -1417,7 +1418,7 @@ export async function mount(me) {
       </div>
     `;
 
-    let addressDistanceCheck = null;
+    addressDistanceCheck = null;
 
     async function refreshAddressRadiusCheck() {
       const selAddr = addresses.find((a) => a.id === selectedAddressId);
@@ -1426,6 +1427,7 @@ export async function mount(me) {
         : null;
       const distanceHintEl = document.querySelector('#address-distance-hint');
       const radiusNoticeEl = document.querySelector('#radius-outside-notice');
+      const drawerRadiusNoticeEl = document.querySelector('#drawer-radius-notice');
       const placeBtn = document.querySelector('#place-order-btn');
 
       if (distanceHintEl) {
@@ -1445,13 +1447,16 @@ export async function mount(me) {
         }
       }
 
+      const outsideMsg = addressDistanceCheck && !addressDistanceCheck.isWithin
+        ? `<strong>Outside Delivery Area:</strong> This address is <strong>${addressDistanceCheck.distanceKm} km</strong> from our station. Our maximum delivery radius is <strong>${addressDistanceCheck.maxRadiusKm} km</strong>.`
+        : '';
       if (radiusNoticeEl) {
-        if (addressDistanceCheck && !addressDistanceCheck.isWithin) {
-          radiusNoticeEl.innerHTML = `<strong>Outside Delivery Area:</strong> This address is <strong>${addressDistanceCheck.distanceKm} km</strong> from our station. Our maximum delivery radius is <strong>${addressDistanceCheck.maxRadiusKm} km</strong>.`;
-          radiusNoticeEl.hidden = false;
-        } else {
-          radiusNoticeEl.hidden = true;
-        }
+        radiusNoticeEl.innerHTML = outsideMsg;
+        radiusNoticeEl.hidden = !outsideMsg;
+      }
+      if (drawerRadiusNoticeEl) {
+        drawerRadiusNoticeEl.innerHTML = outsideMsg;
+        drawerRadiusNoticeEl.hidden = !outsideMsg;
       }
 
       // Re-evaluate cart state, capacity limits, and place order button using latest distance check
