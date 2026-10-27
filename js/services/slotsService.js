@@ -126,3 +126,21 @@ export async function toggleSlotClosureToday(slotId, dateStr, shouldClose, reaso
   }
   invalidateDataCache('slots:');
 }
+export async function deleteTimeSlot(slotId) {
+  if (!slotId) return;
+  const { error } = await supabase
+    .from('time_slots')
+    .delete()
+    .eq('id', slotId);
+
+  if (error) {
+    if (error.code === '23503' || /foreign key/i.test(error.message || '')) {
+      await toggleTimeSlotActive(slotId, false);
+      invalidateDataCache('slots:');
+      return { disabled: true };
+    }
+    throw new Error(error.message || 'Could not delete time slot.');
+  }
+  invalidateDataCache('slots:');
+  return { deleted: true };
+}
