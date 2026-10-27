@@ -1,10 +1,12 @@
 import { bootCustomerPage, navigateCustomerSpa, updateCustomerActiveOrderBadge } from '../../core/nav.js';
+import { subscribeCustomerOrders } from '../../core/realtime.js';
 import {
   confirmModal,
   escapeHtml,
   formatPeso,
   formatTimeShort,
   getTodayManila,
+  invalidateDataCache,
   setBusy,
   showToast,
 } from '../../core/ui.js';
@@ -1105,8 +1107,51 @@ export async function mount(me) {
       }
     }
 
-    document.querySelector('#place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
+        document.querySelector('#place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
     document.querySelector('#drawer-place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
+
+    // Realtime listener: instantly reflect product edits, disabling, and price changes
+    const unsubRealtime = subscribeCustomerOrders(me.id, async (payload) => {
+      try {
+        invalidateDataCache('products:');
+        invalidateDataCache('settings:');
+        const [freshProducts, freshCharge, freshBalance, freshOrders] = await Promise.all([
+          getActiveProducts(),
+          getServiceCharge(),
+          getCustomerBottleBalance(me.id).catch(() => null),
+          getCustomerOrders(me.id, { limit: 50 }).catch(() => null),
+        ]);
+        products = freshProducts;
+        serviceCharge = freshCharge;
+        if (freshBalance) bottleBalanceInfo = freshBalance;
+        if (freshOrders) customerOrders = freshOrders;
+
+        // Auto-prune any items in cart that were disabled or removed by admin
+        let cartPruned = false;
+        for (const [key, quantity] of Array.from(cart.entries())) {
+          if (quantity > 0) {
+            const rawId = key.includes(':') ? key.split(':')[0] : key;
+            const stillActive = products.some((p) => String(p.id) === String(rawId));
+            if (!stillActive) {
+              cart.delete(key);
+              cartPruned = true;
+            }
+          }
+        }
+
+        renderPolicyBanner();
+        renderProductsSection();
+        renderCartSection();
+
+        if (cartPruned) {
+          showToast('A product in your cart was updated or is no longer available.', 'info');
+        }
+      } catch (err) {
+        console.warn('[Customer order-new realtime refresh error]:', err);
+      }
+    });
+
+    window.addEventListener('beforeunload', () => unsubRealtime(), { once: true });
   } catch (err) {
     showToast(err.message || 'Could not load order form.', 'error');
   }

@@ -188,8 +188,8 @@ export async function mount() {
                   <td>${escapeHtml(summarizeOrderItems(order.items))}</td>
                   <td>${escapeHtml(slotText)}</td>
                   <td>${escapeHtml(riderName)}</td>
-                  <td style="font-weight: 700;">${escapeHtml(formatPeso(order.total))}</td>
-                  <td><span class="pill pill-${escapeHtml(tone)}">${escapeHtml(statusLabel)}</span></td>
+                  <td style="font-weight: 700; text-align: right;">${escapeHtml(formatPeso(order.total))}</td>
+                  <td style="text-align: center;"><span class="pill pill-${escapeHtml(tone)}">${escapeHtml(statusLabel)}</span></td>
                 </tr>
               `;
             })
@@ -223,8 +223,8 @@ export async function mount() {
                 <th>Items</th>
                 <th>Slot</th>
                 <th>Rider</th>
-                <th>Total</th>
-                <th>Status</th>
+                <th style="width: 110px; text-align: right;">Total</th>
+                <th style="width: 130px; text-align: center;">Status</th>
               </tr>
             </thead>
             <tbody>

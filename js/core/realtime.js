@@ -44,6 +44,24 @@ export function subscribeCustomerOrders(customerId, onUpdate) {
       },
       handle
     )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'products',
+      },
+      handle
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'settings',
+      },
+      handle
+    )
     .subscribe((status, err) => {
       if (err) console.warn('[Realtime Customer error]:', err);
     });
@@ -67,6 +85,8 @@ export function subscribeStaffWorkspace(onUpdate) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bottle_ledger' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, handle)
     .subscribe((status, err) => {
       if (err) console.warn('[Realtime Staff error]:', err);
     });

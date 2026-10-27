@@ -174,9 +174,9 @@ export async function mount() {
                 <th>Area / Barangay</th>
                 <th>Items</th>
                 <th>Delivery slot</th>
-                <th>Status</th>
-                <th>Total</th>
-                <th style="text-align: right;">Action</th>
+                <th style="width: 125px; text-align: center;">Status</th>
+                <th style="width: 110px; text-align: right;">Total</th>
+                <th style="width: 90px; text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody id="staff-orders-tbody"></tbody>
@@ -424,12 +424,12 @@ export async function mount() {
             <td><span class="badge" style="font-size:11px; background:#f1f5f9; color:#334155; display:inline-flex; align-items:center; gap:3px;">${ICONS.pin} ${escapeHtml(brgy)}</span></td>
             <td>${escapeHtml(summarizeOrderItems(order.items))}</td>
             <td style="color: #64748b; font-size: 13px;">${escapeHtml(slotText)}</td>
-            <td>
+            <td style="text-align: center;">
               <span class="pill status-${escapeHtml(order.status)}">
                 ${escapeHtml(STATUS_LABELS[order.status] || order.status)}
               </span>
             </td>
-            <td class="table-strong">${escapeHtml(formatPeso(order.total))}</td>
+            <td class="table-strong" style="text-align: right;">${escapeHtml(formatPeso(order.total))}</td>
             <td style="text-align: right;">
               <button type="button" class="table-action-link" data-action-order="${escapeHtml(order.id)}" style="background:none; border:none; padding:0; font:inherit; color:var(--blue-app, #1d5bd6); font-weight:600; cursor:pointer;">
                 ${actionLabel}

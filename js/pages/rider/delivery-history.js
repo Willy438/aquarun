@@ -174,14 +174,14 @@ export async function mount(me) {
                 <td class="table-order-id">#${escapeHtml(o.order_number)}</td>
                 <td>${escapeHtml(o.customer?.full_name || 'Customer')}</td>
                 <td>${escapeHtml(formatDateShort(o.delivered_at || o.delivery_date))}</td>
-                <td>${escapeHtml(delivered)}</td>
-                <td>${escapeHtml(empties)}</td>
-                <td>
+                <td style="text-align: center; font-weight: 600;">${escapeHtml(delivered)}</td>
+                <td style="text-align: center; font-weight: 600;">${escapeHtml(empties)}</td>
+                <td style="text-align: center;">
                   <span class="pill ${isPaid ? 'pill-green' : 'pill-amber'}">
                     ${isPaid ? 'Paid' : 'Pending'}
                   </span>
                 </td>
-                <td>
+                <td style="text-align: center;">
                   <span class="pill ${o.status === 'completed' ? 'pill-green' : 'pill-blue'}">
                     ${escapeHtml(STATUS_LABELS[o.status] || o.status)}
                   </span>
@@ -322,14 +322,14 @@ export async function mount(me) {
           <table class="table">
             <thead>
               <tr>
-                <th>Order</th>
+                <th style="width: 110px;">Order</th>
                 <th>Customer</th>
-                <th>Date</th>
-                <th>Delivered</th>
-                <th>Empties</th>
-                <th>Payment</th>
-                <th>Status</th>
-                <th style="text-align:right;">Action</th>
+                <th style="width: 110px;">Date</th>
+                <th style="width: 100px; text-align: center;">Delivered</th>
+                <th style="width: 100px; text-align: center;">Empties</th>
+                <th style="width: 110px; text-align: center;">Payment</th>
+                <th style="width: 120px; text-align: center;">Status</th>
+                <th style="width: 100px; text-align: right;">Action</th>
               </tr>
             </thead>
             <tbody>

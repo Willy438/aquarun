@@ -105,25 +105,40 @@ export async function mount() {
       <div class="modal modal-product" role="dialog" aria-modal="true" aria-labelledby="prod-modal-title" style="max-width: 580px;">
         <div class="modal-header">
           <div>
-            <h3 class="modal-title" id="prod-modal-title">${isEdit ? 'Edit product' : 'Add product'}</h3>
-            <p class="text-muted" style="font-size: 12px; margin-top: 2px;">Configure refill pricing, standalone empty containers, and catalog visibility</p>
+            <h3 class="modal-title" id="prod-modal-title">${isReadOnly ? 'Product details' : isEdit ? 'Edit product' : 'Add product'}</h3>
+            <p class="text-muted" style="font-size: 12px; margin-top: 2px;">${isReadOnly ? 'View-only product specifications, catalog rates, and photo' : 'Configure refill pricing, standalone empty containers, and catalog visibility'}</p>
           </div>
           <button type="button" class="modal-close" data-close aria-label="Close">×</button>
         </div>
         <form id="prod-modal-form">
           <div class="modal-body stack" style="gap: 13px;">
-            <!-- Product Category Tabs -->
-            <div class="prod-type-tabs-wrap">
-              <label class="label">Product Category</label>
-              <div class="prod-type-tabs" id="prod-type-tabs" role="tablist">
-                <button type="button" class="prod-type-tab${currentType === 'refill' ? ' is-active' : ''}" data-type="refill">
-                  Water Refill (with Swap)
-                </button>
-                <button type="button" class="prod-type-tab${currentType === 'empty' ? ' is-active' : ''}" data-type="empty">
-                  Empty Container Only
-                </button>
+            <!-- Product Category -->
+            ${
+              isReadOnly
+                ? `
+              <div class="field">
+                <label class="label">Product Category</label>
+                <div style="margin-top: 4px;">
+                  <span class="pill ${currentType === 'refill' ? 'pill-info' : 'pill-neutral'}" style="font-size: 12.5px; font-weight: 700; padding: 6px 14px;">
+                    ${currentType === 'refill' ? 'Water Refill (with Swap)' : 'Empty Container Only (Sold Outright)'}
+                  </span>
+                </div>
               </div>
-            </div>
+            `
+                : `
+              <div class="prod-type-tabs-wrap">
+                <label class="label">Product Category</label>
+                <div class="prod-type-tabs" id="prod-type-tabs" role="tablist">
+                  <button type="button" class="prod-type-tab${currentType === 'refill' ? ' is-active' : ''}" data-type="refill">
+                    Water Refill (with Swap)
+                  </button>
+                  <button type="button" class="prod-type-tab${currentType === 'empty' ? ' is-active' : ''}" data-type="empty">
+                    Empty Container Only
+                  </button>
+                </div>
+              </div>
+            `
+            }
 
             <!-- Product Name & Quick Presets -->
             <div class="field">
@@ -262,8 +277,14 @@ export async function mount() {
           </div>
 
           <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" data-close>Cancel</button>
-            <button type="submit" class="btn btn-primary" id="btn-save-prod">${isEdit ? 'Save changes' : 'Add product'}</button>
+            ${
+              isReadOnly
+                ? `<button type="button" class="btn btn-secondary" data-close style="min-width: 90px;">Close</button>`
+                : `
+                  <button type="button" class="btn btn-secondary" data-close>Cancel</button>
+                  <button type="submit" class="btn btn-primary" id="btn-save-prod">${isEdit ? 'Save changes' : 'Add product'}</button>
+                `
+            }
           </div>
         </form>
       </div>
@@ -733,14 +754,35 @@ export async function mount() {
       backdrop.querySelectorAll('input, select, textarea').forEach((el) => {
         el.disabled = true;
         el.readOnly = true;
+        el.style.backgroundColor = '#f8fafc';
+        el.style.borderColor = '#e2e8f0';
+        el.style.color = '#0f172a';
+        el.style.cursor = 'default';
       });
-      backdrop.querySelectorAll('.prod-type-tab, .prod-preset-chip, .prod-fit-btn, #btn-upload-file, #btn-clear-photo, #btn-reset-crop, .prod-photo-presets').forEach((el) => {
+      backdrop.querySelectorAll('.prod-type-tab, .prod-preset-chip, .prod-fit-btn, #btn-upload-file, #btn-clear-photo, #btn-reset-crop, .prod-photo-presets, .prod-photo-toolbar, #prod-crop-badge').forEach((el) => {
         el.style.display = 'none';
       });
       const cropControls = backdrop.querySelector('.prod-crop-controls');
       if (cropControls) cropControls.style.display = 'none';
       const urlField = backdrop.querySelector('#prod-photo')?.closest('.field');
       if (urlField) urlField.style.display = 'none';
+
+      // Dropzone styling for view-only
+      if (dropzone) {
+        dropzone.style.cursor = 'default';
+        dropzone.style.pointerEvents = 'none';
+        dropzone.style.borderStyle = 'solid';
+      }
+      if (!currentPhotoData && placeholderEl) {
+        placeholderEl.innerHTML = `
+          ${getGallonIconSvg()}
+          <span style="font-size: 12.5px; color: #64748b; font-weight: 500;">No photo uploaded</span>
+        `;
+      }
+
+      const form = backdrop.querySelector('#prod-modal-form');
+      form?.addEventListener('submit', (e) => e.preventDefault());
+      return;
     }
 
     const form = backdrop.querySelector('#prod-modal-form');
@@ -1178,11 +1220,11 @@ export async function mount() {
             <table class="prod-table">
               <thead>
                 <tr>
-                  <th style="width: 280px;">Product</th>
-                  <th style="width: 150px;">Category</th>
-                  <th>Pricing details</th>
-                  <th style="width: 140px; text-align: center;">Visibility</th>
-                  <th style="width: 220px; text-align: right;">Actions</th>
+                  <th style="min-width: 260px;">Product</th>
+                  <th style="width: 140px;">Category</th>
+                  <th style="min-width: 260px;">Pricing details</th>
+                  <th style="width: 130px; text-align: center;">Visibility</th>
+                  <th style="width: 150px; text-align: right;">Actions</th>
                 </tr>
               </thead>
               <tbody>
