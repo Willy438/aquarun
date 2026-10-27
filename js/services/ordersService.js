@@ -879,7 +879,10 @@ export async function createOrder({ addressId, deliveryDate, slotId, notes, item
       });
 
       if (error) {
-        throw new Error(error.message || 'Could not place your order.');
+        const fullMsg = [error.message, error.details, error.hint].filter(Boolean).join(' · ') || 'Could not place your order.';
+        const errObj = new Error(fullMsg);
+        errObj.code = error.code;
+        throw errObj;
       }
       invalidateDataCache();
       return data;
