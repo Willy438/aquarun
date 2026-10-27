@@ -264,11 +264,11 @@ export async function mount(me) {
   async function refreshSlotsForDate(dateStr, { force = false } = {}) {
     slots = await getSlotAvailability(dateStr, { forceRefresh: force });
     const stillAvailable = slots.find(
-      (s) => s.slot_id === selectedSlotId && !s.is_closed && !s.is_full && !isSlotPassed(s, dateStr)
+      (s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId) && !s.is_closed && !s.is_full && !isSlotPassed(s, dateStr)
     );
     if (!stillAvailable) {
       const firstOpen = slots.find((s) => !s.is_closed && !s.is_full && !isSlotPassed(s, dateStr));
-      selectedSlotId = firstOpen ? firstOpen.slot_id : '';
+      selectedSlotId = firstOpen ? (firstOpen.slot_id || firstOpen.id) : '';
     }
   }
 
@@ -308,7 +308,7 @@ export async function mount(me) {
     cart.set(id, next);
     persistCart();
 
-    const selectedSlot = slots.find((s) => s.slot_id === selectedSlotId);
+    const selectedSlot = slots.find((s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId));
     if (selectedSlot) {
       const slotMax = Number(selectedSlot.max_orders || 10);
       const slotBooked = Number(selectedSlot.orders_count || 0);
@@ -584,7 +584,7 @@ export async function mount(me) {
       return;
     }
 
-    const cur = slots.find((s) => s.slot_id === selectedSlotId);
+    const cur = slots.find((s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId));
     if (!cur) {
       hintEl.textContent = 'Please choose an available delivery window.';
       hintEl.style.color = '#64748b';
@@ -1004,7 +1004,7 @@ export async function mount(me) {
     if (drawerChargeEl) drawerChargeEl.textContent = formatPeso(effectiveCharge);
     if (drawerTotalEl) drawerTotalEl.textContent = formatPeso(grandTotal);
 
-    const selectedSlot = slots.find((s) => s.slot_id === selectedSlotId);
+    const selectedSlot = slots.find((s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId));
     const slotMax = selectedSlot ? Number(selectedSlot.max_orders || 10) : 10;
     const slotBooked = selectedSlot ? Number(selectedSlot.orders_count || 0) : 0;
     const slotRemaining = selectedSlot ? Math.max(0, slotMax - slotBooked) : 10;
@@ -1326,14 +1326,16 @@ export async function mount(me) {
             <strong>Preferred slot:</strong> The station may adjust your delivery window based on current orders. You can cancel only while the order is Submitted.
           </div>
 
-          <button
-            type="button"
-            class="btn btn-primary btn-block"
-            id="place-order-btn"
-            ${!isStationOpen || addresses.length === 0 ? 'disabled' : ''}
-          >
-            ${!isStationOpen ? 'Station closed' : addresses.length === 0 ? 'Add delivery address first' : 'Place order'}
-          </button>
+          <div id="place-order-btn-wrapper" style="cursor: pointer;">
+            <button
+              type="button"
+              class="btn btn-primary btn-block"
+              id="place-order-btn"
+              ${!isStationOpen || addresses.length === 0 ? 'disabled' : ''}
+            >
+              ${!isStationOpen ? 'Station closed' : addresses.length === 0 ? 'Add delivery address first' : 'Place order'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -1401,14 +1403,16 @@ export async function mount(me) {
           <div class="notice cart-notice slot-capacity-notice" id="drawer-capacity-warning-notice" hidden></div>
           <div class="notice cart-notice" id="drawer-radius-notice" style="border-color: #fca5a5; background: #fef2f2; color: #991b1b;" hidden></div>
 
-          <button
-            type="button"
-            class="btn btn-primary btn-block"
-            id="drawer-place-order-btn"
-            ${!isStationOpen || addresses.length === 0 ? 'disabled' : ''}
-          >
-            ${!isStationOpen ? 'Station closed' : addresses.length === 0 ? 'Add delivery address first' : 'Place order'}
-          </button>
+          <div id="drawer-place-order-btn-wrapper" style="cursor: pointer;">
+            <button
+              type="button"
+              class="btn btn-primary btn-block"
+              id="drawer-place-order-btn"
+              ${!isStationOpen || addresses.length === 0 ? 'disabled' : ''}
+            >
+              ${!isStationOpen ? 'Station closed' : addresses.length === 0 ? 'Add delivery address first' : 'Place order'}
+            </button>
+          </div>
         </div>
       </div>
     `;
@@ -1450,18 +1454,8 @@ export async function mount(me) {
         }
       }
 
-      if (placeBtn && isStationOpen) {
-        if (addresses.length === 0) {
-          placeBtn.disabled = true;
-          placeBtn.textContent = 'Add delivery address first';
-        } else if (addressDistanceCheck && !addressDistanceCheck.isWithin) {
-          placeBtn.disabled = true;
-          placeBtn.textContent = 'Address outside delivery radius';
-        } else {
-          placeBtn.disabled = false;
-          placeBtn.textContent = 'Place order';
-        }
-      }
+      // Re-evaluate cart state, capacity limits, and place order button using latest distance check
+      renderCartSection({ skipItemsRebuild: true });
 
       
     }
@@ -1572,7 +1566,7 @@ export async function mount(me) {
 
       // Live verification of slot capacity right before order placement
       await refreshSlotsForDate(selectedDate, { force: true });
-      const currentSlot = slots.find((s) => s.slot_id === selectedSlotId);
+      const currentSlot = slots.find((s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId));
       if (!currentSlot || currentSlot.is_closed || currentSlot.is_full || isSlotPassed(currentSlot, selectedDate)) {
         showToast('That delivery window has reached its order limit or passed. Please select another time slot.', 'error');
         renderSlotsSelect();
@@ -1600,7 +1594,7 @@ export async function mount(me) {
       }
 
       const selectedAddr = addresses.find((a) => a.id === selectedAddressId);
-      const selectedSlot = slots.find((s) => s.slot_id === selectedSlotId);
+      const selectedSlot = slots.find((s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId));
       const slotText = selectedSlot?.label ? selectedSlot.label.replace(/\s*-\s*/g, '–') : 'Scheduled window';
       const grandTotalText = document.querySelector('#cart-total')?.textContent || '';
 
@@ -1643,6 +1637,39 @@ export async function mount(me) {
 
         document.querySelector('#place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
     document.querySelector('#drawer-place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
+
+    const checkAndShowCapacityPrompt = async () => {
+      const selectedSlot = slots.find((s) => (s.slot_id === selectedSlotId || s.id === selectedSlotId));
+      if (!selectedSlot) return;
+      const slotMax = Number(selectedSlot.max_orders || 10);
+      const slotBooked = Number(selectedSlot.orders_count || 0);
+      const slotRemaining = Math.max(0, slotMax - slotBooked);
+      let totalItems = 0;
+      for (const q of cart.values()) if (q > 0) totalItems += q;
+
+      if (totalItems > slotRemaining) {
+        await confirmModal({
+          title: 'Delivery Window Capacity Exceeded',
+          message: `The selected delivery window "${selectedSlot.label.replace(/\s*-\s*/g, '–')}" only has ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} remaining (maximum capacity: ${slotMax} orders).\n\nYour order currently has ${totalItems} items, which exceeds the delivery limit for this window.\n\nPlease reduce your order quantity to at most ${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}, or select another delivery window or date.`,
+          confirmText: 'Adjust quantity',
+          cancelText: 'Cancel',
+        });
+      }
+    };
+
+    document.querySelector('#place-order-btn-wrapper')?.addEventListener('click', (e) => {
+      const btn = document.querySelector('#place-order-btn');
+      if (btn && btn.disabled) {
+        checkAndShowCapacityPrompt();
+      }
+    });
+
+    document.querySelector('#drawer-place-order-btn-wrapper')?.addEventListener('click', (e) => {
+      const btn = document.querySelector('#drawer-place-order-btn');
+      if (btn && btn.disabled) {
+        checkAndShowCapacityPrompt();
+      }
+    });
 
     // Realtime listener: instantly reflect product edits, disabling, and price changes
     const refreshCatalogState = async () => {

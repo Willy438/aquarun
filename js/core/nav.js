@@ -912,7 +912,7 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
   const moduleKey = `${role}/${pageKey}`;
   let mod = MODULE_CACHE.get(moduleKey);
   if (!mod) {
-    mod = await import(`../pages/${role}/${pageKey}.js`);
+    mod = await import(`../pages/${role}/${pageKey}.js?v=20261027b`);
     MODULE_CACHE.set(moduleKey, mod);
   }
 
