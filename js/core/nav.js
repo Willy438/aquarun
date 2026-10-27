@@ -164,9 +164,9 @@ const STAFF_PAGE_META = {
     sub: 'One main action per status keeps each order moving.',
   },
   remittance: {
-    title: 'Cash remittance & sales',
-    docTitle: 'Cash remittance | AquaRun',
-    sub: 'Verify, receive, and reconcile physical cash collected by delivery riders.',
+    title: 'Cash & sales',
+    docTitle: 'Cash & sales | AquaRun',
+    sub: 'Verify rider cash turnovers and track reconciled sales.',
   },
   'bottle-ledger': {
     title: 'Bottle ledger',

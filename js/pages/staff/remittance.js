@@ -6,6 +6,7 @@ import {
   formatDateShort,
   formatPeso,
   formatTimeShort,
+  getInitials,
   getTodayManila,
   matchesDateFilter,
   paginateList,
