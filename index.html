@@ -3,138 +3,622 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AquaRun | Water refill &amp; delivery</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&display=swap" rel="stylesheet">
+  <title>AquaRun | Community Water Refill &amp; Smart Delivery</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400;1,9..40,600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/pages/public/landing.css">
 </head>
-<body>
-  <div class="wrap hero-panel" id="home">
-  <header class="nav" id="public-nav">
-    <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-    <button type="button" class="nav-hamburger" id="public-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="public-nav-menu">
-      <svg class="hamburger-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
-      <svg class="hamburger-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-    </button>
-    <div class="nav-backdrop" id="public-nav-backdrop" aria-hidden="true"></div>
-    <div class="nav-collapsible" id="public-nav-menu" role="dialog" aria-label="Navigation menu">
-      <div class="nav-drawer-head">
-        <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-        <button type="button" class="nav-drawer-close" id="public-nav-close" aria-label="Close navigation menu">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
-        </button>
-      </div>
-      <nav class="nav-links" aria-label="Main">
-        <a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a>
-      </nav>
-      <div class="nav-actions">
-        <a class="btn btn-light" href="login.html" data-login>Log in</a>
-        <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+<body class="landing-body">
+
+  <!-- Sticky Full-Width Clean White Top Navigation -->
+  <header class="landing-header" id="public-nav">
+    <div class="nav-container">
+      <a class="logo" href="index.html" aria-label="AquaRun Home">
+        <img src="assets/icons/logo-mark.svg" alt="" width="36" height="36">
+        Aqua<span>Run</span>
+      </a>
+
+      <button type="button" class="nav-hamburger" id="public-nav-toggle" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="public-nav-menu">
+        <svg class="hamburger-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="4" y1="7" x2="20" y2="7"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="17" x2="20" y2="17"/></svg>
+        <svg class="hamburger-icon-close" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+      </button>
+
+      <div class="nav-backdrop" id="public-nav-backdrop" aria-hidden="true"></div>
+
+      <div class="nav-collapsible" id="public-nav-menu" role="dialog" aria-label="Navigation menu">
+        <div class="nav-drawer-head">
+          <a class="logo" href="index.html">
+            <img src="assets/icons/logo-mark.svg" alt="" width="32" height="32">
+            Aqua<span>Run</span>
+          </a>
+          <button type="button" class="nav-drawer-close" id="public-nav-close" aria-label="Close navigation menu">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="6" y1="6" x2="18" y2="18"/><line x1="18" y1="6" x2="6" y2="18"/></svg>
+          </button>
+        </div>
+
+        <nav class="nav-links" aria-label="Main navigation">
+          <a href="#home">Home</a>
+          <a href="#how-it-works">How It Works</a>
+          <a href="#products">Refill Products</a>
+          <a href="#tracking">Live Tracking</a>
+          <a href="#station">Station Info</a>
+        </nav>
+
+        <div class="nav-actions">
+          <a class="btn btn-outline" href="login.html" data-login>Log in</a>
+          <a class="btn btn-primary" href="signup.html" data-order>Order refill</a>
+        </div>
       </div>
     </div>
   </header>
 
-    <section class="hero">
-      <p class="hero-kicker">WATER REFILL &amp; DELIVERY PORTAL</p>
-      <h1 class="hero-title">water, delivered <span>on time.</span></h1>
-      <p class="hero-text">Order refills, pick a delivery slot, and follow every gallon from the station to your door.</p>
-      <div class="hero-actions">
-        <a class="btn btn-primary btn-lg" href="signup.html">Order a refill</a>
-        <a class="btn btn-white btn-lg" href="login.html">Track order</a>
+  <!-- Full-Bleed Edge-to-Edge Hero Section (Zero Margins, Zero Borders) -->
+  <section class="hero-fullbleed" id="home">
+    <div class="hero-overlay"></div>
+    <div class="hero-inner">
+      <div class="hero-content">
+        <div class="hero-badge">
+          <span class="hero-badge-dot"></span>
+          <span>COMMUNITY WATER REFILL &amp; AUTOMATED DISPATCH</span>
+        </div>
+        <h1 class="hero-title">Clean, purified water delivered <span>right on schedule.</span></h1>
+        <p class="hero-desc">
+          AquaRun connects households and local stations with scheduled morning and afternoon delivery windows, transparent 1:1 bottle swaps, and real-time station-to-doorstep order tracking.
+        </p>
+
+        <div class="hero-trust-chips">
+          <div class="trust-chip">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            <span>1:1 Bottle Swaps Accepted</span>
+          </div>
+          <div class="trust-chip">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            <span>Predictable Time Slots</span>
+          </div>
+          <div class="trust-chip">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+            <span>Barangay Route Dispatch</span>
+          </div>
+          <div class="trust-chip">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Cash on Delivery</span>
+          </div>
+        </div>
+
+        <div class="hero-cta-group">
+          <a class="btn btn-primary btn-hero" href="signup.html">
+            <span>Order a refill</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </a>
+          <a class="btn btn-glass btn-hero" href="#tracking">
+            <span>Track your order</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </a>
+        </div>
       </div>
-    </section>
-  </div>
+
+      <!-- Live Operational Status Card inside Hero -->
+      <div class="hero-live-card" aria-label="Station live dispatch status">
+        <div class="live-card-header">
+          <div class="live-indicator">
+            <span class="live-pulse"></span>
+            <strong>Station Dispatch Live</strong>
+          </div>
+          <span class="live-badge">Today's Deliveries</span>
+        </div>
+
+        <div class="live-metrics-grid">
+          <div class="live-metric-box">
+            <small>Active Slots</small>
+            <strong>Morning &amp; Afternoon</strong>
+            <span>8:00 AM – 5:00 PM</span>
+          </div>
+          <div class="live-metric-box">
+            <small>Purification</small>
+            <strong>Multi-Stage UV</strong>
+            <span>100% Certified Safe</span>
+          </div>
+          <div class="live-metric-box">
+            <small>Bottle Policy</small>
+            <strong>1:1 Empty Swap</strong>
+            <span>Ledger Tracked</span>
+          </div>
+          <div class="live-metric-box">
+            <small>Service Fee</small>
+            <strong>Flat Rate COD</strong>
+            <span>No Hidden Surcharges</span>
+          </div>
+        </div>
+
+        <div class="live-card-footer">
+          <div class="live-station-info">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+            <span>Clustered Barangay Routing Active</span>
+          </div>
+          <a class="live-order-link" href="signup.html">Book Slot &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <main>
-    <section class="wrap highlights" aria-label="Highlights">
-      <div class="highlight"><span class="icon-wrap"></span><div><strong>Refill orders</strong><small>Gallons and bottles, your way</small></div></div>
-      <div class="highlight"><span class="icon-wrap"></span><div><strong>Daily delivery</strong><small>Pick a date and time slot</small></div></div>
-      <div class="highlight"><span class="icon-wrap"></span><div><strong>Live order status</strong><small>From refill to doorstep</small></div></div>
-      <div class="highlight"><span class="icon-wrap"></span><div><strong>Bottle ledger</strong><small>Empties and refills, counted</small></div></div>
-    </section>
+    <!-- 4 System Process Pillars -->
+    <section class="pillars-section" aria-label="System features">
+      <div class="landing-wrap">
+        <div class="pillars-grid">
+          <article class="pillar-card">
+            <div class="pillar-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+            </div>
+            <div>
+              <h3>1:1 Bottle Swap Policy</h3>
+              <p>Hand over your empty 5-gallon bottles to the rider on arrival to pay only for the refill, or buy a brand-new container if you have none.</p>
+            </div>
+          </article>
 
-    <section class="wrap section" id="services">
-      <h2 class="section-title">Refill options</h2>
-      <p class="section-sub">Choose what you need, we handle the rest.</p>
-      <div class="products">
-        <article>
-          <img class="product-img" src="assets/images/round-gallon-refill.png" alt="Round gallon refill">
-          <div class="product-meta"><div><strong>Round Gallon Refill</strong><small>Refilled at the station</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
-        </article>
-        <article>
-          <img class="product-img" src="assets/images/slim-gallon-refill.png" alt="Slim gallon refill">
-          <div class="product-meta"><div><strong>Slim Gallon Refill</strong><small>Refilled at the station</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
-        </article>
-        <article>
-          <img class="product-img" src="assets/images/bottle-delivery.png" alt="Bottle delivery">
-          <div class="product-meta"><div><strong>Bottle Delivery</strong><small>Delivered to your door</small></div><a class="btn btn-primary btn-sm" href="signup.html">Order</a></div>
-        </article>
-      </div>
-    </section>
+          <article class="pillar-card">
+            <div class="pillar-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <h3>Scheduled Time Slots</h3>
+              <p>Choose morning or afternoon delivery windows. No need to stay stuck at home waiting all day for water.</p>
+            </div>
+          </article>
 
-    <section class="wrap section section-center" id="how">
-      <h2 class="section-title">Refills made simple</h2>
-      <p class="section-sub">From the first tap to the last empty bottle, every step is tracked.</p>
-      <div class="steps">
-        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">01</span></div><h3>Place your order</h3><p>Choose your product, number of bottles or gallons, delivery address, and a preferred date and time slot.</p></article>
-        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">02</span></div><h3>Station refills</h3><p>Staff confirm the order, refill the bottles, and update the status as it moves along.</p></article>
-        <article class="step"><div class="step-head"><span class="icon-wrap"></span><span class="step-num">03</span></div><h3>Rider delivers &amp; logs bottles</h3><p>An assigned rider delivers your order, then records the bottles delivered and empties collected.</p></article>
-      </div>
-    </section>
+          <article class="pillar-card">
+            <div class="pillar-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></svg>
+            </div>
+            <div>
+              <h3>Barangay Cluster Dispatch</h3>
+              <p>Orders are intelligently grouped by neighborhood zone to expedite deliveries and save rider transit time.</p>
+            </div>
+          </article>
 
-    <section class="tracking">
-      <div class="wrap tracking-row">
-        <div class="tracking-copy">
-          <p class="eyebrow">Order tracking</p>
-          <h2>Know exactly where your water is.</h2>
-          <p>Every order moves through clear stages, updated by station staff and riders. You always see the latest status, and the station keeps an accurate record of every bottle.</p>
-          <form class="track-form" action="login.html">
-            <label class="visually-hidden" for="order-number">Order number</label>
-            <input class="input" id="order-number" name="order" type="text" placeholder="Order number">
-            <button class="btn btn-primary btn-lg" type="submit">Track order →</button>
-          </form>
-          <p class="note">Updates come straight from the station and your assigned rider.</p>
+          <article class="pillar-card">
+            <div class="pillar-icon">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            </div>
+            <div>
+              <h3>Digital Bottle Ledger</h3>
+              <p>Every empty container received and refilled bottle delivered is logged digitally to maintain an accurate bottle balance.</p>
+            </div>
+          </article>
         </div>
-        <div class="status-card" aria-label="Sample order">
-          <div class="status-head"><strong>Order #AR-1042</strong><span class="badge">Out for delivery</span></div>
-          <ol class="timeline">
-            <li><span class="dot">✓</span><div><strong>Order received</strong><small>8:05 AM · Confirmed by station</small></div></li>
-            <li><span class="dot">✓</span><div><strong>Refilled &amp; ready</strong><small>9:20 AM · 3 round gallons</small></div></li>
-            <li class="current"><span class="dot">3</span><div><strong>Out for delivery</strong><small>Rider assigned · Slot 2:00 – 3:00 PM</small></div></li>
-            <li class="pending"><span class="dot">4</span><div><strong>Delivered</strong><small>Pending</small></div></li>
-          </ol>
-          <div class="ledger">
-            <div><b>3</b><span>Empty bottles received</span></div>
-            <div><b>3</b><span>Bottles refilled</span></div>
-            <div><b>3</b><span>Bottles delivered</span></div>
+      </div>
+    </section>
+
+    <!-- Operational Flow: How AquaRun Actually Works -->
+    <section class="flow-section" id="how-it-works">
+      <div class="landing-wrap">
+        <div class="section-head text-center">
+          <p class="section-kicker">SYSTEM WORKFLOW</p>
+          <h2 class="section-title">How AquaRun processes your refill</h2>
+          <p class="section-desc">From selecting your gallon type to bottle ledger reconciliation, every step is coordinated between customer, station staff, and rider.</p>
+        </div>
+
+        <div class="process-grid">
+          <article class="process-card">
+            <div class="process-card-header">
+              <span class="process-step-num">01</span>
+              <div class="process-card-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              </div>
+            </div>
+            <h3>Pick Product &amp; Gallon Option</h3>
+            <p>Select 5-Gallon Round or Slim containers. If you have clean empty containers ready, choose <strong>1:1 Refill Swap</strong>. If you need new containers, choose <strong>Buy New Container</strong>.</p>
+            <ul class="process-checklist">
+              <li>Round dispenser or slim faucet gallons</li>
+              <li>Transparent price breakdown per gallon</li>
+            </ul>
+          </article>
+
+          <article class="process-card">
+            <div class="process-card-header">
+              <span class="process-step-num">02</span>
+              <div class="process-card-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              </div>
+            </div>
+            <h3>Choose Delivery Time Window</h3>
+            <p>Select your delivery date and preferred slot window (Morning 8:00 AM – 12:00 PM or Afternoon 1:00 PM – 5:00 PM). Set your delivery address and specific drop-off notes.</p>
+            <ul class="process-checklist">
+              <li>Morning &amp; Afternoon slot options</li>
+              <li>Saved delivery addresses with notes</li>
+            </ul>
+          </article>
+
+          <article class="process-card">
+            <div class="process-card-header">
+              <span class="process-step-num">03</span>
+              <div class="process-card-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"/></svg>
+              </div>
+            </div>
+            <h3>Station Refilling &amp; Sanitization</h3>
+            <p>Station staff confirm the order on the station portal, sanitize the containers, refill through multi-stage micro-filtration, and seal caps securely for rider dispatch.</p>
+            <ul class="process-checklist">
+              <li>Order status updates in real time</li>
+              <li>Clustered neighborhood staging</li>
+            </ul>
+          </article>
+
+          <article class="process-card">
+            <div class="process-card-header">
+              <span class="process-step-num">04</span>
+              <div class="process-card-icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+            </div>
+            <h3>Doorstep Handover &amp; Bottle Ledger</h3>
+            <p>Your rider arrives, delivers the sealed gallons, collects your empty bottles, and receives Cash on Delivery. The rider records bottle counts on their app, syncing your balance instantly.</p>
+            <ul class="process-checklist">
+              <li>Digital receipt and bottle balance sync</li>
+              <li>Zero surprise fees — flat rate delivery</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- Transparent Refill Products & Container Options -->
+    <section class="products-section" id="products">
+      <div class="landing-wrap">
+        <div class="section-head text-center">
+          <p class="section-kicker">PRODUCTS &amp; PRICING</p>
+          <h2 class="section-title">Transparent options for every household</h2>
+          <p class="section-desc">Standardized pricing for water refills and brand-new container purchases. No hidden fuel markups or unexpected surcharges.</p>
+        </div>
+
+        <div class="product-cards-grid">
+          <!-- Product 1: Round Gallon -->
+          <article class="pricing-card">
+            <div class="pricing-card-top">
+              <div class="pricing-badge">Most Popular for Dispensers</div>
+              <div class="product-visual">
+                <div class="product-visual-circle">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="7" width="12" height="14" rx="2"/><path d="M10 7V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3"/><line x1="6" y1="11" x2="18" y2="11"/><line x1="6" y1="15" x2="18" y2="15"/></svg>
+                </div>
+              </div>
+              <h3 class="product-title">Round Gallon (5 Gallons / 19L)</h3>
+              <p class="product-subtitle">Universal fit for inverted water dispensers and top-load ceramic crocks.</p>
+            </div>
+
+            <div class="pricing-details">
+              <div class="pricing-tier">
+                <div class="tier-label">
+                  <strong>Refill Swap</strong>
+                  <small>1:1 Empty Bottle Returned</small>
+                </div>
+                <div class="tier-cost">
+                  <span class="currency">&#8369;</span><span class="price-val">30.00</span>
+                </div>
+              </div>
+              <div class="pricing-tier tier-secondary">
+                <div class="tier-label">
+                  <strong>With New Container</strong>
+                  <small>Purchase brand-new bottle</small>
+                </div>
+                <div class="tier-cost">
+                  <span class="currency">&#8369;</span><span class="price-val">180.00</span>
+                </div>
+              </div>
+            </div>
+
+            <ul class="product-features-list">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> 1:1 empty container swap eligible</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Sanitized, pressure-tested &amp; foil-sealed</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Standard food-grade polycarbonate</li>
+            </ul>
+
+            <div class="pricing-card-footer">
+              <a class="btn btn-primary btn-block" href="signup.html">Order Round Refill</a>
+            </div>
+          </article>
+
+          <!-- Product 2: Slim Gallon -->
+          <article class="pricing-card pricing-card-featured">
+            <div class="pricing-card-top">
+              <div class="pricing-badge featured-badge">Built-in Faucet Tap</div>
+              <div class="product-visual">
+                <div class="product-visual-circle circle-featured">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="6" width="10" height="15" rx="2"/><path d="M10 6V3a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3"/><circle cx="12" cy="17" r="1.5"/><line x1="12" y1="18.5" x2="12" y2="21"/></svg>
+                </div>
+              </div>
+              <h3 class="product-title">Slim Gallon (5 Gallons / 19L)</h3>
+              <p class="product-subtitle">Space-saving flat-side design with integrated dispensing tap valve.</p>
+            </div>
+
+            <div class="pricing-details">
+              <div class="pricing-tier">
+                <div class="tier-label">
+                  <strong>Refill Swap</strong>
+                  <small>1:1 Empty Bottle Returned</small>
+                </div>
+                <div class="tier-cost">
+                  <span class="currency">&#8369;</span><span class="price-val">35.00</span>
+                </div>
+              </div>
+              <div class="pricing-tier tier-secondary">
+                <div class="tier-label">
+                  <strong>With New Container</strong>
+                  <small>Purchase brand-new bottle</small>
+                </div>
+                <div class="tier-cost">
+                  <span class="currency">&#8369;</span><span class="price-val">190.00</span>
+                </div>
+              </div>
+            </div>
+
+            <ul class="product-features-list">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> 1:1 empty container swap eligible</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Pre-installed leak-proof spigot faucet</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Compact countertop profile</li>
+            </ul>
+
+            <div class="pricing-card-footer">
+              <a class="btn btn-primary btn-block" href="signup.html">Order Slim Refill</a>
+            </div>
+          </article>
+
+          <!-- Product 3: Bottled Pack -->
+          <article class="pricing-card">
+            <div class="pricing-card-top">
+              <div class="pricing-badge">Pack of 24 · No Swap Needed</div>
+              <div class="product-visual">
+                <div class="product-visual-circle">
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="7" width="8" height="14" rx="2"/><path d="M10 7V4a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v3"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                </div>
+              </div>
+              <h3 class="product-title">Bottled Water Case (500ml x 24)</h3>
+              <p class="product-subtitle">Convenient sealed single-serve bottles for family gatherings, events, and offices.</p>
+            </div>
+
+            <div class="pricing-details">
+              <div class="pricing-tier">
+                <div class="tier-label">
+                  <strong>Full Case Price</strong>
+                  <small>24 Bottles per Case</small>
+                </div>
+                <div class="tier-cost">
+                  <span class="currency">&#8369;</span><span class="price-val">240.00</span>
+                </div>
+              </div>
+              <div class="pricing-tier tier-secondary">
+                <div class="tier-label">
+                  <strong>Container Status</strong>
+                  <small>Non-returnable item</small>
+                </div>
+                <div class="tier-cost">
+                  <span class="price-val price-label">No Swap</span>
+                </div>
+              </div>
+            </div>
+
+            <ul class="product-features-list">
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Sealed factory tamper-evident caps</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Ready to chill and serve</li>
+              <li><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg> Zero empty bottle collection required</li>
+            </ul>
+
+            <div class="pricing-card-footer">
+              <a class="btn btn-outline btn-block" href="signup.html">Order Bottled Case</a>
+            </div>
+          </article>
+        </div>
+
+        <div class="policy-callout">
+          <div class="callout-icon">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </div>
+          <div class="callout-text">
+            <strong>Clear Bottle Swap Accountability</strong>
+            <span>Your digital bottle ledger credits every empty container collected by your rider. If you order 3 refills, have 3 empties ready for the rider to maintain a zero-deposit balance.</span>
           </div>
         </div>
       </div>
     </section>
 
+    <!-- Real-Time Order Tracking Showcase & Bottle Ledger -->
+    <section class="tracking-showcase-section" id="tracking">
+      <div class="landing-wrap">
+        <div class="tracking-grid">
+          <div class="tracking-copy">
+            <p class="section-kicker">LIVE VISIBILITY</p>
+            <h2 class="section-title">Know exactly where your refill is.</h2>
+            <p class="section-desc">
+              No more wondering when the delivery rider will show up. AquaRun tracks every gallon through 4 clear operational checkpoints, updated by station staff and dispatch riders in real time.
+            </p>
 
-    <section class="wrap closing" id="contact">
-      <div>
-        <img class="station-photo" src="assets/images/station-photo.png" alt="Water refilling station">
-        <div class="hours"><b>Mon–Sat</b><span>7:00 AM – 6:00 PM<br>Sample hours</span></div>
-      </div>
-      <div class="closing-copy">
-        <div>
-          <h2>Never miss a refill with AquaRun</h2>
-          <p>Order in under a minute, pick a time slot that suits you, and let the station and riders take it from there.</p>
+            <div class="tracking-features-list">
+              <div class="tf-item">
+                <div class="tf-dot"></div>
+                <div>
+                  <strong>Live Status Transitions</strong>
+                  <p>Follow your order as it moves from Order Placed to Refilling, Out for Delivery, and Delivered.</p>
+                </div>
+              </div>
+              <div class="tf-item">
+                <div class="tf-dot"></div>
+                <div>
+                  <strong>Assigned Rider Information</strong>
+                  <p>View your assigned rider's name, vehicle, and targeted delivery window directly on your dashboard.</p>
+                </div>
+              </div>
+              <div class="tf-item">
+                <div class="tf-dot"></div>
+                <div>
+                  <strong>Synchronized Bottle Ledger</strong>
+                  <p>Riders log collected empties upon arrival, updating your account ledger balance on the spot.</p>
+                </div>
+              </div>
+            </div>
+
+            <form class="track-lookup-form" action="login.html" method="GET">
+              <div class="track-input-wrap">
+                <input class="track-input" type="text" name="order" placeholder="Enter Order Number (e.g. AR-1042)" aria-label="Order Number">
+                <button class="btn btn-primary" type="submit">Track Order</button>
+              </div>
+              <p class="track-form-hint">Sign in to view active orders, request refills, and check your container balance.</p>
+            </form>
+          </div>
+
+          <!-- Live Interactive Order & Ledger Simulation Card -->
+          <div class="order-simulation-card" aria-label="Sample live order tracker">
+            <div class="sim-header">
+              <div>
+                <span class="sim-label">Active Order Reference</span>
+                <strong class="sim-order-id">#AR-1042</strong>
+              </div>
+              <span class="sim-status-badge">Out for Delivery</span>
+            </div>
+
+            <!-- 4-Stage Progress Stepper -->
+            <div class="sim-timeline">
+              <div class="sim-step step-done">
+                <div class="sim-step-indicator">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="sim-step-info">
+                  <strong>Order Confirmed</strong>
+                  <small>8:15 AM &middot; Assigned to Station Queue</small>
+                </div>
+              </div>
+
+              <div class="sim-step step-done">
+                <div class="sim-step-indicator">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <div class="sim-step-info">
+                  <strong>Refilled &amp; Sealed</strong>
+                  <small>8:45 AM &middot; 3x Round Gallons Sanitized</small>
+                </div>
+              </div>
+
+              <div class="sim-step step-active">
+                <div class="sim-step-indicator">3</div>
+                <div class="sim-step-info">
+                  <strong>Out for Delivery</strong>
+                  <small>9:10 AM &middot; Rider Juan D. &middot; Slot 9:00 AM – 1:00 PM</small>
+                </div>
+              </div>
+
+              <div class="sim-step step-pending">
+                <div class="sim-step-indicator">4</div>
+                <div class="sim-step-info">
+                  <strong>Delivered &amp; Handover</strong>
+                  <small>Estimated 9:30 AM &middot; Empties Collection &amp; COD</small>
+                </div>
+              </div>
+            </div>
+
+            <!-- Ledger Accountability Summary -->
+            <div class="sim-ledger-box">
+              <div class="sim-ledger-title">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                <span>Bottle Ledger &amp; Payment Summary</span>
+              </div>
+              <div class="sim-ledger-grid">
+                <div class="sim-ledger-stat">
+                  <span class="stat-num">3</span>
+                  <span class="stat-desc">Gallons to Deliver</span>
+                </div>
+                <div class="sim-ledger-stat">
+                  <span class="stat-num">3</span>
+                  <span class="stat-desc">Empties Expected</span>
+                </div>
+                <div class="sim-ledger-stat stat-highlight">
+                  <span class="stat-num">0</span>
+                  <span class="stat-desc">Net Bottle Balance</span>
+                </div>
+              </div>
+              <div class="sim-ledger-total">
+                <span>Total Amount Due (COD)</span>
+                <strong>&#8369;110.00 <small>(3x &#8369;30 refill + &#8369;20 flat delivery)</small></strong>
+              </div>
+            </div>
+          </div>
         </div>
-        <a class="cta-big" href="signup.html">Request a refill now <span aria-hidden="true">→</span></a>
+      </div>
+    </section>
+
+    <!-- Station Info, Operating Hours & Final Call to Action -->
+    <section class="station-section" id="station">
+      <div class="landing-wrap">
+        <div class="station-grid">
+          <div class="station-info-card">
+            <div class="station-card-badge">STATION SCHEDULE</div>
+            <h3>Operating Hours &amp; Delivery Days</h3>
+            <p>Our station is equipped with multi-stage reverse osmosis and ultraviolet purification systems, staffed six days a week for high-capacity refilling and community dispatch.</p>
+
+            <div class="schedule-rows">
+              <div class="schedule-row">
+                <strong>Monday &ndash; Saturday</strong>
+                <span>7:00 AM &ndash; 6:00 PM</span>
+              </div>
+              <div class="schedule-row">
+                <strong>Sunday</strong>
+                <span>8:00 AM &ndash; 1:00 PM (Express Slots)</span>
+              </div>
+              <div class="schedule-row">
+                <strong>Daily Delivery Windows</strong>
+                <span>Morning (8:00 AM &ndash; 12:00 PM) &amp; Afternoon (1:00 PM &ndash; 5:00 PM)</span>
+              </div>
+            </div>
+
+            <div class="station-location-badge">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Serving registered barangays and surrounding communities</span>
+            </div>
+          </div>
+
+          <div class="cta-banner-card">
+            <div class="cta-banner-content">
+              <p class="section-kicker text-white">GET STARTED TODAY</p>
+              <h2>Never run out of clean drinking water again.</h2>
+              <p>Sign up in less than a minute. Save your delivery address, schedule a morning or afternoon slot, and let AquaRun handle your household water refills with total peace of mind.</p>
+              <div class="cta-banner-buttons">
+                <a class="btn btn-white btn-lg" href="signup.html">Create your account</a>
+                <a class="btn btn-outline-white btn-lg" href="login.html">Sign in</a>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
   </main>
 
-  <footer class="footer">
-    <div class="wrap footer-row">
-      <a class="logo" href="index.html"><img src="assets/icons/logo-mark.svg" alt="">Aqua<span>Run</span></a>
-      <nav class="footer-links" aria-label="Footer"><a href="#home">Home</a><a href="#services">Services</a><a href="#how">How it works</a><a href="#contact">Contact</a></nav>
-      <small>Computer Studies · University of Caloocan City</small>
+  <!-- Clean Footer -->
+  <footer class="landing-footer">
+    <div class="landing-wrap footer-inner">
+      <div class="footer-brand">
+        <a class="logo" href="index.html">
+          <img src="assets/icons/logo-mark.svg" alt="" width="32" height="32">
+          Aqua<span>Run</span>
+        </a>
+        <p class="footer-tagline">Automated community water refill ordering, dispatch, and bottle ledger tracking.</p>
+      </div>
+
+      <nav class="footer-nav" aria-label="Footer links">
+        <a href="#home">Home</a>
+        <a href="#how-it-works">How It Works</a>
+        <a href="#products">Products &amp; Pricing</a>
+        <a href="#tracking">Live Tracking</a>
+        <a href="#station">Station Info</a>
+        <a href="login.html">Log In</a>
+        <a href="signup.html">Sign Up</a>
+      </nav>
+
+      <div class="footer-meta">
+        <small>&copy; 2026 AquaRun Water Refill System. All rights reserved.</small>
+        <small>Computer Studies &middot; University of Caloocan City</small>
+      </div>
     </div>
   </footer>
+
   <script type="module" src="js/pages/public/index.js"></script>
 </body>
 </html>
