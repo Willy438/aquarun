@@ -807,14 +807,23 @@ export async function mount(initialMe) {
     renderNav(me, 'my-deliveries');
   });
 
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      loadAndRender({ forceRefresh: true });
+      renderNav(me, 'my-deliveries');
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
   const pollTimer = setInterval(() => {
     if (document.visibilityState === 'visible') {
       loadAndRender({ forceRefresh: true });
     }
-  }, 35000);
+  }, 6000);
 
   return () => {
     clearInterval(pollTimer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     unsub();
   };
 }

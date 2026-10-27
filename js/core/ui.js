@@ -157,10 +157,17 @@ export function showToast(message, type = 'info') {
 export function setBusy(button, busy, busyText) {
   if (!button) return;
   if (busy) {
-    button.dataset.label = button.textContent;
-    button.textContent = busyText;
-  } else if (button.dataset.label) {
-    button.textContent = button.dataset.label;
+    if (!button.dataset.label) {
+      button.dataset.label = button.textContent;
+    }
+    if (busyText) {
+      button.textContent = busyText;
+    }
+  } else {
+    if (button.dataset.label) {
+      button.textContent = button.dataset.label;
+      delete button.dataset.label;
+    }
   }
   button.disabled = busy;
 }

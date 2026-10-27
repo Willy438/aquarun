@@ -845,14 +845,23 @@ export async function mount() {
     updateStaffOrdersBadge().catch(() => {});
   });
 
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      loadData();
+      updateStaffOrdersBadge().catch(() => {});
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
   const pollTimer = setInterval(() => {
     if (document.visibilityState === 'visible') {
       loadData();
     }
-  }, 35000);
+  }, 6000);
 
   return () => {
     clearInterval(pollTimer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     unsub();
   };
 }

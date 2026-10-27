@@ -506,7 +506,17 @@ export function startShellRealtimeSync(role, profile) {
           event: '*',
           schema: 'public',
           table: 'orders',
-          filter: `customer_id=eq.${profile.id}`,
+        },
+        () => {
+          updateCustomerActiveOrderBadge(profile.id).catch(() => {});
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'order_status_log',
         },
         () => {
           updateCustomerActiveOrderBadge(profile.id).catch(() => {});
@@ -517,7 +527,7 @@ export function startShellRealtimeSync(role, profile) {
       if (document.visibilityState === 'visible') {
         updateCustomerActiveOrderBadge(profile.id).catch(() => {});
       }
-    }, 45000);
+    }, 15000);
   }
 }
 

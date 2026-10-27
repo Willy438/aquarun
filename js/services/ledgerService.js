@@ -2,7 +2,7 @@
 import { supabase } from '../config/supabaseClient.js';
 import { cachedQuery } from '../core/ui.js';
 
-export async function getCustomerBottleBalance(customerId) {
+export async function getCustomerBottleBalance(customerId, { forceRefresh = false } = {}) {
   return cachedQuery(`ledger:balance:${customerId}`, async () => {
     const { data, error } = await supabase
       .from('customer_bottle_balance')
@@ -20,7 +20,7 @@ export async function getCustomerBottleBalance(customerId) {
       };
     }
     return data;
-  });
+  }, { forceRefresh });
 }
 
 export async function getCustomerLedgerActivity(customerId) {

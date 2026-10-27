@@ -42,7 +42,7 @@ export async function mount(me) {
 
   async function renderPage() {
     try {
-      const activeOrders = await getCustomerActiveOrders(me.id);
+      const activeOrders = await getCustomerActiveOrders(me.id, { forceRefresh: true });
       let order = null;
       let pastTerminalOrder = null;
 
@@ -50,7 +50,7 @@ export async function mount(me) {
         order = activeOrders.find((o) => o.id === currentOrderId);
         if (!order) {
           // Check if this was a completed or cancelled past order
-          const found = await getCustomerOrderById(me.id, currentOrderId).catch(() => null);
+          const found = await getCustomerOrderById(me.id, currentOrderId, { forceRefresh: true }).catch(() => null);
           if (found && ['completed', 'cancelled'].includes(found.status)) {
             pastTerminalOrder = found;
           }
@@ -525,14 +525,24 @@ export async function mount(me) {
     renderNav(me, 'track-order');
   });
 
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      renderPage();
+      renderNav(me, 'track-order');
+    }
+  };
+  document.addEventListener('visibilitychange', onVisibilityChange);
+
+  // Responsive near-instant polling fallback (5s) for live tracking
   const pollTimer = setInterval(() => {
     if (document.visibilityState === 'visible') {
       renderPage();
     }
-  }, 35000);
+  }, 5000);
 
   return () => {
     clearInterval(pollTimer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     unsub();
   };
 }

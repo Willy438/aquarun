@@ -17,6 +17,10 @@ function triggerNavBadgeUpdate(fnName, ...args) {
 export function subscribeCustomerOrders(customerId, onUpdate) {
   if (!customerId || typeof onUpdate !== 'function') return () => {};
   const handle = (payload) => {
+    // If the change event explicitly includes a different customer_id, ignore it
+    if (payload?.new?.customer_id && payload.new.customer_id !== customerId) {
+      return;
+    }
     invalidateDataCache();
     triggerNavBadgeUpdate('updateCustomerActiveOrderBadge', customerId);
     onUpdate(payload);
@@ -30,7 +34,15 @@ export function subscribeCustomerOrders(customerId, onUpdate) {
         event: '*',
         schema: 'public',
         table: 'orders',
-        filter: `customer_id=eq.${customerId}`,
+      },
+      handle
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'order_status_log',
       },
       handle
     )
@@ -40,7 +52,6 @@ export function subscribeCustomerOrders(customerId, onUpdate) {
         event: '*',
         schema: 'public',
         table: 'bottle_ledger',
-        filter: `customer_id=eq.${customerId}`,
       },
       handle
     )
@@ -63,7 +74,9 @@ export function subscribeCustomerOrders(customerId, onUpdate) {
       handle
     )
     .subscribe((status, err) => {
-      if (err) console.warn('[Realtime Customer error]:', err);
+      if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Realtime Customer warning]:', status, err);
+      }
     });
 
   return () => {
@@ -83,12 +96,16 @@ export function subscribeStaffWorkspace(onUpdate) {
   const channel = supabase
     .channel(channelName)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'order_status_log' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'bottle_ledger' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slots' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, handle)
     .subscribe((status, err) => {
-      if (err) console.warn('[Realtime Staff error]:', err);
+      if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Realtime Staff warning]:', status, err);
+      }
     });
 
   return () => {
@@ -104,7 +121,6 @@ export function subscribeRiderWorkspace(riderId, onUpdate) {
     triggerNavBadgeUpdate('updateRiderRemittanceBadge', riderId);
     onUpdate(p);
   };
-  // Listen without restrictive SQL filter on orders so assignment transitions from null -> riderId fire immediately
   const channelName = `rider-workspace-${riderId}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const channel = supabase
     .channel(channelName)
@@ -122,12 +138,23 @@ export function subscribeRiderWorkspace(riderId, onUpdate) {
       {
         event: '*',
         schema: 'public',
+        table: 'order_status_log',
+      },
+      handle
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
         table: 'bottle_ledger',
       },
       handle
     )
     .subscribe((status, err) => {
-      if (err) console.warn('[Realtime Rider error]:', err);
+      if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Realtime Rider warning]:', status, err);
+      }
     });
 
   return () => {
@@ -145,18 +172,19 @@ export function subscribeAdminWorkspace(onUpdate) {
   const channel = supabase
     .channel(channelName)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, handle)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'order_status_log' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'time_slots' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'slot_closures' }, handle)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'settings' }, handle)
     .subscribe((status, err) => {
-      if (err) console.warn('[Realtime Admin error]:', err);
+      if (err || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        console.warn('[Realtime Admin warning]:', status, err);
+      }
     });
 
   return () => {
     supabase.removeChannel(channel);
   };
 }
-
-

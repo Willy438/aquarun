@@ -38,9 +38,9 @@ export async function mount(me) {
   async function loadAndRender() {
     try {
       const [activeOrders, allOrders, balance, addresses, products] = await Promise.all([
-        getCustomerActiveOrders(me.id),
-        getCustomerOrders(me.id, { limit: 6 }),
-        getCustomerBottleBalance(me.id),
+        getCustomerActiveOrders(me.id, { forceRefresh: true }),
+        getCustomerOrders(me.id, { limit: 6, forceRefresh: true }),
+        getCustomerBottleBalance(me.id, { forceRefresh: true }),
         getCustomerAddresses(me.id),
         getActiveProducts({ forceRefresh: true }),
       ]);
@@ -257,21 +257,24 @@ export async function mount(me) {
     renderNav(me, 'home');
   });
 
-  const onSync = () => {
-    loadAndRender();
+  const onVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      loadAndRender();
+      renderNav(me, 'home');
+    }
   };
-  
+  document.addEventListener('visibilitychange', onVisibilityChange);
 
   const pollTimer = setInterval(() => {
     if (document.visibilityState === 'visible') {
       loadAndRender();
     }
-  }, 35000);
+  }, 8000);
 
   return () => {
     clearInterval(pollTimer);
+    document.removeEventListener('visibilitychange', onVisibilityChange);
     unsub();
-    
   };
 }
 
