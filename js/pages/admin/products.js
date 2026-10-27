@@ -17,8 +17,8 @@ import {
   toggleProductActive,
 } from '../../services/productsService.js';
 
-const CROP_WIDTH = 760;
-const CROP_HEIGHT = 360;
+const CROP_WIDTH = 600;
+const CROP_HEIGHT = 600;
 
 function getGallonIconSvg() {
   return `
@@ -1031,31 +1031,42 @@ export async function mount() {
 
     content.innerHTML = `
       <div class="stack-lg">
-        <div class="grid-3">
-          ${cardsHtml}
-        </div>
-
-        <section class="card">
-          <div class="card-header">
-            <div>
-              <h2 class="card-title">Delivery service charge</h2>
-              <p class="card-subtitle">Flat fee added to every delivery order</p>
+        <!-- Delivery service charge (AT TOP FOR EASY ACCESS) -->
+        <section class="card delivery-charge-top-card">
+          <div class="delivery-charge-top-inner">
+            <div class="delivery-charge-top-left">
+              <span class="delivery-charge-top-icon">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="1" y="3" width="15" height="13"></rect>
+                  <polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon>
+                  <circle cx="5.5" cy="18.5" r="2.5"></circle>
+                  <circle cx="18.5" cy="18.5" r="2.5"></circle>
+                </svg>
+              </span>
+              <div>
+                <h2 class="card-title" style="font-size: 15px; margin: 0 0 2px 0;">Delivery service charge</h2>
+                <p class="card-subtitle" style="font-size: 12px; margin: 0; color: #64748b;">Flat fee added to every delivery order</p>
+              </div>
             </div>
-          </div>
-          <form class="service-charge-row" id="service-charge-form">
-            <div class="field">
-              <label class="label" for="service-charge-input">Standard charge per order</label>
+            <form class="service-charge-inline-form" id="service-charge-form">
+              <label class="label" for="service-charge-input" style="font-size: 13px; font-weight: 700; margin: 0; white-space: nowrap;">Charge per order:</label>
               <input
                 class="input"
                 id="service-charge-input"
                 type="text"
                 value="₱${Number(serviceCharge || 0).toFixed(0)}"
+                style="width: 100px; min-height: 40px; text-align: center; font-weight: 800; font-size: 14px;"
                 required
               />
-            </div>
-            <button type="submit" class="btn btn-primary" id="btn-save-charge">Save</button>
-          </form>
+              <button type="submit" class="btn btn-primary btn-sm" id="btn-save-charge" style="min-height: 40px; padding: 0 18px;">Save</button>
+            </form>
+          </div>
         </section>
+
+        <!-- Horizontal 1:1 Product Cards Grid -->
+        <div class="admin-products-grid">
+          ${cardsHtml}
+        </div>
       </div>
     `;
 

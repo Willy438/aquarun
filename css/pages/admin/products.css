@@ -98,8 +98,10 @@
 
 /* Compact Photo Dropzone & Canvas */
 .prod-photo-preview-box {
-  width: 100%;
-  height: 140px;
+  width: 180px;
+  height: 180px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
   border-radius: 12px;
   border: 2px dashed #cbd5e1;
   background: #f8fafc;
@@ -243,4 +245,198 @@
   gap: 8px;
   margin-top: 8px;
   flex-wrap: wrap;
+}
+
+/* Delivery Service Charge Top Card */
+.delivery-charge-top-card {
+  padding: 14px 20px;
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  box-shadow: var(--shadow-xs, 0 1px 3px rgba(15, 23, 42, 0.05));
+  margin-bottom: 4px;
+}
+
+.delivery-charge-top-inner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.delivery-charge-top-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.delivery-charge-top-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: var(--brand-soft, #ebf2ff);
+  color: var(--blue-app, #1d5bd6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.service-charge-inline-form {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Horizontal 1:1 Product Cards Grid */
+.admin-products-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+@media (max-width: 960px) {
+  .admin-products-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-product-card {
+  background: var(--surface, #ffffff);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 16px;
+  overflow: hidden;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  min-width: 0;
+  transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.admin-product-card:hover {
+  border-color: #93c5fd;
+  box-shadow: 0 8px 22px rgba(15, 36, 84, 0.08);
+}
+
+.admin-product-art {
+  width: 140px !important;
+  min-width: 140px !important;
+  max-width: 140px !important;
+  height: 140px !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 12px;
+  margin: 12px;
+  background: linear-gradient(180deg, #e6f0fd 0%, #dbeafe 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.admin-product-art-img {
+  width: 100% !important;
+  height: 100% !important;
+  aspect-ratio: 1 / 1 !important;
+  object-fit: cover !important;
+  object-position: center;
+  display: block;
+}
+
+.admin-product-art-circle {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: #bfdbfe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--brand, #1d5bd6);
+}
+
+.admin-product-body {
+  flex: 1;
+  min-width: 0;
+  padding: 14px 16px 14px 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-product-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.admin-product-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+  margin: 0 0 2px 0;
+  line-height: 1.25;
+}
+
+.admin-product-sub {
+  font-size: 11.5px;
+  color: var(--muted-blue, #64748b);
+  margin: 0;
+}
+
+.admin-product-pricing-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-price-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 12px;
+}
+
+.admin-price-chip .price-label {
+  color: #64748b;
+  font-size: 11px;
+}
+
+.admin-price-chip .price-val {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.admin-product-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 540px) {
+  .admin-product-card {
+    flex-direction: column !important;
+  }
+  .admin-product-art {
+    width: calc(100% - 24px) !important;
+    max-width: 100% !important;
+    height: 180px !important;
+    aspect-ratio: auto !important;
+  }
+  .admin-product-body {
+    padding: 0 14px 14px;
+  }
 }

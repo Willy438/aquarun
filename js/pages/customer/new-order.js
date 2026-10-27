@@ -746,23 +746,6 @@ export async function mount(me) {
             <span class="cart-count" id="cart-count">0 items</span>
           </div>
 
-          <!-- Live Delivery Destination & Slot preview in sidebar -->
-          <div class="cart-delivery-preview">
-            <div class="cart-delivery-row">
-              <span class="cart-delivery-icon">${ICONS.pin}</span>
-              <div class="cart-delivery-meta">
-                <span class="cart-delivery-kicker">Deliver to</span>
-                <span class="cart-delivery-value" id="cart-preview-address">Loading address...</span>
-              </div>
-            </div>
-            <div class="cart-delivery-row">
-              <span class="cart-delivery-icon">${ICONS.drop}</span>
-              <div class="cart-delivery-meta">
-                <span class="cart-delivery-kicker">Delivery Window</span>
-                <span class="cart-delivery-value" id="cart-preview-slot">Loading slot...</span>
-              </div>
-            </div>
-          </div>
 
           <div class="cart-items" id="cart-items"></div>
 
@@ -832,31 +815,6 @@ export async function mount(me) {
       </div>
     `;
 
-    function updateCartDeliveryPreview() {
-      const addrEl = document.querySelector('#cart-preview-address');
-      const slotEl = document.querySelector('#cart-preview-slot');
-      const selAddr = addresses.find((a) => a.id === selectedAddressId);
-      if (addrEl) {
-        if (selAddr) {
-          addrEl.textContent = `${selAddr.label} · ${selAddr.street || selAddr.barangay || 'Caloocan'}`;
-          addrEl.title = formatAddressFull(selAddr);
-        } else {
-          addrEl.textContent = addresses.length === 0 ? 'No address set up' : 'Select delivery address';
-          addrEl.title = '';
-        }
-      }
-      if (slotEl) {
-        const selSlot = slots.find((s) => s.slot_id === selectedSlotId);
-        const dateLabel = selectedDate === getTodayManila() ? 'Today' : selectedDate;
-        if (selSlot) {
-          const timeText = selSlot.label ? selSlot.label.replace(/\s*-\s*/g, '–') : '';
-          slotEl.textContent = `${dateLabel} · ${timeText}`;
-        } else {
-          slotEl.textContent = `${dateLabel} · Select slot`;
-        }
-      }
-    }
-
     let addressDistanceCheck = null;
 
     async function refreshAddressRadiusCheck() {
@@ -907,7 +865,7 @@ export async function mount(me) {
         }
       }
 
-      updateCartDeliveryPreview();
+      
     }
 
     renderPolicyBanner();
@@ -915,7 +873,7 @@ export async function mount(me) {
     renderSlotsSelect();
     renderCartSection();
     refreshAddressRadiusCheck();
-    updateCartDeliveryPreview();
+    
 
     document.querySelector('#category-tabs')?.addEventListener('click', (e) => {
       const tab = e.target.closest('.category-tab');
@@ -928,7 +886,7 @@ export async function mount(me) {
       selectedAddressId = e.target.value;
       refreshAddressRadiusCheck();
       renderCartSection();
-      updateCartDeliveryPreview();
+      
     });
 
     document.querySelector('#delivery-date')?.addEventListener('change', async (e) => {
@@ -937,7 +895,7 @@ export async function mount(me) {
         await refreshSlotsForDate(selectedDate);
         renderSlotsSelect();
         renderCartSection();
-        updateCartDeliveryPreview();
+        
       } catch (err) {
         showToast(err.message || 'Could not load time slots for that date.', 'error');
       }
@@ -946,7 +904,7 @@ export async function mount(me) {
     document.querySelector('#slot-select')?.addEventListener('change', (e) => {
       selectedSlotId = e.target.value;
       renderCartSection();
-      updateCartDeliveryPreview();
+      
     });
 
     document.querySelector('#delivery-note')?.addEventListener('input', (e) => {
