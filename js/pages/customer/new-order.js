@@ -649,38 +649,31 @@ export async function mount(me) {
       : `<option value="">No saved address yet — add one in Saved addresses</option>`;
 
     content.innerHTML = `
+      ${
+        addresses.length === 0
+          ? `
+            <div class="order-no-address-banner">
+              <div class="order-no-address-left">
+                <span class="order-no-address-icon">${ICONS.pin}</span>
+                <div>
+                  <div class="order-no-address-title">No delivery address set up yet</div>
+                  <p class="order-no-address-sub">Please set up your delivery address first so we can verify delivery radius coverage and schedule your refills.</p>
+                </div>
+              </div>
+              <a href="addresses.html" class="btn btn-primary" style="white-space: nowrap;">+ Add delivery address</a>
+            </div>
+          `
+          : ''
+      }
+
       <div class="grid-split">
         <div class="stack">
-          <div class="card">
-            <div class="card-header">
-              <div class="card-title-group">
-                <span class="card-icon">${ICONS.drop}</span>
-                <h2 class="card-title">1. Choose your items</h2>
-              </div>
-              <span class="pill pill-info" id="swap-limit-pill" hidden></span>
-            </div>
-
-            <!-- Category Filter Tabs -->
-            <div class="category-tabs" id="category-tabs" role="tablist">
-              <button type="button" class="category-tab is-active" data-cat="all">
-                All items <span class="tab-count" id="count-all">0</span>
-              </button>
-              <button type="button" class="category-tab" data-cat="refill">
-                Water refills <span class="tab-count" id="count-refill">0</span>
-              </button>
-              <button type="button" class="category-tab" data-cat="empty">
-                Empty bottles only <span class="tab-count" id="count-empty">0</span>
-              </button>
-            </div>
-
-            <div class="product-grid" id="product-grid"></div>
-          </div>
-
-          <div class="card">
+          <!-- Step 1: Delivery details & schedule (AT TOP FOR INSTANT VISIBILITY) -->
+          <div class="card" id="delivery-details-card">
             <div class="card-header">
               <div class="card-title-group">
                 <span class="card-icon">${ICONS.pin}</span>
-                <h2 class="card-title">2. Delivery details</h2>
+                <h2 class="card-title">1. Delivery details &amp; schedule</h2>
               </div>
               ${
                 addresses.length === 0
@@ -691,7 +684,7 @@ export async function mount(me) {
 
             <div class="form-stack">
               <div class="field">
-                <label class="field-label" for="address-select">Saved address</label>
+                <label class="field-label" for="address-select">Delivery address</label>
                 <select class="select" id="address-select" ${addresses.length === 0 ? 'disabled' : ''}>
                   ${addressOptionsHtml}
                 </select>
@@ -711,19 +704,64 @@ export async function mount(me) {
 
               <div class="field">
                 <label class="field-label" for="delivery-note">Delivery note (optional)</label>
-                <input class="input" id="delivery-note" type="text" placeholder="Landmark or instruction" value="${escapeHtml(deliveryNote)}">
+                <input class="input" id="delivery-note" type="text" placeholder="Landmark or gate/unit instructions" value="${escapeHtml(deliveryNote)}">
               </div>
             </div>
           </div>
+
+          <!-- Step 2: Choose your items -->
+          <div class="card" id="choose-items-card">
+            <div class="card-header">
+              <div class="card-title-group">
+                <span class="card-icon">${ICONS.drop}</span>
+                <h2 class="card-title">2. Choose your items</h2>
+              </div>
+              <span class="pill pill-info" id="swap-limit-pill" hidden></span>
+            </div>
+
+            <!-- Category Filter Tabs -->
+            <div class="category-tabs" id="category-tabs" role="tablist">
+              <button type="button" class="category-tab is-active" data-cat="all">
+                All items <span class="tab-count" id="count-all">0</span>
+              </button>
+              <button type="button" class="category-tab" data-cat="refill">
+                Water refills <span class="tab-count" id="count-refill">0</span>
+              </button>
+              <button type="button" class="category-tab" data-cat="empty">
+                Empty bottles only <span class="tab-count" id="count-empty">0</span>
+              </button>
+            </div>
+
+            <div class="product-grid" id="product-grid"></div>
+          </div>
         </div>
 
+        <!-- Sticky Cart Sidebar -->
         <div class="card cart-card">
           <div class="card-header">
             <div class="card-title-group">
               <span class="card-icon">${ICONS.cart}</span>
               <h2 class="card-title">Your order</h2>
             </div>
-            <span class="cart-count" id="cart-count">0 gallons</span>
+            <span class="cart-count" id="cart-count">0 items</span>
+          </div>
+
+          <!-- Live Delivery Destination & Slot preview in sidebar -->
+          <div class="cart-delivery-preview">
+            <div class="cart-delivery-row">
+              <span class="cart-delivery-icon">${ICONS.pin}</span>
+              <div class="cart-delivery-meta">
+                <span class="cart-delivery-kicker">Deliver to</span>
+                <span class="cart-delivery-value" id="cart-preview-address">Loading address...</span>
+              </div>
+            </div>
+            <div class="cart-delivery-row">
+              <span class="cart-delivery-icon">${ICONS.drop}</span>
+              <div class="cart-delivery-meta">
+                <span class="cart-delivery-kicker">Delivery Window</span>
+                <span class="cart-delivery-value" id="cart-preview-slot">Loading slot...</span>
+              </div>
+            </div>
           </div>
 
           <div class="cart-items" id="cart-items"></div>
@@ -775,9 +813,9 @@ export async function mount(me) {
             type="button"
             class="btn btn-primary btn-block"
             id="place-order-btn"
-            ${!isStationOpen ? 'disabled title="Station is currently closed"' : ''}
+            ${!isStationOpen || addresses.length === 0 ? 'disabled' : ''}
           >
-            ${!isStationOpen ? 'Station closed' : 'Place order'}
+            ${!isStationOpen ? 'Station closed' : addresses.length === 0 ? 'Add delivery address first' : 'Place order'}
           </button>
         </div>
       </div>
@@ -793,6 +831,31 @@ export async function mount(me) {
         </button>
       </div>
     `;
+
+    function updateCartDeliveryPreview() {
+      const addrEl = document.querySelector('#cart-preview-address');
+      const slotEl = document.querySelector('#cart-preview-slot');
+      const selAddr = addresses.find((a) => a.id === selectedAddressId);
+      if (addrEl) {
+        if (selAddr) {
+          addrEl.textContent = `${selAddr.label} · ${selAddr.street || selAddr.barangay || 'Caloocan'}`;
+          addrEl.title = formatAddressFull(selAddr);
+        } else {
+          addrEl.textContent = addresses.length === 0 ? 'No address set up' : 'Select delivery address';
+          addrEl.title = '';
+        }
+      }
+      if (slotEl) {
+        const selSlot = slots.find((s) => s.slot_id === selectedSlotId);
+        const dateLabel = selectedDate === getTodayManila() ? 'Today' : selectedDate;
+        if (selSlot) {
+          const timeText = selSlot.label ? selSlot.label.replace(/\s*-\s*/g, '–') : '';
+          slotEl.textContent = `${dateLabel} · ${timeText}`;
+        } else {
+          slotEl.textContent = `${dateLabel} · Select slot`;
+        }
+      }
+    }
 
     let addressDistanceCheck = null;
 
@@ -832,7 +895,10 @@ export async function mount(me) {
       }
 
       if (placeBtn && isStationOpen) {
-        if (addressDistanceCheck && !addressDistanceCheck.isWithin) {
+        if (addresses.length === 0) {
+          placeBtn.disabled = true;
+          placeBtn.textContent = 'Add delivery address first';
+        } else if (addressDistanceCheck && !addressDistanceCheck.isWithin) {
           placeBtn.disabled = true;
           placeBtn.textContent = 'Address outside delivery radius';
         } else {
@@ -840,6 +906,8 @@ export async function mount(me) {
           placeBtn.textContent = 'Place order';
         }
       }
+
+      updateCartDeliveryPreview();
     }
 
     renderPolicyBanner();
@@ -847,6 +915,7 @@ export async function mount(me) {
     renderSlotsSelect();
     renderCartSection();
     refreshAddressRadiusCheck();
+    updateCartDeliveryPreview();
 
     document.querySelector('#category-tabs')?.addEventListener('click', (e) => {
       const tab = e.target.closest('.category-tab');
@@ -859,6 +928,7 @@ export async function mount(me) {
       selectedAddressId = e.target.value;
       refreshAddressRadiusCheck();
       renderCartSection();
+      updateCartDeliveryPreview();
     });
 
     document.querySelector('#delivery-date')?.addEventListener('change', async (e) => {
@@ -867,6 +937,7 @@ export async function mount(me) {
         await refreshSlotsForDate(selectedDate);
         renderSlotsSelect();
         renderCartSection();
+        updateCartDeliveryPreview();
       } catch (err) {
         showToast(err.message || 'Could not load time slots for that date.', 'error');
       }
@@ -875,6 +946,7 @@ export async function mount(me) {
     document.querySelector('#slot-select')?.addEventListener('change', (e) => {
       selectedSlotId = e.target.value;
       renderCartSection();
+      updateCartDeliveryPreview();
     });
 
     document.querySelector('#delivery-note')?.addEventListener('input', (e) => {

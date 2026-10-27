@@ -625,14 +625,42 @@ export async function mount(me) {
           }
           if (suggestionsBox) {
             suggestionsBox.hidden = false;
-            suggestionsBox.innerHTML = '<div class="suggestion-loading">Searching locations...</div>';
+            suggestionsBox.innerHTML = '<div class="suggestion-loading">Searching locations near station...</div>';
           }
 
           try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=5&addressdetails=1`;
+            const sLat = stationSettings.lat || 14.7565;
+            const sLng = stationSettings.lng || 121.0437;
+            const left = (sLng - 0.25).toFixed(4);
+            const top = (sLat + 0.20).toFixed(4);
+            const right = (sLng + 0.25).toFixed(4);
+            const bottom = (sLat - 0.20).toFixed(4);
+
+            const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(query)}&limit=10&addressdetails=1`;
             const resp = await fetch(url, { headers: { 'Accept': 'application/json' } });
             if (!resp.ok) throw new Error('API failed');
-            const data = await resp.json();
+            let data = await resp.json();
+
+            // If no local match within 15 km, also query with Caloocan appended
+            const hasLocalMatch = Array.isArray(data) && data.some((item) => {
+              const d = calculateDistanceKm(sLat, sLng, parseFloat(item.lat), parseFloat(item.lon));
+              return d !== null && d <= 15;
+            });
+
+            if (!hasLocalMatch && !/caloocan|manila|quezon/i.test(query)) {
+              try {
+                const fallbackUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query + ' Caloocan')}&limit=5&addressdetails=1`;
+                const fallbackResp = await fetch(fallbackUrl, { headers: { 'Accept': 'application/json' } });
+                if (fallbackResp.ok) {
+                  const fallbackData = await fallbackResp.json();
+                  if (Array.isArray(fallbackData) && fallbackData.length > 0) {
+                    const existingPlaceIds = new Set((data || []).map((x) => x.place_id));
+                    const newItems = fallbackData.filter((x) => !existingPlaceIds.has(x.place_id));
+                    data = [...newItems, ...(data || [])];
+                  }
+                }
+              } catch {}
+            }
 
             if (!data || data.length === 0) {
               if (suggestionsBox) {
@@ -641,19 +669,31 @@ export async function mount(me) {
               return;
             }
 
+            // Calculate distance and sort NEAR TO FAR
+            data.forEach((item) => {
+              const d = calculateDistanceKm(sLat, sLng, parseFloat(item.lat), parseFloat(item.lon));
+              item.distanceKm = Number.isFinite(d) ? d : 99999;
+            });
+            data.sort((a, b) => a.distanceKm - b.distanceKm);
+
             if (suggestionsBox) {
               suggestionsBox.innerHTML = data
+                .slice(0, 6)
                 .map((item, idx) => {
                   const parts = (item.display_name || '').split(',');
                   const primary = parts[0]?.trim() || 'Location';
                   const secondary = parts.slice(1, 4).join(',').trim();
+                  const distLabel = item.distanceKm < 9999 ? `${item.distanceKm.toFixed(1)} km` : '';
                   return `
                     <div class="suggestion-item" data-idx="${idx}" data-lat="${item.lat}" data-lon="${item.lon}">
                       <span class="suggestion-icon">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                        ${ICONS.pin}
                       </span>
-                      <div class="suggestion-text">
-                        <span class="suggestion-primary">${escapeHtml(primary)}</span>
+                      <div class="suggestion-text" style="flex:1; min-width:0;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+                          <span class="suggestion-primary">${escapeHtml(primary)}</span>
+                          ${distLabel ? `<span class="suggestion-distance-tag" style="font-size:11px; font-weight:700; color:#1d5bd6; background:#ebf2ff; padding:1px 6px; border-radius:999px; white-space:nowrap; flex-shrink:0;">${distLabel}</span>` : ''}
+                        </div>
                         <span class="suggestion-secondary">${escapeHtml(secondary)}</span>
                       </div>
                     </div>
@@ -709,17 +749,40 @@ export async function mount(me) {
           setBusy(searchBtn, true, 'Searching...');
 
           try {
-            const resp = await fetch(
-              `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`
+            const sLat = stationSettings.lat || 14.7565;
+            const sLng = stationSettings.lng || 121.0437;
+            const left = (sLng - 0.25).toFixed(4);
+            const top = (sLat + 0.20).toFixed(4);
+            const right = (sLng + 0.25).toFixed(4);
+            const bottom = (sLat - 0.20).toFixed(4);
+
+            let resp = await fetch(
+              `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(query)}&limit=10&addressdetails=1`
             );
-            const results = await resp.json();
+            let results = await resp.json();
+
+            if ((!results || results.length === 0) && !/caloocan|manila|quezon/i.test(query)) {
+              const fResp = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query + ' Caloocan')}&limit=5&addressdetails=1`
+              );
+              results = await fResp.json();
+            }
+
             if (results && results.length > 0) {
+              // Sort near to far
+              results.forEach((item) => {
+                const d = calculateDistanceKm(sLat, sLng, parseFloat(item.lat), parseFloat(item.lon));
+                item.distanceKm = Number.isFinite(d) ? d : 99999;
+              });
+              results.sort((a, b) => a.distanceKm - b.distanceKm);
+
               const hit = results[0];
               const lat = parseFloat(hit.lat);
               const lng = parseFloat(hit.lon);
               miniMap.setView([lat, lng], 16);
               await onLocationSelected(lat, lng, true);
-              showToast(`Found: ${hit.display_name.split(',')[0]}`, 'success');
+              const distText = hit.distanceKm < 9999 ? ` (${hit.distanceKm.toFixed(1)} km away)` : '';
+              showToast(`Found: ${hit.display_name.split(',')[0]}${distText}`, 'success');
             } else {
               showToast('Location not found. Try searching another street or barangay.', 'warning');
             }

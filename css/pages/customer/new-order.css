@@ -442,3 +442,119 @@
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
 }
+
+/* No address setup banner */
+.order-no-address-banner {
+  border: 1.5px solid #bfdbfe;
+  background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%);
+  border-radius: 16px;
+  padding: 16px 20px;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  box-shadow: 0 2px 10px rgba(29, 91, 214, 0.06);
+}
+
+.order-no-address-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  flex: 1;
+}
+
+.order-no-address-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #dbeafe;
+  color: var(--blue-app, #1d5bd6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.order-no-address-icon svg {
+  width: 22px;
+  height: 22px;
+}
+
+.order-no-address-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink-navy, #0f172a);
+  margin-bottom: 3px;
+}
+
+.order-no-address-sub {
+  font-size: 12.5px;
+  color: var(--muted-blue, #64748b);
+  line-height: 1.45;
+  margin: 0;
+}
+
+/* Sticky Cart Delivery Destination Preview */
+.cart-delivery-preview {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cart-delivery-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  min-width: 0;
+}
+
+.cart-delivery-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: #e0edff;
+  color: var(--blue-app, #1d5bd6);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cart-delivery-icon svg {
+  width: 14px;
+  height: 14px;
+}
+
+.cart-delivery-meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.cart-delivery-kicker {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--muted-blue, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cart-delivery-value {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink-navy, #0f172a);
+  line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

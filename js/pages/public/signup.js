@@ -70,10 +70,7 @@ async function checkRealtimeEmail(rawEmail) {
       emailInput?.classList.remove('is-valid');
       if (emailFeedback) {
         emailFeedback.style.display = 'block';
-        emailFeedback.innerHTML = `
-          <span style="color: #dc2626; font-weight: 600;">This email is already registered.</span>
-          <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 5px;">Log in instead &rarr;</a>
-        `;
+        emailFeedback.innerHTML = '<span style="color: #dc2626; font-weight: 600;">This email is already registered.</span>';
       }
     } else {
       emailTaken = false;
@@ -150,10 +147,7 @@ form.addEventListener('submit', async (event) => {
 
   // Check if real-time check already marked email as taken
   if (emailTaken) {
-    errorBox.innerHTML = `
-      <span>This email is already registered.</span>
-      <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 6px;">Log in instead &rarr;</a>
-    `;
+    errorBox.textContent = 'This email is already registered.';
     form.email.focus();
     return;
   }
@@ -175,10 +169,7 @@ form.addEventListener('submit', async (event) => {
     }).catch(() => ({ data: false }));
 
     if (alreadyRegistered === true) {
-      errorBox.innerHTML = `
-        <span>This email is already registered.</span>
-        <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 6px;">Log in instead &rarr;</a>
-      `;
+      errorBox.textContent = 'This email is already registered.';
       form.email.focus();
       setBusy(button, false);
       return;
@@ -247,14 +238,7 @@ form.addEventListener('submit', async (event) => {
     showToast('Account created! Welcome to AquaRun.', 'success');
     setTimeout(() => { window.location.href = homeFor(ROLES.CUSTOMER); }, 900);
   } catch (error) {
-    if (/registered|already/i.test(error.message)) {
-      errorBox.innerHTML = `
-        <span>${error.message}</span>
-        <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 6px;">Log in instead &rarr;</a>
-      `;
-    } else {
-      errorBox.textContent = error.message;
-    }
+    errorBox.textContent = error.message;
     setBusy(button, false);
   }
 });
