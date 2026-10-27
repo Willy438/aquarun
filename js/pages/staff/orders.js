@@ -218,150 +218,159 @@ export async function mount() {
 
   function openOrderDetailsModal(order) {
     if (!order) return;
-    const tone = (STATUS_PILL_TONE && STATUS_PILL_TONE[order.status]) || (order.status === 'completed' ? 'green' : order.status === 'cancelled' ? 'rose' : 'neutral');
-    const statusLabel = (STATUS_LABELS && STATUS_LABELS[order.status]) || order.status;
-    const customerName = order.customer?.full_name || 'Customer';
-    const customerPhone = order.customer?.phone || 'No contact provided';
-    const addressText = typeof formatAddressFull === 'function' && order.address
-      ? formatAddressFull(order.address)
-      : [order.address?.street, order.address?.barangay, order.address?.city, order.address?.landmark].filter(Boolean).join(', ') || 'No address specified';
+    try {
+      document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
+      const status = String(order.status || '').trim().toLowerCase();
+      const tone = (STATUS_PILL_TONE && STATUS_PILL_TONE[status]) || (status === 'completed' ? 'green' : status === 'cancelled' ? 'rose' : 'neutral');
+      const statusLabel = (STATUS_LABELS && STATUS_LABELS[status]) || order.status;
+      const customerName = order.customer?.full_name || 'Customer';
+      const customerPhone = order.customer?.phone || 'No contact provided';
+      const addressText = typeof formatAddressFull === 'function' && order.address
+        ? formatAddressFull(order.address)
+        : [order.address?.street, order.address?.barangay, order.address?.city, order.address?.landmark].filter(Boolean).join(', ') || 'No address specified';
 
-    const effectiveSlot = typeof getEffectiveSlot === 'function' ? getEffectiveSlot(order) : null;
-    const slotText = typeof formatSlotWindow === 'function' && effectiveSlot
-      ? formatSlotWindow(effectiveSlot)
-      : (typeof formatSlotCompact === 'function' && effectiveSlot ? formatSlotCompact(effectiveSlot) : 'Standard slot');
+      const effectiveSlot = typeof getEffectiveSlot === 'function' ? getEffectiveSlot(order) : null;
+      const slotText = typeof formatSlotWindow === 'function' && effectiveSlot
+        ? formatSlotWindow(effectiveSlot)
+        : (typeof formatSlotCompact === 'function' && effectiveSlot ? formatSlotCompact(effectiveSlot) : 'Standard slot');
 
-    const createdDateText = typeof formatDateShort === 'function' && order.created_at
-      ? `${formatDateShort(order.created_at)} at ${formatTimeShort(order.created_at)}`
-      : 'Recently placed';
+      const createdDateText = typeof formatDateShort === 'function' && order.created_at
+        ? `${formatDateShort(order.created_at)} at ${formatTimeShort(order.created_at)}`
+        : 'Recently placed';
 
-    const riderName = order.rider?.full_name || 'Not assigned';
-    const isCompleted = order.status === 'completed' || order.status === 'delivered';
-    const isCancelled = order.status === 'cancelled';
-    const isActive = !isCompleted && !isCancelled;
+      const riderName = order.rider?.full_name || 'Not assigned';
+      const isCompleted = status === 'completed' || status === 'delivered';
+      const isCancelled = status === 'cancelled';
+      const isActive = !isCompleted && !isCancelled;
 
-    const itemsListHtml = (order.items || [])
-      .map(
-        (it) => {
-          const pricingTag = typeof getOrderItemPricingTag === 'function' ? getOrderItemPricingTag(it) : 'refill';
-          const qty = Number(it.quantity || 1);
-          const unitPrice = Number(it.unit_price || 0);
-          return `
-            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13.5px;">
-              <span>${escapeHtml(qty)} × ${escapeHtml(it.product?.name || 'Water Refill')} <small style="color:#64748b;">(${escapeHtml(pricingTag)} · ${escapeHtml(formatPeso(unitPrice))})</small></span>
-              <span style="font-weight:600; color:#0f172a;">${escapeHtml(formatPeso(qty * unitPrice))}</span>
-            </div>
-          `;
-        }
-      )
-      .join('');
-
-    const backdrop = document.createElement('div');
-    backdrop.className = 'modal-backdrop';
-    backdrop.innerHTML = `
-      <div class="modal" role="dialog" aria-modal="true" style="max-width: 540px; border-radius: 14px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
-        <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:flex-start;">
-          <div>
-            <h3 class="modal-title" style="margin:0; font-size:18px; font-weight:700; color:#0f172a;">Order #${escapeHtml(order.order_number)}</h3>
-            <p class="text-muted" style="font-size:12px; margin:3px 0 0;">
-              Placed ${escapeHtml(createdDateText)}
-            </p>
-          </div>
-          <div style="display:flex; align-items:center; gap:8px;">
-            <span class="pill pill-${escapeHtml(tone)}" style="font-weight:700;">${escapeHtml(statusLabel)}</span>
-            <button type="button" class="modal-close" data-close aria-label="Close" style="background:none; border:none; font-size:22px; cursor:pointer; color:#64748b; line-height:1;">×</button>
-          </div>
-        </div>
-
-        <div class="modal-body stack" style="gap:14px; padding: 18px 20px; max-height: 75vh; overflow-y: auto;">
-          <!-- Customer & Contact -->
-          <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px;">
-            <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
-              <div>
-                <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Customer</p>
-                <p style="margin:0; font-weight:700; color:#0f172a; font-size:14px;">${escapeHtml(customerName)}</p>
-                <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">${escapeHtml(customerPhone)}</p>
+      const itemsListHtml = (order.items || [])
+        .map(
+          (it) => {
+            const pricingTag = typeof getOrderItemPricingTag === 'function' ? getOrderItemPricingTag(it) : 'refill';
+            const qty = Number(it.quantity || 1);
+            const unitPrice = Number(it.unit_price || 0);
+            return `
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13.5px;">
+                <span>${escapeHtml(qty)} × ${escapeHtml(it.product?.name || 'Water Refill')} <small style="color:#64748b;">(${escapeHtml(pricingTag)} · ${escapeHtml(formatPeso(unitPrice))})</small></span>
+                <span style="font-weight:600; color:#0f172a;">${escapeHtml(formatPeso(qty * unitPrice))}</span>
               </div>
-              <div style="text-align:right;">
-                <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Assigned Rider</p>
-                <p style="margin:0; font-weight:600; color:#0f172a; font-size:13px;">${escapeHtml(riderName)}</p>
-              </div>
-            </div>
-            <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1;">
-              <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Delivery Address</p>
-              <p style="margin:0; font-size:13px; color:#1e293b; line-height:1.4;">${escapeHtml(addressText)}</p>
-            </div>
-          </div>
-
-          <!-- Schedule & Window -->
-          <div style="display:flex; gap:12px; font-size:13px;">
-            <div style="flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;">
-              <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Delivery Window</p>
-              <p style="margin:0; font-weight:600; color:#0f172a;">${escapeHtml(slotText)}</p>
-            </div>
-            ${
-              order.delivered_at
-                ? `
-              <div style="flex:1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:10px 12px;">
-                <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#166534; margin:0 0 2px;">Delivered At</p>
-                <p style="margin:0; font-weight:600; color:#166534;">${escapeHtml(formatDateShort(order.delivered_at))} ${escapeHtml(formatTimeShort(order.delivered_at))}</p>
-              </div>
-            `
-                : ''
-            }
-            ${
-              isCancelled
-                ? `
-              <div style="flex:1; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:10px 12px;">
-                <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#991b1b; margin:0 0 2px;">Reason</p>
-                <p style="margin:0; font-weight:600; color:#991b1b;">${escapeHtml(order.cancellation_reason || order.cancellation_note || 'Order cancelled')}</p>
-              </div>
-            `
-                : ''
-            }
-          </div>
-
-          <!-- Items Breakdown -->
-          <div>
-            <p style="font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 6px;">Order Items</p>
-            <div style="border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; background:#ffffff;">
-              ${itemsListHtml || '<p class="text-muted" style="margin:6px 0;">No items listed</p>'}
-              <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:13px; color:#64748b;">
-                <span>Delivery service charge</span>
-                <span>${escapeHtml(formatPeso(order.service_charge || 0))}</span>
-              </div>
-              <div style="display:flex; justify-content:space-between; align-items:baseline; padding-top:10px; border-top:1px solid #e2e8f0; margin-top:4px;">
-                <span style="font-weight:700; font-size:14px; color:#0f172a;">
-                  Total Amount <small style="font-weight:500; color:#64748b;">(${order.payment_status === 'paid' ? 'Paid COD' : 'Unpaid COD'})</small>
-                </span>
-                <span style="font-weight:700; font-size:17px; color:#0f172a;">${escapeHtml(formatPeso(order.total))}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:8px;">
-          ${
-            isActive
-              ? `<button type="button" class="btn btn-primary btn-sm" id="btn-modal-open-processing">Go to Order Processing</button>`
-              : ''
+            `;
           }
-          <button type="button" class="btn btn-secondary btn-sm" data-close>Close</button>
+        )
+        .join('');
+
+      const backdrop = document.createElement('div');
+      backdrop.className = 'modal-backdrop';
+      backdrop.style.cssText = 'position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; background:rgba(15,23,42,0.65) !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:16px !important; z-index:999999 !important; backdrop-filter:blur(3px) !important;';
+
+      backdrop.innerHTML = `
+        <div class="modal" role="dialog" aria-modal="true" style="max-width: 540px; width: 100%; border-radius: 14px; background: #ffffff !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25) !important; z-index: 1000000 !important; position: relative !important;">
+          <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:flex-start;">
+            <div>
+              <h3 class="modal-title" style="margin:0; font-size:18px; font-weight:700; color:#0f172a;">Order #${escapeHtml(order.order_number)}</h3>
+              <p class="text-muted" style="font-size:12px; margin:3px 0 0;">
+                Placed ${escapeHtml(createdDateText)}
+              </p>
+            </div>
+            <div style="display:flex; align-items:center; gap:8px;">
+              <span class="pill pill-${escapeHtml(tone)}" style="font-weight:700;">${escapeHtml(statusLabel)}</span>
+              <button type="button" class="modal-close" data-close aria-label="Close" style="background:none; border:none; font-size:22px; cursor:pointer; color:#64748b; line-height:1;">×</button>
+            </div>
+          </div>
+
+          <div class="modal-body stack" style="gap:14px; padding: 18px 20px; max-height: 75vh; overflow-y: auto;">
+            <!-- Customer & Contact -->
+            <div style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:12px 14px;">
+              <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                <div>
+                  <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Customer</p>
+                  <p style="margin:0; font-weight:700; color:#0f172a; font-size:14px;">${escapeHtml(customerName)}</p>
+                  <p style="margin:2px 0 0; font-size:12.5px; color:#64748b;">${escapeHtml(customerPhone)}</p>
+                </div>
+                <div style="text-align:right;">
+                  <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Assigned Rider</p>
+                  <p style="margin:0; font-weight:600; color:#0f172a; font-size:13px;">${escapeHtml(riderName)}</p>
+                </div>
+              </div>
+              <div style="margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1;">
+                <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Delivery Address</p>
+                <p style="margin:0; font-size:13px; color:#1e293b; line-height:1.4;">${escapeHtml(addressText)}</p>
+              </div>
+            </div>
+
+            <!-- Schedule & Window -->
+            <div style="display:flex; gap:12px; font-size:13px;">
+              <div style="flex:1; background:#f8fafc; border:1px solid #e2e8f0; border-radius:10px; padding:10px 12px;">
+                <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 2px;">Delivery Window</p>
+                <p style="margin:0; font-weight:600; color:#0f172a;">${escapeHtml(slotText)}</p>
+              </div>
+              ${
+                order.delivered_at
+                  ? `
+                <div style="flex:1; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:10px; padding:10px 12px;">
+                  <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#166534; margin:0 0 2px;">Delivered At</p>
+                  <p style="margin:0; font-weight:600; color:#166534;">${escapeHtml(formatDateShort(order.delivered_at))} ${escapeHtml(formatTimeShort(order.delivered_at))}</p>
+                </div>
+              `
+                  : ''
+              }
+              ${
+                isCancelled
+                  ? `
+                <div style="flex:1; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:10px 12px;">
+                  <p style="font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#991b1b; margin:0 0 2px;">Reason</p>
+                  <p style="margin:0; font-weight:600; color:#991b1b;">${escapeHtml(order.cancellation_reason || order.cancellation_note || 'Order cancelled')}</p>
+                </div>
+              `
+                  : ''
+              }
+            </div>
+
+            <!-- Items Breakdown -->
+            <div>
+              <p style="font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:0.5px; color:#64748b; margin:0 0 6px;">Order Items</p>
+              <div style="border:1px solid #e2e8f0; border-radius:10px; padding:8px 14px; background:#ffffff;">
+                ${itemsListHtml || '<p class="text-muted" style="margin:6px 0;">No items listed</p>'}
+                <div style="display:flex; justify-content:space-between; padding:8px 0; font-size:13px; color:#64748b;">
+                  <span>Delivery service charge</span>
+                  <span>${escapeHtml(formatPeso(order.service_charge || 0))}</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:baseline; padding-top:10px; border-top:1px solid #e2e8f0; margin-top:4px;">
+                  <span style="font-weight:700; font-size:14px; color:#0f172a;">
+                    Total Amount <small style="font-weight:500; color:#64748b;">(${order.payment_status === 'paid' ? 'Paid COD' : 'Unpaid COD'})</small>
+                  </span>
+                  <span style="font-weight:700; font-size:17px; color:#0f172a;">${escapeHtml(formatPeso(order.total))}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:8px;">
+            ${
+              isActive
+                ? `<button type="button" class="btn btn-primary btn-sm" id="btn-modal-open-processing">Go to Order Processing</button>`
+                : ''
+            }
+            <button type="button" class="btn btn-secondary btn-sm" data-close>Close</button>
+          </div>
         </div>
-      </div>
-    `;
+      `;
 
-    document.body.appendChild(backdrop);
-    const close = () => backdrop.remove();
-    backdrop.querySelectorAll('[data-close]').forEach((btn) => btn.addEventListener('click', close));
-    backdrop.addEventListener('click', (e) => {
-      if (e.target === backdrop) close();
-    });
+      document.body.appendChild(backdrop);
+      const close = () => backdrop.remove();
+      backdrop.querySelectorAll('[data-close]').forEach((btn) => btn.addEventListener('click', close));
+      backdrop.addEventListener('click', (e) => {
+        if (e.target === backdrop) close();
+      });
 
-    backdrop.querySelector('#btn-modal-open-processing')?.addEventListener('click', () => {
-      close();
-      navigateStaffSpa(`order-processing.html?id=${encodeURIComponent(order.id)}`);
-    });
+      backdrop.querySelector('#btn-modal-open-processing')?.addEventListener('click', () => {
+        close();
+        navigateStaffSpa(`order-processing.html?id=${encodeURIComponent(order.id)}`);
+      });
+    } catch (err) {
+      console.error('[Staff orders openOrderDetailsModal error]:', err);
+      showToast('Could not open order details: ' + (err.message || 'Unknown error'), 'error');
+    }
   }
 
   function populateTableBody() {
@@ -454,29 +463,32 @@ export async function mount() {
     }
 
     const handleOrderSelect = (orderId) => {
-      const order = allOrders.find((o) => String(o.id) === String(orderId));
-      if (!order) return;
-      const isTerminal = ['completed', 'cancelled', 'delivered'].includes(order.status);
-      if (isTerminal) {
-        openOrderDetailsModal(order);
-      } else {
-        navigateStaffSpa(`order-processing.html?id=${encodeURIComponent(order.id)}`);
+      let order = allOrders.find((o) => String(o.id) === String(orderId));
+      if (!order) {
+        order = (allOrders || []).find((o) => String(o.order_number) === String(orderId));
       }
+      if (!order) {
+        console.warn('[Staff orders] Order not found for id:', orderId);
+        showToast('Could not find order details.', 'error');
+        return;
+      }
+      openOrderDetailsModal(order);
     };
 
-    tbody.querySelectorAll('[data-action-order]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
+    // Use direct delegated click on tbody for 100% click capture
+    tbody.onclick = (e) => {
+      const actionBtn = e.target.closest('[data-action-order]');
+      if (actionBtn) {
+        e.preventDefault();
         e.stopPropagation();
-        handleOrderSelect(btn.getAttribute('data-action-order'));
-      });
-    });
-
-    tbody.querySelectorAll('tr[data-order-id]').forEach((row) => {
-      row.addEventListener('click', (e) => {
-        if (e.target.closest('button, a')) return;
+        handleOrderSelect(actionBtn.getAttribute('data-action-order'));
+        return;
+      }
+      const row = e.target.closest('tr[data-order-id]');
+      if (row && !e.target.closest('a, button, input, select')) {
         handleOrderSelect(row.dataset.orderId);
-      });
-    });
+      }
+    };
   }
 
   function renderBatchDispatchTab(container) {

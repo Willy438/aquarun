@@ -99,8 +99,10 @@ export async function mount() {
     let panY = 0;
     let hasUserAdjustedCrop = false;
 
+    document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
+    backdrop.style.cssText = 'position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; background:rgba(15,23,42,0.65) !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:16px !important; z-index:999999 !important; backdrop-filter:blur(3px) !important;';
     backdrop.innerHTML = `
       <div class="modal modal-product" role="dialog" aria-modal="true" aria-labelledby="prod-modal-title" style="max-width: 580px;">
         <div class="modal-header">

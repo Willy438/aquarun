@@ -20,7 +20,7 @@ function normalizeProductRow(row) {
   };
 }
 
-export async function getActiveProducts() {
+export async function getActiveProducts({ forceRefresh = false } = {}) {
   return cachedQuery('products:active', async () => {
     let { data, error } = await supabase
       .from('products')
@@ -40,7 +40,7 @@ export async function getActiveProducts() {
 
     if (error) throw error;
     return (data ?? []).map(normalizeProductRow);
-  });
+  }, { ttlMs: 3000, forceRefresh });
 }
 
 export async function getAllProductsForAdmin() {

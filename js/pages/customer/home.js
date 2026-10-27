@@ -42,7 +42,7 @@ export async function mount(me) {
         getCustomerOrders(me.id, { limit: 6 }),
         getCustomerBottleBalance(me.id),
         getCustomerAddresses(me.id),
-        getActiveProducts(),
+        getActiveProducts({ forceRefresh: true }),
       ]);
 
       const activeOrder =
@@ -257,6 +257,11 @@ export async function mount(me) {
     renderNav(me, 'home');
   });
 
+  const onSync = () => {
+    loadAndRender();
+  };
+  window.addEventListener('aquarun:sync', onSync);
+
   const pollTimer = setInterval(() => {
     if (document.visibilityState === 'visible') {
       loadAndRender();
@@ -266,6 +271,7 @@ export async function mount(me) {
   return () => {
     clearInterval(pollTimer);
     unsub();
+    window.removeEventListener('aquarun:sync', onSync);
   };
 }
 

@@ -158,3 +158,23 @@ export function subscribeAdminWorkspace(onUpdate) {
     supabase.removeChannel(channel);
   };
 }
+
+// Cross-tab synchronization via BroadcastChannel and storage events
+if (typeof window !== 'undefined') {
+  try {
+    if ('BroadcastChannel' in window) {
+      const crossTabSync = new BroadcastChannel('aquarun_sync');
+      crossTabSync.onmessage = (e) => {
+        if (e.data?.type === 'invalidate') {
+          window.dispatchEvent(new CustomEvent('aquarun:sync', { detail: e.data }));
+        }
+      };
+    }
+  } catch {}
+  window.addEventListener('storage', (e) => {
+    if (e.key && e.key.startsWith('aquarun_sync_')) {
+      const prefix = e.key.replace('aquarun_sync_', '');
+      window.dispatchEvent(new CustomEvent('aquarun:sync', { detail: { prefix: prefix === 'all' ? '' : prefix } }));
+    }
+  });
+}

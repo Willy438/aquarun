@@ -233,9 +233,13 @@ const CACHE_PREFIX = 'aquarun_swr_';
 
 export async function cachedQuery(key, fetcher, { ttlMs = 45000, forceRefresh = false } = {}) {
   const now = Date.now();
+  // NEVER lock dynamic catalog items or settings in sessionStorage across tab reloads
+  const bypassSession = key.startsWith('products:') || key.startsWith('settings:');
+  const effectiveTtl = bypassSession ? Math.min(ttlMs, 3000) : ttlMs;
+
   if (!forceRefresh && MEMORY_CACHE.has(key)) {
     const entry = MEMORY_CACHE.get(key);
-    if (now - entry.ts < ttlMs) {
+    if (now - entry.ts < effectiveTtl) {
       return entry.data;
     }
     // Return stale data immediately while refreshing in background
@@ -243,22 +247,24 @@ export async function cachedQuery(key, fetcher, { ttlMs = 45000, forceRefresh = 
       .then(() => fetcher())
       .then((fresh) => {
         MEMORY_CACHE.set(key, { data: fresh, ts: Date.now() });
-        try {
-          sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data: fresh, ts: Date.now() }));
-        } catch {}
+        if (!bypassSession) {
+          try {
+            sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ data: fresh, ts: Date.now() }));
+          } catch {}
+        }
       })
       .catch(() => {});
     return entry.data;
   }
 
-  if (!forceRefresh) {
+  if (!forceRefresh && !bypassSession) {
     try {
       const raw = sessionStorage.getItem(CACHE_PREFIX + key);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed && parsed.data !== undefined && now - Number(parsed.ts || 0) < ttlMs * 2) {
+        if (parsed && parsed.data !== undefined && now - Number(parsed.ts || 0) < effectiveTtl * 2) {
           MEMORY_CACHE.set(key, parsed);
-          if (now - Number(parsed.ts || 0) >= ttlMs) {
+          if (now - Number(parsed.ts || 0) >= effectiveTtl) {
             Promise.resolve()
               .then(() => fetcher())
               .then((fresh) => {
@@ -278,9 +284,11 @@ export async function cachedQuery(key, fetcher, { ttlMs = 45000, forceRefresh = 
   const data = await fetcher();
   const record = { data, ts: Date.now() };
   MEMORY_CACHE.set(key, record);
-  try {
-    sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(record));
-  } catch {}
+  if (!bypassSession) {
+    try {
+      sessionStorage.setItem(CACHE_PREFIX + key, JSON.stringify(record));
+    } catch {}
+  }
   return data;
 }
 
@@ -293,9 +301,23 @@ export function invalidateDataCache(prefix = '') {
   try {
     for (let i = sessionStorage.length - 1; i >= 0; i--) {
       const k = sessionStorage.key(i);
-      if (k && k.startsWith(CACHE_PREFIX + prefix)) {
+      if (k && (!prefix || k.startsWith(CACHE_PREFIX + prefix))) {
         sessionStorage.removeItem(k);
       }
+    }
+  } catch {}
+
+  // Broadcast cache invalidation across all open browser tabs
+  try {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      const bc = new BroadcastChannel('aquarun_sync');
+      bc.postMessage({ type: 'invalidate', prefix, ts: Date.now() });
+      bc.close();
+    }
+  } catch {}
+  try {
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('aquarun_sync_' + (prefix || 'all'), Date.now().toString());
     }
   } catch {}
 }

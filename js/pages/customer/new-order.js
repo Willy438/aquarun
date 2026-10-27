@@ -662,7 +662,7 @@ export async function mount(me) {
   try {
     [products, addresses, serviceCharge, bottleBalanceInfo, customerOrders, isStationOpen] =
       await Promise.all([
-        getActiveProducts(),
+        getActiveProducts({ forceRefresh: true }),
         getCustomerAddresses(me.id),
         getServiceCharge(),
         getCustomerBottleBalance(me.id).catch(() => null),
@@ -1111,16 +1111,21 @@ export async function mount(me) {
     document.querySelector('#drawer-place-order-btn')?.addEventListener('click', (e) => handlePlaceOrder(e.currentTarget));
 
     // Realtime listener: instantly reflect product edits, disabling, and price changes
-    const unsubRealtime = subscribeCustomerOrders(me.id, async (payload) => {
+    const refreshCatalogState = async () => {
       try {
         invalidateDataCache('products:');
         invalidateDataCache('settings:');
         const [freshProducts, freshCharge, freshBalance, freshOrders] = await Promise.all([
-          getActiveProducts(),
+          getActiveProducts({ forceRefresh: true }),
           getServiceCharge(),
           getCustomerBottleBalance(me.id).catch(() => null),
           getCustomerOrders(me.id, { limit: 50 }).catch(() => null),
         ]);
+        const changed =
+          JSON.stringify(freshProducts) !== JSON.stringify(products) ||
+          Number(freshCharge) !== Number(serviceCharge);
+        if (!changed) return;
+
         products = freshProducts;
         serviceCharge = freshCharge;
         if (freshBalance) bottleBalanceInfo = freshBalance;
@@ -1149,9 +1154,21 @@ export async function mount(me) {
       } catch (err) {
         console.warn('[Customer order-new realtime refresh error]:', err);
       }
-    });
+    };
 
-    window.addEventListener('beforeunload', () => unsubRealtime(), { once: true });
+    const unsubRealtime = subscribeCustomerOrders(me.id, refreshCatalogState);
+    window.addEventListener('aquarun:sync', refreshCatalogState);
+    const syncInterval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        refreshCatalogState();
+      }
+    }, 3000);
+
+    window.addEventListener('beforeunload', () => {
+      unsubRealtime();
+      window.removeEventListener('aquarun:sync', refreshCatalogState);
+      clearInterval(syncInterval);
+    }, { once: true });
   } catch (err) {
     showToast(err.message || 'Could not load order form.', 'error');
   }
