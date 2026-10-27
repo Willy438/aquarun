@@ -132,6 +132,11 @@ export async function signUpCustomer({ fullName, phone, email, address = null, p
     throw new Error(error.message);
   }
 
+  // Supabase returns empty identities array when user already exists
+  if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+    throw new Error('This email is already registered. Please log in instead.');
+  }
+
   // If "Confirm email" is turned on in Supabase there is no session yet.
   if (!data.session) return { needsConfirmation: true, addressSaved: false };
 

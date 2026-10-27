@@ -26,6 +26,8 @@ input::-ms-clear {
 .input::placeholder { color: var(--subtle); }
 .input:focus, .select:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(47, 128, 255, 0.14); }
 .input:disabled, .select:disabled { background: #f8fafc; color: var(--muted-blue); cursor: not-allowed; }
+.input.is-invalid { border-color: #ef4444 !important; box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15) !important; }
+.input.is-valid { border-color: #10b981 !important; box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.12) !important; }
 
 /* Match browser autofill background and text color to normal input styling (Login, Sign Up & all forms) */
 .input:-webkit-autofill,

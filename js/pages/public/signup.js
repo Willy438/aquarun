@@ -11,12 +11,107 @@ import {
 const form = document.querySelector('#signup-form');
 const errorBox = document.querySelector('#form-error');
 const button = form.querySelector('button[type="submit"]');
+const emailInput = form.querySelector('#email');
+const emailFeedback = document.querySelector('#email-feedback');
 
 enablePasswordToggles(form);
 
+let emailTaken = false;
+let emailCheckTimeout = null;
+
+async function checkRealtimeEmail(rawEmail) {
+  const clean = String(rawEmail || '').trim().toLowerCase();
+
+  if (!clean || !clean.includes('@') || !clean.includes('.')) {
+    if (emailFeedback) {
+      emailFeedback.style.display = 'none';
+      emailFeedback.innerHTML = '';
+    }
+    emailInput?.classList.remove('is-invalid', 'is-valid');
+    emailTaken = false;
+    return;
+  }
+
+  // Basic regex check before RPC lookup
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(clean)) {
+    if (emailFeedback) {
+      emailFeedback.style.display = 'none';
+      emailFeedback.innerHTML = '';
+    }
+    emailInput?.classList.remove('is-invalid', 'is-valid');
+    emailTaken = false;
+    return;
+  }
+
+  if (emailFeedback) {
+    emailFeedback.style.display = 'block';
+    emailFeedback.innerHTML = '<span style="color: #64748b; font-size: 12px;">Checking availability...</span>';
+  }
+
+  try {
+    const { data: exists, error } = await supabase.rpc('check_email_exists', {
+      email_to_check: clean,
+    });
+
+    if (error) {
+      // If RPC is not created yet in Supabase, fail silently so normal signup continues
+      if (emailFeedback) {
+        emailFeedback.style.display = 'none';
+        emailFeedback.innerHTML = '';
+      }
+      emailInput?.classList.remove('is-invalid', 'is-valid');
+      emailTaken = false;
+      return;
+    }
+
+    if (exists === true) {
+      emailTaken = true;
+      emailInput?.classList.add('is-invalid');
+      emailInput?.classList.remove('is-valid');
+      if (emailFeedback) {
+        emailFeedback.style.display = 'block';
+        emailFeedback.innerHTML = `
+          <span style="color: #dc2626; font-weight: 600;">This email is already registered.</span>
+          <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 5px;">Log in instead &rarr;</a>
+        `;
+      }
+    } else {
+      emailTaken = false;
+      emailInput?.classList.remove('is-invalid');
+      emailInput?.classList.add('is-valid');
+      if (emailFeedback) {
+        emailFeedback.style.display = 'block';
+        emailFeedback.innerHTML = `
+          <span style="color: #16a34a; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Email is available
+          </span>
+        `;
+      }
+    }
+  } catch {
+    if (emailFeedback) emailFeedback.style.display = 'none';
+    emailTaken = false;
+  }
+}
+
+if (emailInput) {
+  emailInput.addEventListener('input', () => {
+    clearTimeout(emailCheckTimeout);
+    emailCheckTimeout = setTimeout(() => {
+      checkRealtimeEmail(emailInput.value);
+    }, 350);
+  });
+
+  emailInput.addEventListener('blur', () => {
+    clearTimeout(emailCheckTimeout);
+    checkRealtimeEmail(emailInput.value);
+  });
+}
+
 form.addEventListener('submit', async (event) => {
   event.preventDefault();
-  errorBox.textContent = '';
+  errorBox.innerHTML = '';
 
   const firstName = form.firstName.value.trim();
   const lastName = form.lastName.value.trim();
@@ -53,12 +148,37 @@ form.addEventListener('submit', async (event) => {
     return;
   }
 
+  // Check if real-time check already marked email as taken
+  if (emailTaken) {
+    errorBox.innerHTML = `
+      <span>This email is already registered.</span>
+      <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 6px;">Log in instead &rarr;</a>
+    `;
+    form.email.focus();
+    return;
+  }
+
   // 3. Email verification API (format + disposable check + Google DNS MX record verification)
   setBusy(button, true, 'Verifying details...');
   try {
     const emailRes = await verifyEmailAddress(form.email.value);
     if (!emailRes.valid) {
       errorBox.textContent = emailRes.message;
+      form.email.focus();
+      setBusy(button, false);
+      return;
+    }
+
+    // Double check email availability via RPC before proceeding
+    const { data: alreadyRegistered } = await supabase.rpc('check_email_exists', {
+      email_to_check: emailRes.email,
+    }).catch(() => ({ data: false }));
+
+    if (alreadyRegistered === true) {
+      errorBox.innerHTML = `
+        <span>This email is already registered.</span>
+        <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 6px;">Log in instead &rarr;</a>
+      `;
       form.email.focus();
       setBusy(button, false);
       return;
@@ -127,7 +247,14 @@ form.addEventListener('submit', async (event) => {
     showToast('Account created! Welcome to AquaRun.', 'success');
     setTimeout(() => { window.location.href = homeFor(ROLES.CUSTOMER); }, 900);
   } catch (error) {
-    errorBox.textContent = error.message;
+    if (/registered|already/i.test(error.message)) {
+      errorBox.innerHTML = `
+        <span>${error.message}</span>
+        <a href="login.html" style="color: #1d5bd6; font-weight: 600; text-decoration: underline; margin-left: 6px;">Log in instead &rarr;</a>
+      `;
+    } else {
+      errorBox.textContent = error.message;
+    }
     setBusy(button, false);
   }
 });
