@@ -157,7 +157,14 @@ export async function mount(me) {
   async function loadTargetOrder() {
     if (currentOrderId) {
       const found = await getStaffOrderById(currentOrderId);
-      if (found) return found;
+      if (found) {
+        if (['completed', 'cancelled'].includes(found.status)) {
+          showToast(`Order #${found.order_number} is already ${found.status}.`, 'info');
+          window.location.href = 'orders.html';
+          return null;
+        }
+        return found;
+      }
     }
     const nextOrder = await getNextOrderForProcessing();
     if (nextOrder) {

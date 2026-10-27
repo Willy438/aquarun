@@ -217,12 +217,24 @@ export async function mount() {
   }
 
   function openOrderDetailsModal(order) {
-    const tone = STATUS_PILL_TONE?.[order.status] || (order.status === 'completed' ? 'green' : order.status === 'cancelled' ? 'rose' : 'neutral');
-    const statusLabel = STATUS_LABELS[order.status] || order.status;
+    if (!order) return;
+    const tone = (STATUS_PILL_TONE && STATUS_PILL_TONE[order.status]) || (order.status === 'completed' ? 'green' : order.status === 'cancelled' ? 'rose' : 'neutral');
+    const statusLabel = (STATUS_LABELS && STATUS_LABELS[order.status]) || order.status;
     const customerName = order.customer?.full_name || 'Customer';
-    const customerPhone = order.customer?.phone || '—';
-    const addressText = formatAddressFull ? formatAddressFull(order.address) : `${order.address?.street || ''}, ${order.address?.barangay || ''}, ${order.address?.city || ''}`;
-    const slotText = formatSlotWindow ? formatSlotWindow(getEffectiveSlot(order)) : formatSlotCompact(getEffectiveSlot(order));
+    const customerPhone = order.customer?.phone || 'No contact provided';
+    const addressText = typeof formatAddressFull === 'function' && order.address
+      ? formatAddressFull(order.address)
+      : [order.address?.street, order.address?.barangay, order.address?.city, order.address?.landmark].filter(Boolean).join(', ') || 'No address specified';
+
+    const effectiveSlot = typeof getEffectiveSlot === 'function' ? getEffectiveSlot(order) : null;
+    const slotText = typeof formatSlotWindow === 'function' && effectiveSlot
+      ? formatSlotWindow(effectiveSlot)
+      : (typeof formatSlotCompact === 'function' && effectiveSlot ? formatSlotCompact(effectiveSlot) : 'Standard slot');
+
+    const createdDateText = typeof formatDateShort === 'function' && order.created_at
+      ? `${formatDateShort(order.created_at)} at ${formatTimeShort(order.created_at)}`
+      : 'Recently placed';
+
     const riderName = order.rider?.full_name || 'Not assigned';
     const isCompleted = order.status === 'completed' || order.status === 'delivered';
     const isCancelled = order.status === 'cancelled';
@@ -230,29 +242,34 @@ export async function mount() {
 
     const itemsListHtml = (order.items || [])
       .map(
-        (it) => `
-          <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13.5px;">
-            <span>${escapeHtml(it.quantity)} × ${escapeHtml(it.product?.name || 'Water Refill')} <small style="color:#64748b;">(${escapeHtml(getOrderItemPricingTag ? getOrderItemPricingTag(it) : 'refill')} · ${escapeHtml(formatPeso(it.unit_price || 0))})</small></span>
-            <span style="font-weight:600; color:#0f172a;">${escapeHtml(formatPeso(Number(it.quantity || 0) * Number(it.unit_price || 0)))}</span>
-          </div>
-        `
+        (it) => {
+          const pricingTag = typeof getOrderItemPricingTag === 'function' ? getOrderItemPricingTag(it) : 'refill';
+          const qty = Number(it.quantity || 1);
+          const unitPrice = Number(it.unit_price || 0);
+          return `
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9; font-size:13.5px;">
+              <span>${escapeHtml(qty)} × ${escapeHtml(it.product?.name || 'Water Refill')} <small style="color:#64748b;">(${escapeHtml(pricingTag)} · ${escapeHtml(formatPeso(unitPrice))})</small></span>
+              <span style="font-weight:600; color:#0f172a;">${escapeHtml(formatPeso(qty * unitPrice))}</span>
+            </div>
+          `;
+        }
       )
       .join('');
 
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
     backdrop.innerHTML = `
-      <div class="modal" role="dialog" aria-modal="true" style="max-width: 540px; border-radius: 14px;">
+      <div class="modal" role="dialog" aria-modal="true" style="max-width: 540px; border-radius: 14px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1), 0 10px 10px -5px rgba(0,0,0,0.04);">
         <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:flex-start;">
           <div>
             <h3 class="modal-title" style="margin:0; font-size:18px; font-weight:700; color:#0f172a;">Order #${escapeHtml(order.order_number)}</h3>
             <p class="text-muted" style="font-size:12px; margin:3px 0 0;">
-              Placed ${escapeHtml(formatDateShort(order.created_at))} at ${escapeHtml(formatTimeShort(order.created_at))}
+              Placed ${escapeHtml(createdDateText)}
             </p>
           </div>
           <div style="display:flex; align-items:center; gap:8px;">
-            <span class="pill pill-${escapeHtml(tone)}">${escapeHtml(statusLabel)}</span>
-            <button type="button" class="modal-close" data-close aria-label="Close" style="background:none; border:none; font-size:20px; cursor:pointer; color:#64748b; line-height:1;">×</button>
+            <span class="pill pill-${escapeHtml(tone)}" style="font-weight:700;">${escapeHtml(statusLabel)}</span>
+            <button type="button" class="modal-close" data-close aria-label="Close" style="background:none; border:none; font-size:22px; cursor:pointer; color:#64748b; line-height:1;">×</button>
           </div>
         </div>
 
@@ -398,7 +415,7 @@ export async function mount() {
         const customerName = order.customer?.full_name || 'Customer';
         const brgy = order.address?.barangay && order.address.barangay !== 'N/A' ? order.address.barangay : '—';
         const slotText = formatSlotCompact(getEffectiveSlot(order));
-        const isTerminal = ['completed', 'cancelled'].includes(order.status);
+        const isTerminal = ['completed', 'cancelled', 'delivered'].includes(order.status);
         const actionLabel = isTerminal ? 'View' : 'Process';
         return `
           <tr class="is-clickable" data-order-id="${escapeHtml(order.id)}" data-order-status="${escapeHtml(order.status)}">
@@ -439,7 +456,8 @@ export async function mount() {
     const handleOrderSelect = (orderId) => {
       const order = allOrders.find((o) => String(o.id) === String(orderId));
       if (!order) return;
-      if (['completed', 'cancelled'].includes(order.status)) {
+      const isTerminal = ['completed', 'cancelled', 'delivered'].includes(order.status);
+      if (isTerminal) {
         openOrderDetailsModal(order);
       } else {
         navigateStaffSpa(`order-processing.html?id=${encodeURIComponent(order.id)}`);

@@ -858,15 +858,8 @@ export async function getNextOrderForProcessing() {
     );
     if (actionable) return actionable;
 
-    const { data: latest } = await supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .neq('status', 'cancelled')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return latest || null;
+    // No active orders waiting for processing - never fallback to completed orders
+    return null;
   });
 }
 
