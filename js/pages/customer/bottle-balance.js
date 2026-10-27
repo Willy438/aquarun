@@ -4,6 +4,7 @@ import { escapeHtml, formatDateShort, showToast } from '../../core/ui.js';
 import {
   getCustomerBottleBalance,
   getCustomerLedgerActivity,
+  getCustomerShapeBalance,
 } from '../../services/ledgerService.js';
 
 const ICONS = {
@@ -18,9 +19,10 @@ export async function mount(me) {
 
   async function loadAndRender() {
     try {
-      const [summary, activity] = await Promise.all([
+      const [summary, activity, shapeBalance] = await Promise.all([
         getCustomerBottleBalance(me.id),
         getCustomerLedgerActivity(me.id),
+        getCustomerShapeBalance(me.id).catch(() => null),
       ]);
 
       const cardsHtml = activity.length
@@ -112,7 +114,7 @@ export async function mount(me) {
             <span class="stat-icon">${ICONS.bookmark}</span>
             <div>
               <p class="stat-value">${escapeHtml(summary.balance)}</p>
-              <p class="stat-label">Bottles with you</p>
+              <p class="stat-label">Bottles with you ${shapeBalance && (shapeBalance.held_round > 0 || shapeBalance.held_slim > 0) ? `(${shapeBalance.held_round} Round, ${shapeBalance.held_slim} Slim)` : ''}</p>
             </div>
           </div>
         </div>

@@ -23,6 +23,26 @@ export async function getCustomerBottleBalance(customerId, { forceRefresh = fals
   }, { forceRefresh });
 }
 
+
+export async function getCustomerShapeBalance(customerId, { forceRefresh = false } = {}) {
+  return cachedQuery(`ledger:shapeBalance:${customerId}`, async () => {
+    const { data, error } = await supabase.rpc('get_customer_shape_balance', {
+      p_customer_id: customerId,
+    });
+    if (error || !data) {
+      return {
+        held_slim: 0,
+        held_round: 0,
+        active_slim: 0,
+        active_round: 0,
+        avail_slim: 0,
+        avail_round: 0,
+      };
+    }
+    return data;
+  }, { forceRefresh });
+}
+
 export async function getCustomerLedgerActivity(customerId) {
   return cachedQuery(`ledger:activity:${customerId}`, async () => {
     const { data, error } = await supabase

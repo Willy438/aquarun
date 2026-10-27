@@ -79,12 +79,62 @@ export async function mount(me) {
   let deliveryNote = '';
 
   function getSwapAllowance() {
-    if (!bottleBalanceInfo || !Array.isArray(customerOrders)) {
-      return { loaded: false, isFirstOrder: false, availableSwaps: 0, ledgerBalance: 0, activeCommittedSwaps: 0 };
+    if (!Array.isArray(customerOrders)) {
+      return {
+        loaded: false,
+        isFirstOrder: false,
+        availableSwaps: 0,
+        availableSlimSwaps: 0,
+        availableRoundSwaps: 0,
+        totalAvailableSwaps: 0,
+        heldSlim: 0,
+        heldRound: 0,
+        activeCommittedSlim: 0,
+        activeCommittedRound: 0,
+        ledgerBalance: 0,
+        activeCommittedSwaps: 0,
+      };
     }
     const nonCancelledOrders = customerOrders.filter((o) => o.status !== 'cancelled');
     const isFirstOrder = nonCancelledOrders.length === 0;
-    const ledgerBalance = Math.max(0, Number(bottleBalanceInfo.balance ?? 0));
+
+    const deliveredOrders = nonCancelledOrders.filter(
+      (o) => o.status === 'delivered' || o.status === 'completed'
+    );
+
+    let heldSlim = 0;
+    let heldRound = 0;
+
+    deliveredOrders.forEach((o) => {
+      (o.items || []).forEach((it) => {
+        const qty = Number(it.quantity || 0);
+        if (qty <= 0) return;
+        const name = String(it.product?.name || '');
+        const isSlim = /slim/i.test(name);
+        const isNew = isOrderItemNewContainer(it);
+        const isEmpty = isOrderItemEmptyContainer(it);
+        if (isNew || isEmpty) {
+          if (isSlim) heldSlim += qty;
+          else heldRound += qty;
+        }
+      });
+    });
+
+    // Legacy fallback: if customer has delivered orders but none had new/empty flagged
+    // (orders from before new container pricing was introduced), inspect earliest delivered order
+    if (heldSlim === 0 && heldRound === 0 && deliveredOrders.length > 0) {
+      const sortedDelivered = [...deliveredOrders].sort(
+        (a, b) => new Date(a.created_at) - new Date(b.created_at)
+      );
+      const firstDelivered = sortedDelivered[0];
+      (firstDelivered.items || []).forEach((it) => {
+        const qty = Number(it.quantity || 0);
+        if (qty <= 0 || it.product?.is_returnable === false) return;
+        const isSlim = /slim/i.test(it.product?.name || '');
+        if (isSlim) heldSlim += qty;
+        else heldRound += qty;
+      });
+    }
 
     const activeStatuses = [
       'submitted',
@@ -97,52 +147,85 @@ export async function mount(me) {
 
     const activeOrders = nonCancelledOrders.filter((o) => activeStatuses.includes(o.status));
 
-    // Swaps already committed in active (undelivered) orders
-    const activeCommittedSwaps = activeOrders.reduce((sum, o) => {
-      const orderSwaps = (o.items || []).reduce((s, it) => {
-        if (it.product?.is_returnable === false) return s;
-        if (!isOrderItemNewContainer(it) && !isOrderItemEmptyContainer(it)) {
-          return s + Number(it.quantity || 0);
-        }
-        return s;
-      }, 0);
-      return sum + orderSwaps;
-    }, 0);
+    let activeCommittedSlim = 0;
+    let activeCommittedRound = 0;
 
-    // Bottles physically available to swap right now:
-    // Bottles held in possession from delivered orders minus bottles already promised to existing active orders.
-    const availableSwaps = Math.max(0, ledgerBalance - activeCommittedSwaps);
+    activeOrders.forEach((o) => {
+      (o.items || []).forEach((it) => {
+        if (it.product?.is_returnable === false) return;
+        if (!isOrderItemNewContainer(it) && !isOrderItemEmptyContainer(it)) {
+          const qty = Number(it.quantity || 0);
+          const isSlim = /slim/i.test(it.product?.name || '');
+          if (isSlim) activeCommittedSlim += qty;
+          else activeCommittedRound += qty;
+        }
+      });
+    });
+
+    const availableSlimSwaps = Math.max(0, heldSlim - activeCommittedSlim);
+    const availableRoundSwaps = Math.max(0, heldRound - activeCommittedRound);
+    const totalAvailableSwaps = availableSlimSwaps + availableRoundSwaps;
+    const totalCommittedSwaps = activeCommittedSlim + activeCommittedRound;
+    const totalHeld = heldSlim + heldRound;
 
     return {
       loaded: true,
       isFirstOrder,
-      availableSwaps,
-      ledgerBalance,
-      activeCommittedSwaps,
+      availableSlimSwaps,
+      availableRoundSwaps,
+      totalAvailableSwaps,
+      heldSlim,
+      heldRound,
+      activeCommittedSlim,
+      activeCommittedRound,
+      // Backwards-compatible aliases
+      availableSwaps: totalAvailableSwaps,
+      ledgerBalance: totalHeld,
+      activeCommittedSwaps: totalCommittedSwaps,
     };
   }
 
   function renderPolicyBanner() {
     const pillEl = document.querySelector('#swap-limit-pill');
     if (!pillEl) return;
-    const { loaded, isFirstOrder, availableSwaps, ledgerBalance, activeCommittedSwaps } = getSwapAllowance();
+    const {
+      loaded,
+      isFirstOrder,
+      availableSlimSwaps,
+      availableRoundSwaps,
+      totalAvailableSwaps,
+      heldSlim,
+      heldRound,
+      activeCommittedSlim,
+      activeCommittedRound,
+    } = getSwapAllowance();
     if (!loaded) {
       pillEl.hidden = true;
       return;
     }
     pillEl.hidden = false;
-    if (isFirstOrder && ledgerBalance === 0) {
+    const totalCommitted = activeCommittedSlim + activeCommittedRound;
+    const totalHeld = heldSlim + heldRound;
+
+    if (isFirstOrder && totalHeld === 0) {
       pillEl.textContent = '1st order · Includes new gallon';
       pillEl.className = 'pill pill-info';
-    } else if (availableSwaps === 0 && activeCommittedSwaps > 0) {
-      pillEl.textContent = `0 swaps available (${activeCommittedSwaps} ${activeCommittedSwaps === 1 ? 'bottle' : 'bottles'} committed to active order)`;
+    } else if (totalAvailableSwaps > 0) {
+      const parts = [];
+      if (availableRoundSwaps > 0) {
+        parts.push(`${availableRoundSwaps} Round`);
+      }
+      if (availableSlimSwaps > 0) {
+        parts.push(`${availableSlimSwaps} Slim`);
+      }
+      pillEl.textContent = `Swap limit: ${parts.join(' · ')} (${totalAvailableSwaps} total)`;
+      pillEl.className = 'pill pill-info';
+    } else if (totalCommitted > 0) {
+      pillEl.textContent = `0 swaps available (${totalCommitted} ${totalCommitted === 1 ? 'bottle' : 'bottles'} committed to active order)`;
       pillEl.className = 'pill pill-warning';
-    } else if (availableSwaps === 0) {
+    } else {
       pillEl.textContent = '0 bottle swaps available · Includes new gallon';
       pillEl.className = 'pill pill-neutral';
-    } else {
-      pillEl.textContent = `Swap limit: ${availableSwaps} ${availableSwaps === 1 ? 'gallon' : 'gallons'}${activeCommittedSwaps > 0 ? ` (${activeCommittedSwaps} in active order)` : ''}`;
-      pillEl.className = 'pill pill-info';
     }
   }
   function isSlotPassed(slot, dateStr) {
@@ -181,21 +264,29 @@ export async function mount(me) {
     const refillProducts = products.filter((p) => p.is_returnable !== false);
     const extraProducts = products.filter((p) => p.is_returnable === false);
 
+    const { availableSlimSwaps, availableRoundSwaps } = getSwapAllowance();
+
     const refillItems = refillProducts.map((p) => {
+      const isSlim = /slim/i.test(p.name);
+      const swapAvail = isSlim ? availableSlimSwaps : availableRoundSwaps;
       const swapPrice = Number(p.price || 0);
       const newWaterPrice = Math.max(
         swapPrice,
         Number(p.new_container_price ?? swapPrice + 125)
       );
+      const swapStatusHint = swapAvail > 0
+        ? `${swapAvail} swap available`
+        : '0 swaps on hand';
+
       return {
         key: p.id,
         category: 'refill',
         name: p.name,
-        badgeText: 'Water refill',
-        badgeClass: 'badge-water',
-        subtitle: `${formatPeso(swapPrice)} swap · ${formatPeso(newWaterPrice)} w/ new gallon`,
+        badgeText: swapAvail > 0 ? `${swapAvail} swap avail` : 'Water refill',
+        badgeClass: swapAvail > 0 ? 'badge-water' : 'badge-water',
+        subtitle: `${formatPeso(swapPrice)} swap · ${formatPeso(newWaterPrice)} w/ new gallon (${swapStatusHint})`,
         displayPrice: formatPeso(swapPrice),
-        priceAlt: `or ${formatPeso(newWaterPrice)} w/ new gallon`,
+        priceAlt: swapAvail > 0 ? `or ${formatPeso(newWaterPrice)} w/ new gallon` : `Includes new gallon (${formatPeso(newWaterPrice)})`,
         photoUrl: p.photo_url,
         icon: getProductIcon(p.name),
       };
@@ -379,12 +470,25 @@ export async function mount(me) {
     const totalEl = document.querySelector('#cart-total');
     const submitBtn = document.querySelector('#place-order-btn');
 
-    const { loaded: balanceLoaded, availableSwaps } = getSwapAllowance();
-    let remainingSwaps = balanceLoaded ? availableSwaps : 0;
+    const {
+      loaded: balanceLoaded,
+      availableSlimSwaps,
+      availableRoundSwaps,
+      heldSlim,
+      heldRound,
+      activeCommittedSlim,
+      activeCommittedRound,
+    } = getSwapAllowance();
+    let remainingSlimSwaps = balanceLoaded ? availableSlimSwaps : 0;
+    let remainingRoundSwaps = balanceLoaded ? availableRoundSwaps : 0;
 
     let totalGallons = 0;
     let totalSwapGallons = 0;
     let totalNewGallons = 0;
+    let totalRoundSwap = 0;
+    let totalRoundNew = 0;
+    let totalSlimSwap = 0;
+    let totalSlimNew = 0;
     let totalEmptyContainers = 0;
     let swapSubtotal = 0;
     let newGallonSubtotal = 0;
@@ -451,10 +555,23 @@ export async function mount(me) {
       );
 
       if (isReturnable) {
-        // Automatic balance scan
-        const itemSwapQty = Math.min(qty, remainingSwaps);
+        const isSlim = /slim/i.test(product.name);
+        const shape = isSlim ? 'Slim' : 'Round';
+        const availableForShape = isSlim ? remainingSlimSwaps : remainingRoundSwaps;
+
+        // Shape-specific swap allocation
+        const itemSwapQty = Math.min(qty, availableForShape);
         const itemNewQty = Math.max(0, qty - itemSwapQty);
-        remainingSwaps = Math.max(0, remainingSwaps - itemSwapQty);
+
+        if (isSlim) {
+          remainingSlimSwaps = Math.max(0, remainingSlimSwaps - itemSwapQty);
+          totalSlimSwap += itemSwapQty;
+          totalSlimNew += itemNewQty;
+        } else {
+          remainingRoundSwaps = Math.max(0, remainingRoundSwaps - itemSwapQty);
+          totalRoundSwap += itemSwapQty;
+          totalRoundNew += itemNewQty;
+        }
 
         const itemSwapTotal = itemSwapQty * swapPrice;
         const itemNewTotal = itemNewQty * newWaterPrice;
@@ -469,11 +586,11 @@ export async function mount(me) {
 
         let modeLabel = '';
         if (itemSwapQty > 0 && itemNewQty > 0) {
-          modeLabel = `${itemSwapQty}x Swap (${formatPeso(swapPrice)}) + ${itemNewQty}x New gallon (${formatPeso(newWaterPrice)})`;
+          modeLabel = `${itemSwapQty}x ${shape} Swap (${formatPeso(swapPrice)}) + ${itemNewQty}x New ${shape} (${formatPeso(newWaterPrice)})`;
         } else if (itemSwapQty > 0) {
-          modeLabel = `${itemSwapQty}x Swap refill · ${formatPeso(swapPrice)} ea`;
+          modeLabel = `${itemSwapQty}x ${shape} Swap refill · ${formatPeso(swapPrice)} ea`;
         } else {
-          modeLabel = `${itemNewQty}x New gallon + water · ${formatPeso(newWaterPrice)} ea`;
+          modeLabel = `${itemNewQty}x New ${shape} gallon + water · ${formatPeso(newWaterPrice)} ea`;
         }
 
         activeEntries.push({
@@ -642,25 +759,43 @@ export async function mount(me) {
     if (swapNoticeEl) {
       if (totalSwapGallons > 0 && totalNewGallons > 0) {
         swapNoticeEl.className = 'notice';
-        swapNoticeEl.innerHTML = `Prepare exactly <strong>${totalSwapGallons} empty ${
+        const swapParts = [];
+        if (totalRoundSwap > 0) swapParts.push(`${totalRoundSwap} empty Round`);
+        if (totalSlimSwap > 0) swapParts.push(`${totalSlimSwap} empty Slim`);
+        const newParts = [];
+        if (totalRoundNew > 0) newParts.push(`${totalRoundNew} new Round`);
+        if (totalSlimNew > 0) newParts.push(`${totalSlimNew} new Slim`);
+
+        swapNoticeEl.innerHTML = `Prepare <strong>${swapParts.join(' + ')} ${
           totalSwapGallons === 1 ? 'bottle' : 'bottles'
-        }</strong> for the 1-to-1 swap. <strong>${totalNewGallons} new ${
+        }</strong> for 1-to-1 swap. <strong>${newParts.join(' + ')} ${
           totalNewGallons === 1 ? 'gallon' : 'gallons'
-        }</strong> added automatically because you have ${availableSwaps} swaps on record.`;
+        }</strong> included with water (no matching empty on hand).`;
         swapNoticeEl.hidden = false;
       } else if (totalSwapGallons > 0) {
         swapNoticeEl.className = 'notice';
-        swapNoticeEl.innerHTML = `Prepare exactly <strong>${totalSwapGallons} empty ${
+        const swapParts = [];
+        if (totalRoundSwap > 0) swapParts.push(`${totalRoundSwap} empty Round`);
+        if (totalSlimSwap > 0) swapParts.push(`${totalSlimSwap} empty Slim`);
+        swapNoticeEl.innerHTML = `Prepare exactly <strong>${swapParts.join(' + ')} ${
           totalSwapGallons === 1 ? 'bottle' : 'bottles'
         }</strong> for the 1-to-1 swap at your door.`;
         swapNoticeEl.hidden = false;
       } else if (totalNewGallons > 0) {
         swapNoticeEl.className = 'notice';
-        const { activeCommittedSwaps, ledgerBalance } = getSwapAllowance();
-        const reasonText =
-          activeCommittedSwaps > 0
-            ? `Your ${ledgerBalance === 1 ? '1 bottle' : `${ledgerBalance} bottles`} on hold ${ledgerBalance === 1 ? 'is' : 'are'} already committed to an active delivery. `
-            : '';
+        const { activeCommittedSlim, activeCommittedRound, heldSlim, heldRound } = getSwapAllowance();
+        const totalCommitted = activeCommittedSlim + activeCommittedRound;
+        const totalHeld = heldSlim + heldRound;
+        let reasonText = '';
+        if (totalCommitted > 0) {
+          reasonText = `Your ${totalHeld === 1 ? '1 bottle' : `${totalHeld} bottles`} on record ${
+            totalHeld === 1 ? 'is' : 'are'
+          } already committed to an active delivery. `;
+        } else if (heldRound > 0 && totalSlimNew > 0 && totalRoundNew === 0) {
+          reasonText = 'You have Round containers on hand, which cannot be swapped for Slim containers. ';
+        } else if (heldSlim > 0 && totalRoundNew > 0 && totalSlimNew === 0) {
+          reasonText = 'You have Slim containers on hand, which cannot be swapped for Round containers. ';
+        }
         swapNoticeEl.innerHTML = `<strong>No empty bottles needed!</strong> ${reasonText}Brand-new containers will be delivered (+${totalNewGallons} added to your bottle balance upon delivery).`;
         swapNoticeEl.hidden = false;
       } else if (totalEmptyContainers > 0) {
