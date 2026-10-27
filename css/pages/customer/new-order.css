@@ -21,6 +21,62 @@
   background: #f6f9ff;
 }
 
+.product-card.is-disabled {
+  opacity: 0.55;
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  filter: grayscale(0.25);
+  cursor: not-allowed;
+}
+
+.product-card.is-disabled .product-foot button,
+.product-card.is-disabled .qty-counter,
+.product-card.is-disabled .qty-btn,
+.product-card.is-disabled .qty-input {
+  pointer-events: none !important;
+  cursor: not-allowed !important;
+  opacity: 0.6;
+}
+
+.day-fully-booked-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin: 10px 0 16px;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.day-fully-booked-banner strong {
+  display: block;
+  font-size: 13.5px;
+  color: #7f1d1d;
+  margin-bottom: 2px;
+}
+
+.slot-capacity-notice {
+  background: #fef2f2;
+  border: 1.5px solid #fca5a5;
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 10px;
+  color: #991b1b;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.slot-capacity-notice strong {
+  display: block;
+  font-size: 13px;
+  color: #7f1d1d;
+  margin-bottom: 3px;
+}
+
 .product-thumb {
   width: 80px;
   height: 80px;

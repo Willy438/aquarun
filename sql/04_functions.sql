@@ -86,6 +86,9 @@ begin
       and coalesce(scheduled_slot_id, preferred_slot_id) = p_slot_id
       and status <> 'cancelled';
   if v_count >= v_slot.max_orders then raise exception 'That time slot is full. Please pick another.'; end if;
+  if (select coalesce(sum((i ->> 'quantity')::int), 0) from jsonb_array_elements(p_items) i) > (v_slot.max_orders - v_count) then
+    raise exception 'Order quantity exceeds the remaining delivery spots for this time slot.';
+  end if;
 
   -- Prices come from the products table, never from the page (Section 8.2).
   select count(*), coalesce(sum(p.price * x.qty), 0) into v_valid, v_subtotal

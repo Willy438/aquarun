@@ -251,6 +251,16 @@ export async function mount(me) {
     return currentMinutes >= slotMinutes;
   }
 
+  function hasAnyOpenSlots(slotList, dateStr) {
+    if (!Array.isArray(slotList) || slotList.length === 0) return false;
+    return slotList.some((s) => {
+      const maxOrders = Number(s.max_orders || 10);
+      const booked = Number(s.orders_count || 0);
+      const remaining = Math.max(0, maxOrders - booked);
+      return !s.is_closed && !s.is_full && remaining > 0 && !isSlotPassed(s, dateStr);
+    });
+  }
+
   async function refreshSlotsForDate(dateStr, { force = false } = {}) {
     slots = await getSlotAvailability(dateStr, { forceRefresh: force });
     const stillAvailable = slots.find(
@@ -297,6 +307,23 @@ export async function mount(me) {
     sourceInput.value = String(next);
     cart.set(id, next);
     persistCart();
+
+    const selectedSlot = slots.find((s) => s.slot_id === selectedSlotId);
+    if (selectedSlot) {
+      const slotMax = Number(selectedSlot.max_orders || 10);
+      const slotBooked = Number(selectedSlot.orders_count || 0);
+      const slotRemaining = Math.max(0, slotMax - slotBooked);
+      let totalItems = 0;
+      for (const q of cart.values()) {
+        if (q > 0) totalItems += q;
+      }
+      if (totalItems > slotRemaining) {
+        showToast(
+          `This delivery window only has ${slotRemaining} remaining ${slotRemaining === 1 ? 'spot' : 'spots'} (max capacity: ${slotMax}). Please adjust your order quantity.`,
+          'warning'
+        );
+      }
+    }
 
     renderProductsSection();
     renderCartSection();
@@ -397,6 +424,29 @@ export async function mount(me) {
       tab.classList.toggle('is-active', tab.dataset.cat === activeCategory);
     });
 
+    const alertContainer = document.querySelector('#day-booked-alert-container');
+    const isDayMaxed = !hasAnyOpenSlots(slots, selectedDate);
+    if (alertContainer) {
+      if (isDayMaxed) {
+        const isToday = selectedDate === getTodayManila();
+        alertContainer.innerHTML = `
+          <div class="day-fully-booked-banner">
+            <svg style="width: 20px; height: 20px; flex-shrink: 0; color: #dc2626;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <div>
+              <strong>${isToday ? 'All delivery windows for today are fully booked or closed' : 'All delivery windows for this date are fully booked'}</strong>
+              <span>All delivery slots for ${isToday ? 'today' : selectedDate} have reached maximum capacity or have passed. Please change the <strong>Delivery date</strong> above to tomorrow or another upcoming date to order refills.</span>
+            </div>
+          </div>
+        `;
+      } else {
+        alertContainer.innerHTML = '';
+      }
+    }
+
     let visibleItems = [...refillItems, ...emptyItems];
     if (activeCategory === 'refill') {
       visibleItems = refillItems;
@@ -412,8 +462,25 @@ export async function mount(me) {
     grid.innerHTML = visibleItems
       .map((item) => {
         const qty = cart.get(item.key) || 0;
+        const cardClass = `product-card${qty > 0 ? ' is-selected' : ''}${isDayMaxed ? ' is-disabled' : ''}`;
+        let footActionHtml = '';
+        if (isDayMaxed) {
+          const isToday = selectedDate === getTodayManila();
+          footActionHtml = `<button type="button" class="btn btn-sm btn-light" disabled style="opacity: 0.6; cursor: not-allowed;">${isToday ? 'Fully booked today' : 'Fully booked'}</button>`;
+        } else if (qty > 0) {
+          footActionHtml = `
+            <div class="qty-counter">
+              <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="-1" aria-label="Decrease quantity">−</button>
+              <input type="number" min="1" max="999" step="1" inputmode="numeric" pattern="[0-9]*" class="qty-input" data-prod-input="${escapeHtml(item.key)}" value="${qty}" aria-label="Quantity" />
+              <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="1" aria-label="Increase quantity">+</button>
+            </div>
+          `;
+        } else {
+          footActionHtml = `<button type="button" class="btn btn-sm btn-light" data-prod-add="${escapeHtml(item.key)}">+ Add</button>`;
+        }
+
         return `
-          <div class="product-card${qty > 0 ? ' is-selected' : ''}" data-product-card="${escapeHtml(item.key)}">
+          <div class="${cardClass}" data-product-card="${escapeHtml(item.key)}">
             <div class="product-thumb">
               ${item.photoUrl ? `<img src="${escapeHtml(item.photoUrl)}" alt="${escapeHtml(item.name)}">` : item.icon}
             </div>
@@ -428,21 +495,15 @@ export async function mount(me) {
                   <span class="product-price">${escapeHtml(item.displayPrice)}</span>
                   <span class="product-price-alt">${escapeHtml(item.priceAlt)}</span>
                 </div>
-                ${
-                  qty > 0
-                    ? `<div class="qty-counter">
-                        <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="-1" aria-label="Decrease quantity">−</button>
-                        <input type="number" min="1" max="999" step="1" inputmode="numeric" pattern="[0-9]*" class="qty-input" data-prod-input="${escapeHtml(item.key)}" value="${qty}" aria-label="Quantity" />
-                        <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="1" aria-label="Increase quantity">+</button>
-                      </div>`
-                    : `<button type="button" class="btn btn-sm btn-light" data-prod-add="${escapeHtml(item.key)}">+ Add</button>`
-                }
+                ${footActionHtml}
               </div>
             </div>
           </div>
         `;
       })
       .join('');
+
+    if (isDayMaxed) return;
 
     grid.querySelectorAll('[data-prod-add]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -515,6 +576,14 @@ export async function mount(me) {
       }
     }
     if (!hintEl) return;
+
+    const hasAnyOpen = hasAnyOpenSlots(slots, selectedDate);
+    if (!hasAnyOpen) {
+      const isToday = selectedDate === getTodayManila();
+      hintEl.innerHTML = `<span style="color: #dc2626; font-weight: 600;">${isToday ? 'All delivery windows for today are fully booked or have passed. Please select tomorrow or an upcoming date.' : 'All delivery windows for this date are fully booked or closed. Please select another delivery date.'}</span>`;
+      return;
+    }
+
     const cur = slots.find((s) => s.slot_id === selectedSlotId);
     if (!cur) {
       hintEl.textContent = 'Please choose an available delivery window.';
@@ -526,6 +595,11 @@ export async function mount(me) {
     const remaining = Math.max(0, maxOrders - booked);
     const isPassed = isSlotPassed(cur, selectedDate);
 
+    let currentTotalItems = 0;
+    for (const qty of cart.values()) {
+      if (qty > 0) currentTotalItems += qty;
+    }
+
     if (cur.is_closed) {
       hintEl.textContent = 'This delivery window is closed by the station.';
       hintEl.style.color = '#ef4444';
@@ -535,6 +609,8 @@ export async function mount(me) {
     } else if (isPassed) {
       hintEl.textContent = 'This delivery window has passed for today. Please pick a later window or tomorrow.';
       hintEl.style.color = '#d97706';
+    } else if (currentTotalItems > remaining) {
+      hintEl.innerHTML = `<span style="color: #dc2626; font-weight: 700;">Capacity limit exceeded:</span> This window only has <strong>${remaining} ${remaining === 1 ? 'spot' : 'spots'} remaining</strong> (window limit: ${maxOrders}), but your order has <strong>${currentTotalItems} items</strong>. Please reduce quantity or choose another window.`;
     } else if (remaining <= 3) {
       hintEl.textContent = `Window capacity: High demand · only ${remaining} ${remaining === 1 ? 'spot' : 'spots'} left (${booked}/${maxOrders} booked).`;
       hintEl.style.color = '#b45309';
@@ -555,9 +631,10 @@ export async function mount(me) {
       return;
     }
 
-    const hasAnyOpen = slots.some((s) => !s.is_closed && !s.is_full && !isSlotPassed(s, selectedDate));
-    if (!hasAnyOpen && selectedDate === getTodayManila()) {
-      select.innerHTML = `<option value="">All delivery windows for today have passed or are full — please select tomorrow</option>`;
+    const hasAnyOpen = hasAnyOpenSlots(slots, selectedDate);
+    if (!hasAnyOpen) {
+      const isToday = selectedDate === getTodayManila();
+      select.innerHTML = `<option value="">${isToday ? 'All delivery windows for today have passed or are full — please select tomorrow' : 'All delivery windows for this date are full or closed — please select another date'}</option>`;
       select.disabled = true;
       selectedSlotId = '';
       updateSlotHint();
@@ -927,8 +1004,72 @@ export async function mount(me) {
     if (drawerChargeEl) drawerChargeEl.textContent = formatPeso(effectiveCharge);
     if (drawerTotalEl) drawerTotalEl.textContent = formatPeso(grandTotal);
 
-    const btnText = totalOrderItems > 0 ? `Place order · ${formatPeso(grandTotal)}` : 'Place order';
-    const isBtnDisabled = totalOrderItems === 0 || !selectedAddressId || !selectedSlotId;
+    const selectedSlot = slots.find((s) => s.slot_id === selectedSlotId);
+    const slotMax = selectedSlot ? Number(selectedSlot.max_orders || 10) : 10;
+    const slotBooked = selectedSlot ? Number(selectedSlot.orders_count || 0) : 0;
+    const slotRemaining = selectedSlot ? Math.max(0, slotMax - slotBooked) : 10;
+    const isDateMaxed = !hasAnyOpenSlots(slots, selectedDate);
+    const isCapacityExceeded = Boolean(selectedSlot && totalOrderItems > slotRemaining);
+
+    const capacityNoticeEl = document.querySelector('#cart-capacity-warning-notice');
+    const drawerCapacityNoticeEl = document.querySelector('#drawer-capacity-warning-notice');
+
+    if (isDateMaxed) {
+      const isToday = selectedDate === getTodayManila();
+      const msg = `<strong>Delivery Windows Unavailable</strong>All delivery slots for ${isToday ? 'today' : selectedDate} are fully booked or closed. Please select tomorrow or an upcoming date above to proceed.`;
+      if (capacityNoticeEl) {
+        capacityNoticeEl.innerHTML = msg;
+        capacityNoticeEl.hidden = false;
+      }
+      if (drawerCapacityNoticeEl) {
+        drawerCapacityNoticeEl.innerHTML = msg;
+        drawerCapacityNoticeEl.hidden = false;
+      }
+    } else if (isCapacityExceeded) {
+      const slotLabel = selectedSlot?.label ? selectedSlot.label.replace(/\s*-\s*/g, '–') : 'Selected window';
+      const msg = `<strong>Delivery Slot Capacity Exceeded</strong>The delivery window "<strong>${escapeHtml(slotLabel)}</strong>" only has <strong>${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} remaining</strong> (capacity limit: ${slotMax}, ${slotBooked} booked). Your order contains <strong>${totalOrderItems} items</strong>. Please reduce your order to at most <strong>${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}</strong>, or select another delivery window or date.`;
+      if (capacityNoticeEl) {
+        capacityNoticeEl.innerHTML = msg;
+        capacityNoticeEl.hidden = false;
+      }
+      if (drawerCapacityNoticeEl) {
+        drawerCapacityNoticeEl.innerHTML = msg;
+        drawerCapacityNoticeEl.hidden = false;
+      }
+    } else {
+      if (capacityNoticeEl) {
+        capacityNoticeEl.hidden = true;
+        capacityNoticeEl.innerHTML = '';
+      }
+      if (drawerCapacityNoticeEl) {
+        drawerCapacityNoticeEl.hidden = true;
+        drawerCapacityNoticeEl.innerHTML = '';
+      }
+    }
+
+    let btnText = totalOrderItems > 0 ? `Place order · ${formatPeso(grandTotal)}` : 'Place order';
+    let isBtnDisabled = totalOrderItems === 0 || !selectedAddressId || !selectedSlotId;
+
+    if (!isStationOpen) {
+      btnText = 'Station closed';
+      isBtnDisabled = true;
+    } else if (addresses.length === 0) {
+      btnText = 'Add delivery address first';
+      isBtnDisabled = true;
+    } else if (addressDistanceCheck && !addressDistanceCheck.isWithin) {
+      btnText = 'Address outside delivery radius';
+      isBtnDisabled = true;
+    } else if (isDateMaxed) {
+      const isToday = selectedDate === getTodayManila();
+      btnText = isToday ? 'Fully booked today — pick another date' : 'All slots full — pick another date';
+      isBtnDisabled = true;
+    } else if (!selectedSlotId) {
+      btnText = 'Select an available delivery slot';
+      isBtnDisabled = true;
+    } else if (isCapacityExceeded) {
+      btnText = `Exceeds slot capacity (max ${slotRemaining})`;
+      isBtnDisabled = true;
+    }
 
     if (submitBtn) {
       submitBtn.textContent = btnText;
@@ -938,6 +1079,22 @@ export async function mount(me) {
       drawerPlaceOrderBtn.textContent = btnText;
       drawerPlaceOrderBtn.disabled = isBtnDisabled;
     }
+
+    const mobileReviewBtn = document.querySelector('#mobile-bar-review-btn');
+    if (mobileReviewBtn) {
+      if (isDateMaxed) {
+        mobileReviewBtn.textContent = 'Date Fully Booked';
+        mobileReviewBtn.disabled = true;
+      } else if (isCapacityExceeded) {
+        mobileReviewBtn.textContent = `Over Limit (Max ${slotRemaining}) →`;
+        mobileReviewBtn.disabled = false;
+      } else {
+        mobileReviewBtn.textContent = 'Review & Order →';
+        mobileReviewBtn.disabled = false;
+      }
+    }
+
+    updateSlotHint();
 
     const swapNoticeEl = document.querySelector('#bottle-swap-notice');
     if (swapNoticeEl) {
@@ -1093,6 +1250,8 @@ export async function mount(me) {
               <span class="pill pill-info" id="swap-limit-pill" hidden></span>
             </div>
 
+            <div id="day-booked-alert-container"></div>
+
             <!-- Category Filter Tabs -->
             <div class="category-tabs" id="category-tabs" role="tablist">
               <button type="button" class="category-tab is-active" data-cat="all">
@@ -1151,6 +1310,7 @@ export async function mount(me) {
           </div>
 
           <div class="notice cart-notice" id="bottle-swap-notice" hidden></div>
+          <div class="notice cart-notice slot-capacity-notice" id="cart-capacity-warning-notice" hidden></div>
 
           ${
             !isStationOpen
@@ -1238,6 +1398,7 @@ export async function mount(me) {
           </div>
 
           <div class="notice cart-notice" id="drawer-swap-notice" hidden></div>
+          <div class="notice cart-notice slot-capacity-notice" id="drawer-capacity-warning-notice" hidden></div>
           <div class="notice cart-notice" id="drawer-radius-notice" style="border-color: #fca5a5; background: #fef2f2; color: #991b1b;" hidden></div>
 
           <button
@@ -1331,8 +1492,8 @@ export async function mount(me) {
       try {
         await refreshSlotsForDate(selectedDate);
         renderSlotsSelect();
+        renderProductsSection();
         renderCartSection();
-        
       } catch (err) {
         showToast(err.message || 'Could not load time slots for that date.', 'error');
       }
@@ -1340,8 +1501,8 @@ export async function mount(me) {
 
     document.querySelector('#slot-select')?.addEventListener('change', (e) => {
       selectedSlotId = e.target.value;
+      updateSlotHint();
       renderCartSection();
-      
     });
 
     document.querySelector('#delivery-note')?.addEventListener('input', (e) => {
@@ -1415,6 +1576,25 @@ export async function mount(me) {
       if (!currentSlot || currentSlot.is_closed || currentSlot.is_full || isSlotPassed(currentSlot, selectedDate)) {
         showToast('That delivery window has reached its order limit or passed. Please select another time slot.', 'error');
         renderSlotsSelect();
+        renderProductsSection();
+        renderCartSection();
+        return;
+      }
+
+      const slotMax = Number(currentSlot.max_orders || 10);
+      const slotBooked = Number(currentSlot.orders_count || 0);
+      const slotRemaining = Math.max(0, slotMax - slotBooked);
+      const totalOrderItems = Array.from(cart.values()).reduce((sum, q) => sum + (q > 0 ? q : 0), 0);
+
+      if (totalOrderItems > slotRemaining) {
+        await confirmModal({
+          title: 'Delivery Slot Capacity Exceeded',
+          message: `The selected delivery window "${currentSlot.label.replace(/\s*-\s*/g, '–')}" only has ${slotRemaining} ${slotRemaining === 1 ? 'spot' : 'spots'} remaining (maximum capacity: ${slotMax} orders).\n\nYour order currently has ${totalOrderItems} items, which exceeds the delivery limit for this window.\n\nPlease reduce your order quantity to at most ${slotRemaining} ${slotRemaining === 1 ? 'item' : 'items'}, or select a different delivery window or date.`,
+          confirmText: 'Adjust quantity',
+          cancelText: 'Cancel',
+        });
+        renderSlotsSelect();
+        renderProductsSection();
         renderCartSection();
         return;
       }
@@ -1515,6 +1695,8 @@ export async function mount(me) {
       try {
         await refreshSlotsForDate(selectedDate, { force: true });
         renderSlotsSelect();
+        renderProductsSection();
+        renderCartSection();
       } catch (err) {
         console.warn('[Realtime slot update error]:', err);
       }
@@ -1525,6 +1707,8 @@ export async function mount(me) {
       if (document.visibilityState === 'visible') {
         await refreshSlotsForDate(selectedDate, { force: true });
         renderSlotsSelect();
+        renderProductsSection();
+        renderCartSection();
       }
     }, 10000);
 
@@ -1532,6 +1716,8 @@ export async function mount(me) {
       if (document.visibilityState === 'visible') {
         await refreshSlotsForDate(selectedDate, { force: true });
         renderSlotsSelect();
+        renderProductsSection();
+        renderCartSection();
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
