@@ -1115,11 +1115,13 @@ export async function mount(me) {
         showToast('Order placed!', 'success');
         navigateCustomerSpa(`track-order.html?id=${encodeURIComponent(orderId)}`);
       } catch (err) {
-        let msg = err.message || 'Could not place order.';
-        if (/failed to fetch/i.test(msg) || err.name === 'TypeError') {
-          msg = 'Connection to the server timed out. Please check your connection and try again.';
+        console.error('Order placement failed:', err);
+        const rawMsg = String(err?.message || err || 'Could not place order.');
+        let userMsg = rawMsg;
+        if (/failed to fetch/i.test(rawMsg)) {
+          userMsg = 'Connection to the server timed out. Please check your internet connection and try again.';
         }
-        showToast(msg, 'error');
+        showToast(userMsg, 'error');
         setBusy(btn, false);
         await refreshSlotsForDate(selectedDate).catch(() => {});
         renderSlotsSelect();

@@ -75,32 +75,8 @@ async function ensureInitialAddress(user) {
 
 export async function ensureActiveSession() {
   try {
-    const getSessionPromise = supabase.auth.getSession();
-    const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('Session timeout')), 3000));
-    const { data: { session }, error } = await Promise.race([getSessionPromise, timeoutPromise]).catch(() => ({ data: { session: null }, error: true }));
-
-    if (error || !session) {
-      const refreshPromise = supabase.auth.refreshSession();
-      const { data: refreshData, error: refreshErr } = await Promise.race([
-        refreshPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 3000))
-      ]).catch(() => ({ data: {}, error: true }));
-      if (refreshErr || !refreshData?.session) {
-        return null;
-      }
-      return refreshData.session;
-    }
-
-    const expiresAt = session.expires_at ? session.expires_at * 1000 : 0;
-    if (expiresAt && Date.now() > expiresAt - 120000) {
-      const refreshPromise = supabase.auth.refreshSession();
-      const { data: refreshData } = await Promise.race([
-        refreshPromise,
-        new Promise((_, reject) => setTimeout(() => reject(new Error('Refresh timeout')), 2500))
-      ]).catch(() => ({ data: { session } }));
-      return refreshData?.session || session;
-    }
-    return session;
+    const { data } = await supabase.auth.getSession();
+    return data?.session || null;
   } catch {
     return null;
   }
