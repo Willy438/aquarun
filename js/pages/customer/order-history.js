@@ -27,6 +27,7 @@ export async function mount(me) {
   const params = new URLSearchParams(window.location.search);
   const initialViewId = params.get('viewOrder');
 
+  let isDisposed = false;
   let orders = [];
   let filterMode = 'all'; // 'all' | 'active' | 'completed' | 'cancelled'
   let dateFilter = 'all'; // 'all' | 'today' | 'yesterday' | 'week' | 'month'
@@ -421,23 +422,30 @@ export async function mount(me) {
   }
 
   async function loadOrders() {
+    if (isDisposed) return;
     try {
-      orders = await getCustomerOrders(me.id, { limit: 100, forceRefresh: true });
+      const data = await getCustomerOrders(me.id, { limit: 100, forceRefresh: true });
+      if (isDisposed) return;
+      orders = data || [];
       renderView();
     } catch (err) {
+      if (isDisposed) return;
       showToast(err.message || 'Could not load order history.', 'error');
     }
   }
 
-  await loadOrders();
-  const unsub = subscribeCustomerOrders(me.id, loadOrders);
+  loadOrders();
+  const unsub = subscribeCustomerOrders(me.id, () => {
+    if (!isDisposed) loadOrders();
+  });
   const pollTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') {
+    if (!isDisposed && document.visibilityState === 'visible') {
       loadOrders();
     }
   }, 35000);
 
   return () => {
+    isDisposed = true;
     clearInterval(pollTimer);
     unsub();
   };

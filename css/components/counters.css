@@ -46,21 +46,22 @@
 }
 
 .counter-input {
-  width: 46px;
-  min-width: 36px;
+  width: 52px;
+  min-width: 44px;
   height: 38px;
   text-align: center;
   font-size: 15px;
   font-weight: 700;
   color: var(--ink-navy, #0f172a);
-  border: 1px solid #e2e8f0;
+  border: 1.5px solid #cbd5e1;
   border-radius: 8px;
   background: #ffffff;
   padding: 0 4px;
   outline: none;
   font-family: inherit;
-  transition: all 0.15s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
   -moz-appearance: textfield;
+  cursor: text;
 }
 
 .counter-input::-webkit-outer-spin-button,
@@ -75,5 +76,6 @@
 
 .counter-input:focus {
   border-color: var(--blue-app, #1d5bd6);
-  box-shadow: 0 0 0 3px rgba(29, 91, 214, 0.15);
+  box-shadow: 0 0 0 3px rgba(29, 91, 214, 0.18);
+  background: #ffffff;
 }

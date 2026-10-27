@@ -275,6 +275,7 @@ async function ensureAddressesAssets() {
 export async function mount(me) {
   await ensureAddressesAssets().catch(() => {});
   const content = document.querySelector('#content');
+  let isDisposed = false;
   let addresses = [];
   let editingId = null;
   let isModalOpen = window.location.hash === '#add' || window.location.hash === '#new';
@@ -309,6 +310,7 @@ export async function mount(me) {
   }
 
   function renderPage() {
+    if (isDisposed || !content) return;
     cleanupMap();
     const editingAddr = editingId ? addresses.find((a) => a.id === editingId) : null;
     if (editingAddr) {
@@ -1428,6 +1430,7 @@ export async function mount(me) {
   }
 
   async function loadAddresses() {
+    if (isDisposed) return;
     try {
       addresses = await getCustomerAddresses(me.id);
       renderPage();
@@ -1436,8 +1439,11 @@ export async function mount(me) {
     }
   }
 
-  await loadAddresses();
-  return () => cleanupMap();
+  loadAddresses();
+  return () => {
+    isDisposed = true;
+    cleanupMap();
+  };
 }
 
 bootCustomerPage('addresses', mount);

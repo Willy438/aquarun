@@ -30,12 +30,14 @@ export async function mount(me) {
   const pageSub = document.querySelector('#page-sub') || document.querySelector('.topbar-sub');
   const content = document.querySelector('#content');
 
+  let isDisposed = false;
   if (pageTitle) pageTitle.textContent = getGreeting(me.full_name, me.role || 'customer');
   if (pageSub) pageSub.textContent = formatDateHeading();
 
   let selectedActiveOrderId = null;
 
   async function loadAndRender() {
+    if (isDisposed) return;
     try {
       const [activeOrders, allOrders, balance, addresses, products] = await Promise.all([
         getCustomerActiveOrders(me.id, { forceRefresh: true }),
@@ -150,6 +152,7 @@ export async function mount(me) {
           </tr>
         `;
 
+      if (isDisposed) return;
       content.innerHTML = `
         ${heroHtml}
 
@@ -251,14 +254,16 @@ export async function mount(me) {
     }
   }
 
-  await loadAndRender();
+  loadAndRender();
   const unsub = subscribeCustomerOrders(me.id, () => {
-    loadAndRender();
-    renderNav(me, 'home');
+    if (!isDisposed) {
+      loadAndRender();
+      renderNav(me, 'home');
+    }
   });
 
   const onVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
+    if (!isDisposed && document.visibilityState === 'visible') {
       loadAndRender();
       renderNav(me, 'home');
     }
@@ -266,12 +271,13 @@ export async function mount(me) {
   document.addEventListener('visibilitychange', onVisibilityChange);
 
   const pollTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') {
+    if (!isDisposed && document.visibilityState === 'visible') {
       loadAndRender();
     }
   }, 8000);
 
   return () => {
+    isDisposed = true;
     clearInterval(pollTimer);
     document.removeEventListener('visibilitychange', onVisibilityChange);
     unsub();

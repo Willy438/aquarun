@@ -65,7 +65,8 @@ export async function mount(me) {
       );
 
       renderView();
-      updateStaffRemittanceBadge(awaitingRiders.length).catch(() => {});
+      const awaitingCount = riderSummaries.filter((s) => s.submittedCash > 0).length;
+      updateStaffRemittanceBadge(awaitingCount).catch(() => {});
     } catch (err) {
       showToast(err.message || 'Could not load remittance data.', 'error');
     }

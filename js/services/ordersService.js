@@ -49,6 +49,22 @@ const ORDER_SELECT = `
   status_log:order_status_log(status, changed_at)
 `;
 
+const ORDER_SELECT_NO_COORDS = ORDER_SELECT.replace(', latitude, longitude', '');
+
+function isCoordsColumnError(error) {
+  if (!error) return false;
+  const msg = String(error.message || '');
+  return /latitude|longitude|column.*exist|schema cache/i.test(msg) || error.code === 'PGRST204';
+}
+
+async function executeOrderSelect(queryFn) {
+  let res = await queryFn(ORDER_SELECT);
+  if (res && res.error && isCoordsColumnError(res.error)) {
+    res = await queryFn(ORDER_SELECT_NO_COORDS);
+  }
+  return res;
+}
+
 export function isOrderItemEmptyContainer(item) {
   if (!item) return false;
   const name = String(item.product?.name || '').toLowerCase();
@@ -819,15 +835,20 @@ export function renderStaffOrderHero(order) {
 
 export async function getCustomerActiveOrders(customerId, { forceRefresh = false } = {}) {
   return cachedQuery(`orders:activeList:${customerId}`, async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .eq('customer_id', customerId)
-      .not('status', 'in', '("completed","cancelled")')
-      .order('created_at', { ascending: false });
+    const { data, error } = await executeOrderSelect((sel) =>
+      supabase
+        .from('orders')
+        .select(sel)
+        .eq('customer_id', customerId)
+        .not('status', 'in', '("completed","cancelled")')
+        .order('created_at', { ascending: false })
+    );
 
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((o) => {
+      if (o?.address) enrichAddressCoordinates(o.address);
+      return o;
+    });
   }, { forceRefresh });
 }
 
@@ -838,12 +859,14 @@ export async function getCustomerActiveOrder(customerId, { forceRefresh = false 
 
 export async function getCustomerOrderById(customerId, orderId, { forceRefresh = false } = {}) {
   return cachedQuery(`orders:byId:${customerId}:${orderId}`, async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .eq('customer_id', customerId)
-      .eq('id', orderId)
-      .maybeSingle();
+    const { data, error } = await executeOrderSelect((sel) =>
+      supabase
+        .from('orders')
+        .select(sel)
+        .eq('customer_id', customerId)
+        .eq('id', orderId)
+        .maybeSingle()
+    );
 
     if (error) throw error;
     if (data?.address) enrichAddressCoordinates(data.address);
@@ -853,15 +876,16 @@ export async function getCustomerOrderById(customerId, orderId, { forceRefresh =
 
 export async function getCustomerOrders(customerId, { limit = 50, forceRefresh = false } = {}) {
   return cachedQuery(`orders:cust:${customerId}:${limit}`, async () => {
-    let query = supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .eq('customer_id', customerId)
-      .order('created_at', { ascending: false });
+    const { data, error } = await executeOrderSelect((sel) => {
+      let query = supabase
+        .from('orders')
+        .select(sel)
+        .eq('customer_id', customerId)
+        .order('created_at', { ascending: false });
+      if (limit) query = query.limit(limit);
+      return query;
+    });
 
-    if (limit) query = query.limit(limit);
-
-    const { data, error } = await query;
     if (error) throw error;
     return (data ?? []).map((o) => {
       if (o?.address) enrichAddressCoordinates(o.address);
@@ -872,14 +896,15 @@ export async function getCustomerOrders(customerId, { limit = 50, forceRefresh =
 
 export async function getAllOrdersForStaff({ limit = 200, forceRefresh = false } = {}) {
   return cachedQuery(`orders:staff:${limit}`, async () => {
-    let query = supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .order('created_at', { ascending: false });
+    const { data, error } = await executeOrderSelect((sel) => {
+      let query = supabase
+        .from('orders')
+        .select(sel)
+        .order('created_at', { ascending: false });
+      if (limit) query = query.limit(limit);
+      return query;
+    });
 
-    if (limit) query = query.limit(limit);
-
-    const { data, error } = await query;
     if (error) throw error;
     return (data ?? []).map((o) => {
       if (o?.address) enrichAddressCoordinates(o.address);
@@ -890,11 +915,13 @@ export async function getAllOrdersForStaff({ limit = 200, forceRefresh = false }
 
 export async function getStaffOrderById(orderId) {
   return cachedQuery(`orders:staffById:${orderId}`, async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .eq('id', orderId)
-      .maybeSingle();
+    const { data, error } = await executeOrderSelect((sel) =>
+      supabase
+        .from('orders')
+        .select(sel)
+        .eq('id', orderId)
+        .maybeSingle()
+    );
 
     if (error) throw error;
     if (data?.address) enrichAddressCoordinates(data.address);
@@ -904,12 +931,14 @@ export async function getStaffOrderById(orderId) {
 
 export async function getNextOrderForProcessing() {
   return cachedQuery('orders:nextProcessing', async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(ORDER_SELECT)
-      .in('status', ['submitted', 'confirmed', 'refilling', 'ready', 'delivered'])
-      .order('created_at', { ascending: true })
-      .limit(10);
+    const { data, error } = await executeOrderSelect((sel) =>
+      supabase
+        .from('orders')
+        .select(sel)
+        .in('status', ['submitted', 'confirmed', 'refilling', 'ready', 'delivered'])
+        .order('created_at', { ascending: true })
+        .limit(10)
+    );
 
     if (error) throw error;
     const actionable = (data || []).find(

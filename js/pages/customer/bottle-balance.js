@@ -16,8 +16,10 @@ const ICONS = {
 
 export async function mount(me) {
   const content = document.querySelector('#content');
+  let isDisposed = false;
 
   async function loadAndRender() {
+    if (isDisposed || !content) return;
     try {
       const [summary, activity, shapeBalance] = await Promise.all([
         getCustomerBottleBalance(me.id),
@@ -154,8 +156,14 @@ export async function mount(me) {
     }
   }
 
-  await loadAndRender();
-  return subscribeCustomerOrders(me.id, loadAndRender);
+  loadAndRender();
+  const unsub = subscribeCustomerOrders(me.id, () => {
+    if (!isDisposed) loadAndRender();
+  });
+  return () => {
+    isDisposed = true;
+    unsub();
+  };
 }
 
 bootCustomerPage('bottle-balance', mount);

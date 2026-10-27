@@ -867,6 +867,8 @@ function triggerSmoothContentEnter() {
   content.classList.add('spa-view-enter');
 }
 
+let currentNavToken = 0;
+
 export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
   const resolved = new URL(targetUrl, window.location.href);
   const pageKey = getRolePageKeyFromUrl(resolved, role);
@@ -874,6 +876,8 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
     window.location.href = resolved.href;
     return;
   }
+
+  const navToken = ++currentNavToken;
 
   if (push && resolved.href !== window.location.href) {
     window.history.pushState({ role, pageKey }, '', resolved.href);
@@ -892,6 +896,17 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
 
   setActiveNavKey(pageKey);
   updateTopbarForRolePage(role, pageKey);
+
+  // Immediately clear old page DOM to avoid stale tables/forms popping up or lingering
+  const content = document.querySelector('#content');
+  if (content) {
+    content.innerHTML = `
+      <div class="spa-nav-skeleton" style="padding: 3rem 1rem; text-align: center;">
+        <div class="spinner" style="margin: 0 auto 0.75rem;"></div>
+        <div class="text-muted" style="font-size: 13px; font-weight: 500;">Loading...</div>
+      </div>
+    `;
+  }
   triggerSmoothContentEnter();
 
   const moduleKey = `${role}/${pageKey}`;
@@ -902,7 +917,15 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
   }
 
   if (typeof mod.mount === 'function') {
-    activeCleanup = await mod.mount(profile);
+    const cleanup = await mod.mount(profile);
+    // If another navigation occurred while awaiting mount, discard and clean up immediately
+    if (navToken !== currentNavToken || currentActivePageKey !== pageKey) {
+      if (typeof cleanup === 'function') {
+        try { cleanup(); } catch {}
+      }
+      return;
+    }
+    activeCleanup = cleanup;
   }
   if (role === 'customer' && profile?.id) {
     updateCustomerActiveOrderBadge(profile.id).catch(() => {});
@@ -994,7 +1017,14 @@ export async function bootCustomerPage(pageKey, mountFn) {
   preloadRoleModules('customer', me);
   await renderNav(me, cleanKey);
   startShellRealtimeSync('customer', me);
-  activeCleanup = await mountFn(me);
+  if (currentActivePageKey === cleanKey) {
+    const cleanup = await mountFn(me);
+    if (currentActivePageKey === cleanKey) {
+      activeCleanup = cleanup;
+    } else if (typeof cleanup === 'function') {
+      try { cleanup(); } catch {}
+    }
+  }
 }
 
 export async function bootStaffPage(pageKey, mountFn) {
@@ -1016,7 +1046,14 @@ export async function bootStaffPage(pageKey, mountFn) {
   preloadRoleModules('staff', me);
   await renderNav(me, cleanKey);
   startShellRealtimeSync('staff', me);
-  activeCleanup = await mountFn(me);
+  if (currentActivePageKey === cleanKey) {
+    const cleanup = await mountFn(me);
+    if (currentActivePageKey === cleanKey) {
+      activeCleanup = cleanup;
+    } else if (typeof cleanup === 'function') {
+      try { cleanup(); } catch {}
+    }
+  }
 }
 
 export async function bootRiderPage(pageKey, mountFn) {
@@ -1038,7 +1075,14 @@ export async function bootRiderPage(pageKey, mountFn) {
   preloadRoleModules('rider', me);
   await renderNav(me, cleanKey);
   startShellRealtimeSync('rider', me);
-  activeCleanup = await mountFn(me);
+  if (currentActivePageKey === cleanKey) {
+    const cleanup = await mountFn(me);
+    if (currentActivePageKey === cleanKey) {
+      activeCleanup = cleanup;
+    } else if (typeof cleanup === 'function') {
+      try { cleanup(); } catch {}
+    }
+  }
 }
 
 export async function bootAdminPage(pageKey, mountFn) {
@@ -1059,5 +1103,12 @@ export async function bootAdminPage(pageKey, mountFn) {
   currentProfile = me;
   preloadRoleModules('admin', me);
   await renderNav(me, cleanKey);
-  activeCleanup = await mountFn(me);
+  if (currentActivePageKey === cleanKey) {
+    const cleanup = await mountFn(me);
+    if (currentActivePageKey === cleanKey) {
+      activeCleanup = cleanup;
+    } else if (typeof cleanup === 'function') {
+      try { cleanup(); } catch {}
+    }
+  }
 }

@@ -37,10 +37,12 @@ const ICONS = {
 export async function mount(me) {
   const content = document.querySelector('#content');
   const rightEl = document.querySelector('#topbar-right');
+  let isDisposed = false;
   const params = new URLSearchParams(window.location.search);
   let currentOrderId = params.get('id');
 
   async function renderPage() {
+    if (isDisposed || !content) return;
     try {
       const activeOrders = await getCustomerActiveOrders(me.id, { forceRefresh: true });
       let order = null;
@@ -519,14 +521,16 @@ export async function mount(me) {
     }
   }
 
-  await renderPage();
+  renderPage();
   const unsub = subscribeCustomerOrders(me.id, () => {
-    renderPage();
-    renderNav(me, 'track-order');
+    if (!isDisposed) {
+      renderPage();
+      renderNav(me, 'track-order');
+    }
   });
 
   const onVisibilityChange = () => {
-    if (document.visibilityState === 'visible') {
+    if (!isDisposed && document.visibilityState === 'visible') {
       renderPage();
       renderNav(me, 'track-order');
     }
@@ -535,12 +539,13 @@ export async function mount(me) {
 
   // Responsive near-instant polling fallback (5s) for live tracking
   const pollTimer = setInterval(() => {
-    if (document.visibilityState === 'visible') {
+    if (!isDisposed && document.visibilityState === 'visible') {
       renderPage();
     }
   }, 5000);
 
   return () => {
+    isDisposed = true;
     clearInterval(pollTimer);
     document.removeEventListener('visibilitychange', onVisibilityChange);
     unsub();

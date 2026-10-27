@@ -49,6 +49,18 @@ function getProductSubtitle(product) {
 
 export async function mount(me) {
   const content = document.querySelector('#content');
+  if (!content) return null;
+
+  let isDisposed = false;
+
+  // Immediately clear any stale view (e.g. order history table from previous page) and show skeleton
+  content.innerHTML = `
+    <div class="order-loading-skeleton" style="padding: 2.5rem 1rem; text-align: center;">
+      <div class="spinner" style="margin: 0 auto 0.75rem;"></div>
+      <div class="text-muted" style="font-size: 13.5px; font-weight: 500;">Loading refill options...</div>
+    </div>
+  `;
+
   let products = [];
   let addresses = [];
   let slots = [];
@@ -252,6 +264,44 @@ export async function mount(me) {
 
   let activeCategory = 'all'; // 'all' | 'refill' | 'empty'
 
+  function handleQuantityTyping(id, rawVal, sourceInput) {
+    if (isDisposed) return;
+    if (rawVal.trim() === '') {
+      document.querySelectorAll(`[data-prod-input="${id}"], [data-cart-input="${id}"]`).forEach((inp) => {
+        if (inp !== sourceInput) inp.value = '';
+      });
+      return;
+    }
+
+    let next = parseInt(rawVal, 10);
+    if (isNaN(next) || next < 1) next = 1;
+    next = Math.min(999, Math.max(1, next));
+
+    cart.set(id, next);
+    persistCart();
+
+    document.querySelectorAll(`[data-prod-input="${id}"], [data-cart-input="${id}"]`).forEach((inp) => {
+      if (inp !== sourceInput) inp.value = String(next);
+    });
+
+    renderCartSection({ skipItemsRebuild: true });
+  }
+
+  function handleQuantityBlur(id, sourceInput) {
+    if (isDisposed) return;
+    let next = parseInt(sourceInput.value, 10);
+    if (isNaN(next) || next <= 0) {
+      next = 1;
+    }
+    next = Math.min(999, Math.max(1, next));
+    sourceInput.value = String(next);
+    cart.set(id, next);
+    persistCart();
+
+    renderProductsSection();
+    renderCartSection();
+  }
+
   function renderProductsSection() {
     const grid = document.querySelector('#product-grid');
     if (!grid) return;
@@ -382,7 +432,7 @@ export async function mount(me) {
                   qty > 0
                     ? `<div class="qty-counter">
                         <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="-1" aria-label="Decrease quantity">−</button>
-                        <input type="number" min="0" max="999" class="qty-input" data-prod-input="${escapeHtml(item.key)}" value="${qty}" aria-label="Quantity" />
+                        <input type="number" min="1" max="999" step="1" inputmode="numeric" pattern="[0-9]*" class="qty-input" data-prod-input="${escapeHtml(item.key)}" value="${qty}" aria-label="Quantity" />
                         <button type="button" class="qty-btn" data-prod-delta="${escapeHtml(item.key)}" data-delta="1" aria-label="Increase quantity">+</button>
                       </div>`
                     : `<button type="button" class="btn btn-sm btn-light" data-prod-add="${escapeHtml(item.key)}">+ Add</button>`
@@ -422,19 +472,31 @@ export async function mount(me) {
     grid.querySelectorAll('[data-prod-input]').forEach((inp) => {
       inp.addEventListener('focus', (e) => e.target.select());
       inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') e.target.blur();
-      });
-      inp.addEventListener('change', (e) => {
-        const id = e.target.dataset.prodInput;
-        let next = parseInt(e.target.value, 10);
-        if (isNaN(next) || next <= 0) {
-          cart.delete(id);
-        } else {
-          next = Math.min(999, Math.max(1, next));
-          cart.set(id, next);
+        if (e.key === 'Enter') {
+          e.target.blur();
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const id = e.target.dataset.prodInput;
+          const cur = cart.get(id) || 1;
+          const next = Math.min(999, cur + 1);
+          e.target.value = String(next);
+          handleQuantityTyping(id, String(next), e.target);
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const id = e.target.dataset.prodInput;
+          const cur = cart.get(id) || 1;
+          const next = Math.max(1, cur - 1);
+          e.target.value = String(next);
+          handleQuantityTyping(id, String(next), e.target);
         }
-        renderProductsSection();
-        renderCartSection();
+      });
+      inp.addEventListener('input', (e) => {
+        const id = e.target.dataset.prodInput;
+        handleQuantityTyping(id, e.target.value, e.target);
+      });
+      inp.addEventListener('blur', (e) => {
+        const id = e.target.dataset.prodInput;
+        handleQuantityBlur(id, e.target);
       });
     });
   }
@@ -534,7 +596,8 @@ export async function mount(me) {
     updateSlotHint();
   }
 
-  function renderCartSection() {
+  function renderCartSection({ skipItemsRebuild = false } = {}) {
+    if (isDisposed) return;
     const cartItemsEl = document.querySelector('#cart-items');
     const cartCountEl = document.querySelector('#cart-count');
     const subtotalEl = document.querySelector('#cart-subtotal');
@@ -754,63 +817,88 @@ export async function mount(me) {
       : activeEntries
           .map(
             ({ key, product, qty, modeLabel, lineTotal }) => `
-            <div class="cart-item">
+            <div class="cart-item" data-cart-item="${escapeHtml(key)}">
               <div class="cart-item-left">
                 <span class="cart-item-icon">${getProductIcon(product.name)}</span>
                 <div>
                   <p class="cart-item-title">${escapeHtml(product.name)}</p>
-                  <p class="cart-item-sub">${escapeHtml(modeLabel)}</p>
+                  <p class="cart-item-sub" data-cart-sub="${escapeHtml(key)}">${escapeHtml(modeLabel)}</p>
                 </div>
               </div>
               <div class="cart-item-right">
                 <div class="counter">
                   <button type="button" class="counter-btn" data-cart-delta="${escapeHtml(key)}" data-delta="-1" aria-label="Decrease quantity">−</button>
-                  <input type="number" min="0" max="999" class="counter-input" data-cart-input="${escapeHtml(key)}" value="${qty}" aria-label="Quantity" />
+                  <input type="number" min="1" max="999" step="1" inputmode="numeric" pattern="[0-9]*" class="counter-input" data-cart-input="${escapeHtml(key)}" value="${qty}" aria-label="Quantity" />
                   <button type="button" class="counter-btn" data-cart-delta="${escapeHtml(key)}" data-delta="1" aria-label="Increase quantity">+</button>
                 </div>
-                <span class="cart-item-total">${escapeHtml(formatPeso(lineTotal))}</span>
+                <span class="cart-item-total" data-cart-total="${escapeHtml(key)}">${escapeHtml(formatPeso(lineTotal))}</span>
               </div>
             </div>
           `
           )
           .join('');
 
-    if (cartItemsEl) cartItemsEl.innerHTML = itemsHtml;
-    if (drawerCartItemsEl) drawerCartItemsEl.innerHTML = itemsHtml;
+    if (!skipItemsRebuild) {
+      if (cartItemsEl) cartItemsEl.innerHTML = itemsHtml;
+      if (drawerCartItemsEl) drawerCartItemsEl.innerHTML = itemsHtml;
 
-    document.querySelectorAll('[data-cart-delta]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.dataset.cartDelta;
-        const delta = Number(btn.dataset.delta);
-        const next = (cart.get(id) || 0) + delta;
-        if (next <= 0) {
-          cart.delete(id);
-        } else {
-          cart.set(id, next);
-        }
-        renderProductsSection();
-        renderCartSection();
+      document.querySelectorAll('[data-cart-delta]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const id = btn.dataset.cartDelta;
+          const delta = Number(btn.dataset.delta);
+          const next = (cart.get(id) || 0) + delta;
+          if (next <= 0) {
+            cart.delete(id);
+          } else {
+            cart.set(id, Math.min(999, next));
+          }
+          persistCart();
+          renderProductsSection();
+          renderCartSection();
+        });
       });
-    });
 
-    document.querySelectorAll('[data-cart-input]').forEach((inp) => {
-      inp.addEventListener('focus', (e) => e.target.select());
-      inp.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') e.target.blur();
+      document.querySelectorAll('[data-cart-input]').forEach((inp) => {
+        inp.addEventListener('focus', (e) => e.target.select());
+        inp.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter') {
+            e.target.blur();
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            const id = e.target.dataset.cartInput;
+            const cur = cart.get(id) || 1;
+            const next = Math.min(999, cur + 1);
+            e.target.value = String(next);
+            handleQuantityTyping(id, String(next), e.target);
+          } else if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            const id = e.target.dataset.cartInput;
+            const cur = cart.get(id) || 1;
+            const next = Math.max(1, cur - 1);
+            e.target.value = String(next);
+            handleQuantityTyping(id, String(next), e.target);
+          }
+        });
+        inp.addEventListener('input', (e) => {
+          const id = e.target.dataset.cartInput;
+          handleQuantityTyping(id, e.target.value, e.target);
+        });
+        inp.addEventListener('blur', (e) => {
+          const id = e.target.dataset.cartInput;
+          handleQuantityBlur(id, e.target);
+        });
       });
-      inp.addEventListener('change', (e) => {
-        const id = e.target.dataset.cartInput;
-        let next = parseInt(e.target.value, 10);
-        if (isNaN(next) || next <= 0) {
-          cart.delete(id);
-        } else {
-          next = Math.min(999, Math.max(1, next));
-          cart.set(id, next);
-        }
-        renderProductsSection();
-        renderCartSection();
+    } else {
+      // In-place live updates: modify text without re-creating DOM or destroying active input
+      activeEntries.forEach(({ key, modeLabel, lineTotal }) => {
+        document.querySelectorAll(`[data-cart-sub="${key}"]`).forEach((el) => {
+          el.textContent = modeLabel;
+        });
+        document.querySelectorAll(`[data-cart-total="${key}"]`).forEach((el) => {
+          el.textContent = formatPeso(lineTotal);
+        });
       });
-    });
+    }
 
     if (swapRowEl && swapSubtotalEl && newGallonRowEl && newGallonSubtotalEl) {
       if (totalNewGallons > 0 || totalEmptyContainers > 0) {
@@ -920,6 +1008,8 @@ export async function mount(me) {
     selectedAddressId = defaultAddr ? defaultAddr.id : '';
 
     await refreshSlotsForDate(selectedDate);
+
+    if (isDisposed) return null;
 
     // Cart starts empty so customer explicitly chooses products
 
@@ -1447,15 +1537,29 @@ export async function mount(me) {
     document.addEventListener('visibilitychange', onVisibilityChange);
 
     return () => {
+      isDisposed = true;
       unsubRealtime();
       unsubSlots();
       clearInterval(pollInterval);
       document.removeEventListener('visibilitychange', onVisibilityChange);
     };
   } catch (err) {
+    if (isDisposed) return null;
+    content.innerHTML = `
+      <div class="card" style="padding: 2.5rem 1.5rem; text-align: center; max-width: 480px; margin: 2rem auto;">
+        <div style="color: #ef4444; font-weight: 700; font-size: 16px; margin-bottom: 0.5rem;">Could not load order form</div>
+        <p class="text-muted" style="font-size: 13.5px; margin-bottom: 1.25rem;">${escapeHtml(err.message || 'Please check your connection and try again.')}</p>
+        <button type="button" class="btn btn-primary" id="retry-new-order-btn">Retry loading</button>
+      </div>
+    `;
+    document.querySelector('#retry-new-order-btn')?.addEventListener('click', () => {
+      mount(me);
+    });
     showToast(err.message || 'Could not load order form.', 'error');
   }
-  return null;
+  return () => {
+    isDisposed = true;
+  };
 }
 
 bootCustomerPage('new-order', mount);

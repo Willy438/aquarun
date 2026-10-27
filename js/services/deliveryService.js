@@ -32,6 +32,22 @@ const RIDER_ORDER_SELECT = `
   ledger:bottle_ledger(id, bottles_refilled, bottles_delivered, empties_collected, note)
 `;
 
+const RIDER_ORDER_SELECT_NO_COORDS = RIDER_ORDER_SELECT.replace(', latitude, longitude', '');
+
+function isCoordsColumnError(error) {
+  if (!error) return false;
+  const msg = String(error.message || '');
+  return /latitude|longitude|column.*exist|schema cache/i.test(msg) || error.code === 'PGRST204';
+}
+
+async function executeRiderOrderSelect(queryFn) {
+  let res = await queryFn(RIDER_ORDER_SELECT);
+  if (res && res.error && isCoordsColumnError(res.error)) {
+    res = await queryFn(RIDER_ORDER_SELECT_NO_COORDS);
+  }
+  return res;
+}
+
 export function sortDeliveriesByScheduledSlot(orders = []) {
   return [...orders].sort((a, b) => {
     const rankA = a.status === 'out_for_delivery' ? 0 : a.status === 'rider_assigned' ? 1 : 2;
@@ -49,12 +65,14 @@ export function sortDeliveriesByScheduledSlot(orders = []) {
 
 export async function getRiderDeliveries(riderId, { forceRefresh = false } = {}) {
   return cachedQuery(`rider:deliveries:${riderId}`, async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select(RIDER_ORDER_SELECT)
-      .eq('rider_id', riderId)
-      .order('delivery_date', { ascending: false })
-      .order('created_at', { ascending: false });
+    const { data, error } = await executeRiderOrderSelect((sel) =>
+      supabase
+        .from('orders')
+        .select(sel)
+        .eq('rider_id', riderId)
+        .order('delivery_date', { ascending: false })
+        .order('created_at', { ascending: false })
+    );
 
     if (error) throw error;
     return (data ?? []).map((o) => {
@@ -67,12 +85,14 @@ export async function getRiderDeliveries(riderId, { forceRefresh = false } = {})
 export async function getRiderCurrentOrder(riderId, orderId = null) {
   if (orderId) {
     return cachedQuery(`rider:order:${riderId}:${orderId}`, async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select(RIDER_ORDER_SELECT)
-        .eq('rider_id', riderId)
-        .eq('id', orderId)
-        .maybeSingle();
+      const { data, error } = await executeRiderOrderSelect((sel) =>
+        supabase
+          .from('orders')
+          .select(sel)
+          .eq('rider_id', riderId)
+          .eq('id', orderId)
+          .maybeSingle()
+      );
       if (error) throw error;
       if (data?.address) enrichAddressCoordinates(data.address);
       return data || null;
