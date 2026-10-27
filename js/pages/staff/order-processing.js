@@ -411,7 +411,7 @@ export async function mount(me) {
     if (document.visibilityState === 'visible') {
       renderPage();
     }
-  }, 4000);
+  }, 35000);
 
   return () => {
     clearInterval(pollTimer);

@@ -849,7 +849,7 @@ export async function mount() {
     if (document.visibilityState === 'visible') {
       loadData();
     }
-  }, 4000);
+  }, 35000);
 
   return () => {
     clearInterval(pollTimer);

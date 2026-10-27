@@ -260,18 +260,18 @@ export async function mount(me) {
   const onSync = () => {
     loadAndRender();
   };
-  window.addEventListener('aquarun:sync', onSync);
+  
 
   const pollTimer = setInterval(() => {
     if (document.visibilityState === 'visible') {
       loadAndRender();
     }
-  }, 4000);
+  }, 35000);
 
   return () => {
     clearInterval(pollTimer);
     unsub();
-    window.removeEventListener('aquarun:sync', onSync);
+    
   };
 }
 

@@ -307,19 +307,7 @@ export function invalidateDataCache(prefix = '') {
     }
   } catch {}
 
-  // Broadcast cache invalidation across all open browser tabs
-  try {
-    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
-      const bc = new BroadcastChannel('aquarun_sync');
-      bc.postMessage({ type: 'invalidate', prefix, ts: Date.now() });
-      bc.close();
-    }
-  } catch {}
-  try {
-    if (typeof localStorage !== 'undefined') {
-      localStorage.setItem('aquarun_sync_' + (prefix || 'all'), Date.now().toString());
-    }
-  } catch {}
+
 }
 
 /**

@@ -1136,8 +1136,6 @@ export async function mount(me) {
     // Realtime listener: instantly reflect product edits, disabling, and price changes
     const refreshCatalogState = async () => {
       try {
-        invalidateDataCache('products:');
-        invalidateDataCache('settings:');
         const [freshProducts, freshCharge, freshBalance, freshOrders] = await Promise.all([
           getActiveProducts({ forceRefresh: true }),
           getServiceCharge(),
@@ -1180,18 +1178,9 @@ export async function mount(me) {
     };
 
     const unsubRealtime = subscribeCustomerOrders(me.id, refreshCatalogState);
-    window.addEventListener('aquarun:sync', refreshCatalogState);
-    const syncInterval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        refreshCatalogState();
-      }
-    }, 3000);
-
-    window.addEventListener('beforeunload', () => {
+    return () => {
       unsubRealtime();
-      window.removeEventListener('aquarun:sync', refreshCatalogState);
-      clearInterval(syncInterval);
-    }, { once: true });
+    };
   } catch (err) {
     showToast(err.message || 'Could not load order form.', 'error');
   }

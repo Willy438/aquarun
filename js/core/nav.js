@@ -482,7 +482,7 @@ export function startShellRealtimeSync(role, profile) {
         updateStaffOrdersBadge().catch(() => {});
         updateStaffRemittanceBadge().catch(() => {});
       }
-    }, 4000);
+    }, 45000);
   } else if (role === 'rider' && profile?.id) {
     shellRealtimeSub = supabase
       .channel(channelName)
@@ -496,7 +496,7 @@ export function startShellRealtimeSync(role, profile) {
         updateRiderCurrentBadge(profile.id).catch(() => {});
         updateRiderRemittanceBadge(profile.id).catch(() => {});
       }
-    }, 4000);
+    }, 45000);
   } else if (role === 'customer' && profile?.id) {
     shellRealtimeSub = supabase
       .channel(channelName)
@@ -517,7 +517,7 @@ export function startShellRealtimeSync(role, profile) {
       if (document.visibilityState === 'visible') {
         updateCustomerActiveOrderBadge(profile.id).catch(() => {});
       }
-    }, 4000);
+    }, 45000);
   }
 }
 
