@@ -12,8 +12,10 @@ import {
 } from '../../core/ui.js';
 import {
   checkOrderDeliveryTiming,
+  formatAddressForNavigation,
   formatAddressFull,
   formatSlotWindow,
+  getAddressMapUrl,
   getEffectiveSlot,
   getOrderItemPricingTag,
   isSlotAdjusted,
@@ -161,11 +163,7 @@ export async function mount(me) {
                 <div style="margin-top: 10px;">
                   <a
                     class="btn btn-outline-blue btn-sm"
-                    href="${
-                      order.address?.latitude && order.address?.longitude
-                        ? `https://www.google.com/maps/search/?api=1&query=${order.address.latitude},${order.address.longitude}`
-                        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(fullAddress)}`
-                    }"
+                    href="${getAddressMapUrl(order.address, { navigate: true })}"
                     target="_blank"
                     rel="noopener noreferrer"
                   >

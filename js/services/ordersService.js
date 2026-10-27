@@ -41,7 +41,7 @@ const ORDER_SELECT = `
   created_at,
   delivered_at,
   customer:profiles!customer_id(id, full_name, phone),
-  address:addresses!address_id(id, label, street, barangay, city, landmark),
+  address:addresses!address_id(id, label, street, barangay, city, landmark, latitude, longitude),
   preferred_slot:time_slots!preferred_slot_id(id, label, start_time, end_time),
   scheduled_slot:time_slots!scheduled_slot_id(id, label, start_time, end_time),
   rider:profiles!rider_id(id, full_name, phone),
@@ -128,14 +128,40 @@ export function isSlotAdjusted(order) {
   );
 }
 
+export function enrichAddressCoordinates(addr) {
+  if (!addr) return addr;
+  if (addr.latitude != null && addr.longitude != null) {
+    const lat = Number(addr.latitude);
+    const lng = Number(addr.longitude);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) {
+      addr.latitude = lat;
+      addr.longitude = lng;
+      return addr;
+    }
+  }
+  if (addr.id) {
+    try {
+      const cached = JSON.parse(localStorage.getItem(`addr_coords_${addr.id}`) || 'null');
+      if (cached && typeof cached.lat === 'number' && typeof cached.lng === 'number') {
+        addr.latitude = cached.lat;
+        addr.longitude = cached.lng;
+      }
+    } catch {}
+  }
+  return addr;
+}
+
 export function formatAddressLine(addr) {
   if (!addr) return 'Saved address';
   const brgy =
     addr.barangay && addr.barangay !== 'N/A'
       ? `Brgy. ${addr.barangay.replace(/^Brgy\.?\s*/i, '')}`
       : null;
-  const parts = [addr.label, brgy, addr.city].filter(Boolean);
-  return parts.length > 1 ? parts.join(', ') : `${addr.label} · ${addr.street}`;
+  const loc = [addr.street, brgy, addr.city].filter(Boolean).join(', ');
+  if (addr.label && loc) {
+    return `${addr.label} · ${loc}`;
+  }
+  return loc || addr.label || 'Saved address';
 }
 
 export function formatAddressFull(addr) {
@@ -145,6 +171,33 @@ export function formatAddressFull(addr) {
       ? `Brgy. ${addr.barangay.replace(/^Brgy\.?\s*/i, '')}`
       : null;
   return [addr.street, brgy, addr.city].filter(Boolean).join(', ');
+}
+
+export function formatAddressForNavigation(addr) {
+  if (!addr) return 'Caloocan, Philippines';
+  const brgy =
+    addr.barangay && addr.barangay !== 'N/A'
+      ? `Brgy. ${addr.barangay.replace(/^Brgy\.?\s*/i, '')}`
+      : null;
+  // Exclude address label ("Work", "Home") so external map services never treat it as a business query
+  return [addr.street, addr.landmark, brgy, addr.city, 'Philippines']
+    .filter(Boolean)
+    .join(', ');
+}
+
+export function getAddressMapUrl(addr, { navigate = true } = {}) {
+  const enriched = enrichAddressCoordinates(addr);
+  const lat = enriched?.latitude != null ? Number(enriched.latitude) : null;
+  const lng = enriched?.longitude != null ? Number(enriched.longitude) : null;
+  if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
+    return navigate
+      ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
+      : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+  }
+  const cleanQuery = formatAddressForNavigation(enriched);
+  return navigate
+    ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanQuery)}`
+    : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanQuery)}`;
 }
 
 /**
@@ -793,6 +846,7 @@ export async function getCustomerOrderById(customerId, orderId, { forceRefresh =
       .maybeSingle();
 
     if (error) throw error;
+    if (data?.address) enrichAddressCoordinates(data.address);
     return data;
   }, { forceRefresh });
 }
@@ -809,7 +863,10 @@ export async function getCustomerOrders(customerId, { limit = 50, forceRefresh =
 
     const { data, error } = await query;
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((o) => {
+      if (o?.address) enrichAddressCoordinates(o.address);
+      return o;
+    });
   }, { forceRefresh });
 }
 
@@ -824,7 +881,10 @@ export async function getAllOrdersForStaff({ limit = 200, forceRefresh = false }
 
     const { data, error } = await query;
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((o) => {
+      if (o?.address) enrichAddressCoordinates(o.address);
+      return o;
+    });
   }, { forceRefresh });
 }
 
@@ -837,6 +897,7 @@ export async function getStaffOrderById(orderId) {
       .maybeSingle();
 
     if (error) throw error;
+    if (data?.address) enrichAddressCoordinates(data.address);
     return data;
   });
 }

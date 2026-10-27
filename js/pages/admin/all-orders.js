@@ -15,6 +15,7 @@ import {
 import {
   formatAddressFull,
   formatSlotCompact,
+  getAddressMapUrl,
   formatSlotWindow,
   getAllOrdersForStaff,
   getEffectiveSlot,
@@ -107,6 +108,12 @@ export async function mount() {
           <div>
             <p class="label" style="margin-bottom:3px;">Delivery Address</p>
             <p style="color:var(--ink-navy);">${escapeHtml(addressText)}</p>
+            <div style="margin-top:4px;">
+              <a href="${getAddressMapUrl(order.address, { navigate: false })}" target="_blank" rel="noopener noreferrer" style="font-size:12px; font-weight:600; color:var(--primary, #1d5bd6); text-decoration:none; display:inline-flex; align-items:center; gap:4px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 21s-7-5.6-7-11a7 7 0 1 1 14 0c0 5.4-7 11-7 11Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                Open in Google Maps
+              </a>
+            </div>
           </div>
           <div class="form-row">
             <div class="field">

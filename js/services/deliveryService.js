@@ -1,7 +1,7 @@
 // Start delivery, record counts, confirm payment. Pages never call Supabase directly, they call this file.
 import { supabase } from '../config/supabaseClient.js';
 import { cachedQuery, invalidateDataCache } from '../core/ui.js';
-import { getEffectiveSlot } from './ordersService.js';
+import { enrichAddressCoordinates, getEffectiveSlot } from './ordersService.js';
 
 const RIDER_ORDER_SELECT = `
   id,
@@ -25,7 +25,7 @@ const RIDER_ORDER_SELECT = `
   created_at,
   delivered_at,
   customer:profiles!customer_id(id, full_name, phone),
-  address:addresses!address_id(id, label, street, barangay, city, landmark),
+  address:addresses!address_id(id, label, street, barangay, city, landmark, latitude, longitude),
   preferred_slot:time_slots!preferred_slot_id(id, label, start_time, end_time),
   scheduled_slot:time_slots!scheduled_slot_id(id, label, start_time, end_time),
   items:order_items(id, product_id, quantity, unit_price, product:products(id, name, unit, price, is_returnable)),
@@ -57,7 +57,10 @@ export async function getRiderDeliveries(riderId, { forceRefresh = false } = {})
       .order('created_at', { ascending: false });
 
     if (error) throw error;
-    return data ?? [];
+    return (data ?? []).map((o) => {
+      if (o?.address) enrichAddressCoordinates(o.address);
+      return o;
+    });
   }, { forceRefresh });
 }
 
@@ -71,6 +74,7 @@ export async function getRiderCurrentOrder(riderId, orderId = null) {
         .eq('id', orderId)
         .maybeSingle();
       if (error) throw error;
+      if (data?.address) enrichAddressCoordinates(data.address);
       return data || null;
     });
   }

@@ -16,8 +16,10 @@ import {
 } from '../../core/ui.js';
 import {
   checkOrderDeliveryTiming,
+  formatAddressForNavigation,
   formatAddressLine,
   formatSlotWindow,
+  getAddressMapUrl,
   getEffectiveSlot,
   getRiderRemittanceSummary,
   isOrderItemNewContainer,
@@ -376,9 +378,7 @@ export async function mount(initialMe) {
         const stopDistText = nextDelivery._distFromHub !== null ? `${nextDelivery._distFromHub} km from hub` : 'First stop';
         const timing = checkOrderDeliveryTiming(nextDelivery);
 
-        const mapUrl = nextDelivery.address?.latitude && nextDelivery.address?.longitude
-          ? `https://www.google.com/maps/dir/?api=1&destination=${nextDelivery.address.latitude},${nextDelivery.address.longitude}`
-          : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddressLine(nextDelivery.address))}`;
+        const mapUrl = getAddressMapUrl(nextDelivery.address, { navigate: true });
 
         heroHtml = `
           <div class="rider-active-card">
@@ -544,9 +544,7 @@ export async function mount(initialMe) {
                 .join(', ');
 
               const distText = order._distFromHub !== null ? `${order._distFromHub} km` : '—';
-              const mapUrl = order.address?.latitude && order.address?.longitude
-                ? `https://www.google.com/maps/dir/?api=1&destination=${order.address.latitude},${order.address.longitude}`
-                : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(formatAddressLine(order.address))}`;
+              const mapUrl = getAddressMapUrl(order.address, { navigate: true });
 
               return `
                 <tr class="is-clickable" data-order-id="${escapeHtml(order.id)}">

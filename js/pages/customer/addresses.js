@@ -31,74 +31,217 @@ function getAddressIcon(label = '') {
   return ICONS.pin;
 }
 
-// Reverse Geocoding API: Coordinates -> Address Fields
-async function fetchAddressFromCoords(lat, lon) {
-  try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1`;
-    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (!data || !data.address) return null;
-
-    const a = data.address;
-    let street = '';
-    const houseNumber = a.house_number || '';
-    const road = a.road || a.pedestrian || a.street || '';
-    if (houseNumber && road) {
-      street = `${houseNumber} ${road}`;
-    } else if (road) {
-      street = road;
-    } else if (a.residential || a.suburb || a.neighbourhood) {
-      street = a.residential || a.suburb || a.neighbourhood;
-    } else if (data.display_name) {
-      street = data.display_name.split(',')[0].trim();
-    }
-
-    let barangay = '';
-    const candidates = [a.village, a.quarter, a.suburb, a.neighbourhood, a.city_district];
-    for (const c of candidates) {
-      if (c && /barangay|\bbrgy\b/i.test(c)) {
-        barangay = c;
-        break;
-      }
-    }
-    if (!barangay) {
-      const match = data.display_name.match(/Barangay\s+[0-9A-Za-z\s-]+/i) || data.display_name.match(/Brgy\.?\s+[0-9A-Za-z\s-]+/i);
-      if (match) {
-        barangay = match[0].split(',')[0].trim();
-      } else {
-        barangay = a.village || a.suburb || a.neighbourhood || 'Barangay 171';
-      }
-    }
-
-    const city = a.city || a.town || a.municipality || 'Caloocan';
-    return { street, barangay, city, full: data.display_name };
-  } catch {
-    return null;
-  }
+function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+  const timeoutId = controller ? setTimeout(() => controller.abort(), timeoutMs) : null;
+  return fetch(url, {
+    ...options,
+    signal: controller ? controller.signal : undefined,
+  }).finally(() => {
+    if (timeoutId) clearTimeout(timeoutId);
+  });
 }
 
-// Forward Geocoding API: Address text -> Coordinates
-async function searchAddressCoordinates(street, barangay, city = 'Caloocan') {
+// Multi-provider Reverse Geocoding API: Coordinates -> Address Fields
+// Combines Photon (Komoot OSM) + BigDataCloud Client API + Nominatim (with user-agent)
+async function fetchAddressFromCoords(lat, lon) {
+  let street = '';
+  let barangay = '';
+  let city = 'Caloocan';
+  let full = '';
+
+  // 1. High-speed Photon reverse geocoder (unmetered, no CORS or cellular hotspot rate-limit)
+  try {
+    const pUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`;
+    const pResp = await fetchWithTimeout(pUrl, {}, 3500);
+    if (pResp.ok) {
+      const pData = await pResp.json();
+      const feat = pData.features?.[0];
+      if (feat && feat.properties) {
+        const p = feat.properties;
+
+        const houseNum = p.housenumber ? `${p.housenumber} ` : '';
+        if (p.street) {
+          street = `${houseNum}${p.street}`.trim();
+        } else if (p.name && /(street|st|road|rd|avenue|ave|lane|ln|drive|dr|way|boulevard|blvd|highway|hwy|subdivision|subd|village|compound)/i.test(p.name)) {
+          street = `${houseNum}${p.name}`.trim();
+        } else if (p.name && !/barangay|brgy|caloocan|metro manila|philippines/i.test(p.name)) {
+          street = `${houseNum}${p.name}`.trim();
+        }
+
+        const brgyCandidates = [p.locality, p.district, p.name, p.suburb];
+        for (const c of brgyCandidates) {
+          if (c && /barangay|\bbrgy\b/i.test(c)) {
+            barangay = c.trim();
+            break;
+          }
+        }
+        if (!barangay && p.locality && (!street || !street.toLowerCase().includes(p.locality.toLowerCase()))) {
+          barangay = p.locality.trim();
+        }
+
+        if (p.city) {
+          city = p.city.trim();
+        }
+
+        full = [p.name, p.street, p.locality, p.district, p.city].filter(Boolean).join(', ');
+      }
+    }
+  } catch (err) {
+    console.warn('Photon reverse error:', err.message);
+  }
+
+  // 2. BigDataCloud reverse geocoding (fast, client-focused, unmetered, accurate administrative levels)
+  if (!street || !barangay) {
+    try {
+      const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
+      const bResp = await fetchWithTimeout(bdcUrl, {}, 3500);
+      if (bResp.ok) {
+        const bData = await bResp.json();
+        const admins = bData.localityInfo?.administrative || [];
+
+        if (!barangay) {
+          for (const a of admins) {
+            if (/barangay|\bbrgy\b/i.test(a.name || '')) {
+              barangay = a.name.trim();
+              break;
+            }
+          }
+          if (!barangay) {
+            const area = admins.find((a) => /camarin|bagong silang|deparo|tala|bagumbong|amparo|zone/i.test(a.name || ''));
+            if (area) barangay = area.name.trim();
+          }
+        }
+
+        if ((!city || city === 'Caloocan') && bData.locality) {
+          const cleanLocality = bData.locality.replace(/^City of\s+/i, '').trim();
+          if (cleanLocality) city = cleanLocality;
+        }
+
+        if (!full && bData.locality) {
+          full = [bData.locality, barangay, city].filter(Boolean).join(', ');
+        }
+      }
+    } catch (err) {
+      console.warn('BDC reverse error:', err.message);
+    }
+  }
+
+  // 3. Nominatim reverse fallback (with User-Agent and email to prevent 403 Forbidden)
+  if (!street || !barangay) {
+    try {
+      const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1&email=aquarun.ph@gmail.com`;
+      const nResp = await fetchWithTimeout(
+        nomUrl,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'AquaRunApp/1.0 (aquarun.ph@gmail.com)',
+          },
+        },
+        3500
+      );
+      if (nResp.ok) {
+        const nData = await nResp.json();
+        const a = nData.address || {};
+        if (!street) {
+          const houseNumber = a.house_number ? `${a.house_number} ` : '';
+          const road = a.road || a.pedestrian || a.street || a.residential || a.suburb || '';
+          if (road) street = `${houseNumber}${road}`.trim();
+          else if (nData.display_name) street = nData.display_name.split(',')[0].trim();
+        }
+        if (!barangay) {
+          const candidates = [a.village, a.quarter, a.suburb, a.neighbourhood, a.city_district];
+          for (const c of candidates) {
+            if (c && /barangay|\bbrgy\b/i.test(c)) {
+              barangay = c.trim();
+              break;
+            }
+          }
+          if (!barangay) {
+            const match = (nData.display_name || '').match(/Barangay\s+[0-9A-Za-z\s-]+/i) || (nData.display_name || '').match(/Brgy\.?\s+[0-9A-Za-z\s-]+/i);
+            if (match) barangay = match[0].split(',')[0].trim();
+            else barangay = a.village || a.suburb || a.neighbourhood || '';
+          }
+        }
+        if (!city && (a.city || a.town || a.municipality)) {
+          city = a.city || a.town || a.municipality;
+        }
+        if (!full && nData.display_name) {
+          full = nData.display_name;
+        }
+      }
+    } catch (err) {
+      console.warn('Nominatim reverse error:', err.message);
+    }
+  }
+
+  // Format barangay standard
+  if (barangay && !/^Barangay\b|^Brgy\.?\b/i.test(barangay) && /^\d+$/.test(barangay.trim())) {
+    barangay = `Barangay ${barangay.trim()}`;
+  }
+
+  return {
+    street: street || '',
+    barangay: barangay || 'Barangay 171',
+    city: city || 'Caloocan',
+    full: full || [street, barangay, city].filter(Boolean).join(', '),
+  };
+}
+
+// Multi-provider Forward Geocoding API: Address text -> Coordinates
+async function searchAddressCoordinates(street, barangay, city = 'Caloocan', stationLat = 14.7565, stationLng = 121.0437) {
   try {
     const queryParts = [];
     if (street) queryParts.push(street);
-    if (barangay) queryParts.push(barangay);
+    if (barangay && barangay !== 'N/A') queryParts.push(barangay);
     if (city) queryParts.push(city);
     queryParts.push('Philippines');
     const query = queryParts.join(', ');
 
-    const url = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=1`;
-    const resp = await fetch(url, { headers: { 'Accept-Language': 'en' } });
-    if (!resp.ok) return null;
-    const data = await resp.json();
-    if (data && data.length > 0) {
-      return {
-        lat: parseFloat(data[0].lat),
-        lng: parseFloat(data[0].lon),
-        displayName: data[0].display_name,
-      };
-    }
+    // 1. Photon forward geocoder (biased near station hub)
+    try {
+      const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${stationLat}&lon=${stationLng}&limit=3`;
+      const pResp = await fetchWithTimeout(photonUrl, {}, 3500);
+      if (pResp.ok) {
+        const pData = await pResp.json();
+        const feat = pData.features?.[0];
+        if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
+          const [lon, lat] = feat.geometry.coordinates;
+          return {
+            lat: parseFloat(lat),
+            lng: parseFloat(lon),
+            displayName: feat.properties?.name || query,
+          };
+        }
+      }
+    } catch {}
+
+    // 2. Nominatim fallback with user-agent and email
+    try {
+      const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&q=${encodeURIComponent(query)}&limit=1&email=aquarun.ph@gmail.com`;
+      const resp = await fetchWithTimeout(
+        nomUrl,
+        {
+          headers: {
+            'Accept-Language': 'en',
+            'User-Agent': 'AquaRunApp/1.0 (aquarun.ph@gmail.com)',
+          },
+        },
+        3500
+      );
+      if (resp.ok) {
+        const data = await resp.json();
+        if (Array.isArray(data) && data.length > 0) {
+          return {
+            lat: parseFloat(data[0].lat),
+            lng: parseFloat(data[0].lon),
+            displayName: data[0].display_name,
+          };
+        }
+      }
+    } catch {}
+
     return null;
   } catch {
     return null;
@@ -758,7 +901,7 @@ export async function mount(me) {
             // 1. High-speed Photon API (unmetered, location-biased to station, unblocked on mobile hotspot)
             try {
               const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${sLat}&lon=${sLng}&limit=8`;
-              const pResp = await fetch(photonUrl);
+              const pResp = await fetchWithTimeout(photonUrl, {}, 3500);
               if (pResp.ok) {
                 const pData = await pResp.json();
                 const features = pData.features || [];
@@ -789,7 +932,7 @@ export async function mount(me) {
                 const right = (sLng + 0.25).toFixed(4);
                 const bottom = (sLat - 0.20).toFixed(4);
                 const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(query)}&limit=6&email=aquarun.ph@gmail.com`;
-                const nResp = await fetch(nomUrl, { headers: { 'Accept': 'application/json' } });
+                const nResp = await fetchWithTimeout(nomUrl, { headers: { 'Accept': 'application/json', 'User-Agent': 'AquaRunApp/1.0 (aquarun.ph@gmail.com)' } }, 3500);
                 if (nResp.ok) {
                   const nData = await nResp.json();
                   if (Array.isArray(nData)) {
@@ -900,7 +1043,7 @@ export async function mount(me) {
             // 1. Photon search (resilient against mobile hotspot restrictions)
             try {
               const photonUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&lat=${sLat}&lon=${sLng}&limit=5`;
-              const pResp = await fetch(photonUrl);
+              const pResp = await fetchWithTimeout(photonUrl, {}, 3500);
               if (pResp.ok) {
                 const pData = await pResp.json();
                 const features = pData.features || [];
@@ -926,7 +1069,7 @@ export async function mount(me) {
                 const right = (sLng + 0.25).toFixed(4);
                 const bottom = (sLat - 0.20).toFixed(4);
                 const nomUrl = `https://nominatim.openstreetmap.org/search?format=json&countrycodes=ph&viewbox=${left},${top},${right},${bottom}&bounded=0&q=${encodeURIComponent(query)}&limit=5&email=aquarun.ph@gmail.com`;
-                const nResp = await fetch(nomUrl, { headers: { 'Accept': 'application/json' } });
+                const nResp = await fetchWithTimeout(nomUrl, { headers: { 'Accept': 'application/json', 'User-Agent': 'AquaRunApp/1.0 (aquarun.ph@gmail.com)' } }, 3500);
                 if (nResp.ok) {
                   const nData = await nResp.json();
                   if (Array.isArray(nData)) {
@@ -1007,7 +1150,7 @@ export async function mount(me) {
             const cityVal = document.querySelector('#addr-city')?.value.trim() || 'Caloocan';
 
             if (!streetVal && !brgyVal) return;
-            const res = await searchAddressCoordinates(streetVal, brgyVal, cityVal);
+            const res = await searchAddressCoordinates(streetVal, brgyVal, cityVal, stationSettings.lat, stationSettings.lng);
             if (res) {
               miniMap.setView([res.lat, res.lng], 16);
               await onLocationSelected(res.lat, res.lng, false);
