@@ -4,9 +4,11 @@ import { confirmModal, escapeHtml, formatPeso, setBusy, showToast } from '../../
 import {
   formatSlotWindow,
   getEffectiveSlot,
+  expireUnacceptedOrders,
   getNextOrderForProcessing,
   getOrderItemPricingTag,
   getStaffOrderById,
+  isOrderExpired,
   renderStaffOrderHero,
   staffAdjustDeliverySlot,
   staffAssignRider,
@@ -92,6 +94,14 @@ function formatSlotNotes(rawNote) {
 }
 
 function getPrimaryActionMeta(order, availableRidersCount = 0) {
+  if (order.status === 'submitted' && isOrderExpired(order)) {
+    return {
+      label: 'Order expired (Slot ended)',
+      hint: 'This order expired because its scheduled delivery window ended before station confirmation.',
+      enabled: false,
+    };
+  }
+
   switch (order.status) {
     case 'submitted':
     case 'confirmed':
@@ -162,6 +172,12 @@ export async function mount(me) {
       if (found) {
         if (['completed', 'cancelled'].includes(found.status)) {
           showToast(`Order #${found.order_number} is already ${found.status}.`, 'info');
+          window.location.href = 'orders.html';
+          return null;
+        }
+        if (found.status === 'submitted' && isOrderExpired(found)) {
+          await expireUnacceptedOrders([found]);
+          showToast(`Order #${found.order_number} expired because its scheduled delivery window ended.`, 'warning');
           window.location.href = 'orders.html';
           return null;
         }
@@ -514,6 +530,13 @@ export async function mount(me) {
         const btn = e.currentTarget;
         const chosenSlotId = document.querySelector('#adjust-slot-select')?.value || selectedSlotId;
         const chosenRiderId = document.querySelector('#rider-select')?.value || '';
+
+        if (order.status === 'submitted' && isOrderExpired(order)) {
+          await expireUnacceptedOrders([order]);
+          showToast(`Order #${order.order_number} has expired because its delivery window has ended.`, 'warning');
+          await renderPage();
+          return;
+        }
 
         setBusy(btn, true, 'Processing...');
         try {

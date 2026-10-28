@@ -15,6 +15,7 @@ import {
   showToast,
 } from '../../core/ui.js';
 import {
+  expireUnacceptedOrders,
   formatAddressFull,
   formatSlotCompact,
   getAddressMapUrl,
@@ -24,6 +25,7 @@ import {
   getOrderItemPricingTag,
   getRiderRemittanceSummary,
   isOrderItemNewContainer,
+  isOrderExpired,
   staffAcceptRiderRemittance,
   staffAssignBatchToRider,
   staffCancelOrder,
@@ -229,8 +231,9 @@ export async function mount() {
     try {
       document.querySelectorAll('.modal-backdrop').forEach((el) => el.remove());
       const status = String(order.status || '').trim().toLowerCase();
-      const tone = (STATUS_PILL_TONE && STATUS_PILL_TONE[status]) || (status === 'completed' ? 'green' : status === 'cancelled' ? 'rose' : 'neutral');
-      const statusLabel = (STATUS_LABELS && STATUS_LABELS[status]) || order.status;
+      const isExpired = (status === 'cancelled' && (order.notes || '').includes('Expired')) || (status === 'submitted' && isOrderExpired(order));
+      const tone = isExpired ? 'rose' : ((STATUS_PILL_TONE && STATUS_PILL_TONE[status]) || (status === 'completed' ? 'green' : status === 'cancelled' ? 'rose' : 'neutral'));
+      const statusLabel = isExpired ? 'Expired' : ((STATUS_LABELS && STATUS_LABELS[status]) || order.status);
       const customerName = order.customer?.full_name || 'Customer';
       const customerPhone = order.customer?.phone || 'No contact provided';
       const addressText = typeof formatAddressFull === 'function' && order.address
@@ -249,7 +252,7 @@ export async function mount() {
       const riderName = order.rider?.full_name || 'Not assigned';
       const isCompleted = status === 'completed' || status === 'delivered';
       const isCancelled = status === 'cancelled';
-      const isActive = !isCompleted && !isCancelled;
+      const isActive = !isCompleted && !isCancelled && !isExpired;
 
       const itemsListHtml = (order.items || [])
         .map(
@@ -549,9 +552,11 @@ export async function mount() {
             <td>${escapeHtml(summarizeOrderItems(order.items))}</td>
             <td style="color: #64748b; font-size: 13px;">${escapeHtml(slotText)}</td>
             <td style="text-align: center;">
-              <span class="pill status-${escapeHtml(order.status)}">
-                ${escapeHtml(STATUS_LABELS[order.status] || order.status)}
-              </span>
+              ${
+                (order.status === 'cancelled' && (order.notes || '').includes('Expired')) || (order.status === 'submitted' && isOrderExpired(order))
+                  ? `<span class="pill pill-rose" style="font-weight:700;">Expired</span>`
+                  : `<span class="pill status-${escapeHtml(order.status)}">${escapeHtml(STATUS_LABELS[order.status] || order.status)}</span>`
+              }
             </td>
             <td class="table-strong" style="text-align: right;">${escapeHtml(formatPeso(order.total))}</td>
             <td style="text-align: right;">
@@ -936,6 +941,7 @@ export async function mount() {
 
   async function loadData() {
     try {
+      await expireUnacceptedOrders().catch(() => {});
       const [orders, riders] = await Promise.all([
         getAllOrdersForStaff({ limit: 200 }),
         getAllActiveRiders().catch(() => []),

@@ -14,6 +14,7 @@ import {
   formatDateShort,
   formatPeso,
   formatTimeShort,
+  getCurrentMinutesManila,
   getTodayManila,
   invalidateDataCache,
   matchesDateFilter,
@@ -250,8 +251,9 @@ export function checkOrderDeliveryTiming(order) {
     };
   }
 
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const currentMinutes = typeof getCurrentMinutesManila === 'function'
+    ? getCurrentMinutesManila()
+    : new Date().getHours() * 60 + new Date().getMinutes();
 
   const [sH, sM] = slot.start_time.split(':').map(Number);
   const slotStartMinutes = sH * 60 + (sM || 0);
@@ -299,6 +301,96 @@ export function checkOrderDeliveryTiming(order) {
     slotEndMinutes,
     currentMinutes,
   };
+}
+
+/**
+ * Returns true if an unaccepted (submitted) order's delivery window has elapsed.
+ */
+export function isOrderExpired(order) {
+  if (!order || order.status !== 'submitted') return false;
+  const timing = checkOrderDeliveryTiming(order);
+  return Boolean(timing.isLate);
+}
+
+let isExpiringOrders = false;
+let lastExpiredCheckAt = 0;
+
+/**
+ * Automatically marks unaccepted submitted orders whose time slots have ended as cancelled.
+ * Runs realtime to prevent station staff and riders from processing past orders.
+ */
+export async function expireUnacceptedOrders(ordersList = null) {
+  const now = Date.now();
+  if (isExpiringOrders) return [];
+  if (!ordersList && now - lastExpiredCheckAt < 8000) return [];
+
+  isExpiringOrders = true;
+  lastExpiredCheckAt = now;
+
+  try {
+    // 1. Try atomic database RPC
+    try {
+      await supabase.rpc('expire_unaccepted_orders');
+    } catch (_) {}
+
+    // 2. Identify candidate orders in memory or query submitted orders
+    let candidates = ordersList;
+    if (!candidates) {
+      const { data } = await executeOrderSelect((sel) =>
+        supabase
+          .from('orders')
+          .select(sel)
+          .eq('status', 'submitted')
+          .limit(100)
+      );
+      candidates = data || [];
+    }
+
+    const expiredOrders = (candidates || []).filter((o) => isOrderExpired(o));
+    if (!expiredOrders.length) {
+      return [];
+    }
+
+    // 3. Mark candidate orders as cancelled
+    let anyUpdated = false;
+    for (const exp of expiredOrders) {
+      try {
+        const existingNotes = (exp.notes || '').trim();
+        const reason = 'Expired: Scheduled delivery window ended before station confirmation.';
+        const updatedNotes = existingNotes ? `${existingNotes}\n${reason}` : reason;
+
+        const { error } = await supabase
+          .from('orders')
+          .update({
+            status: 'cancelled',
+            notes: updatedNotes,
+          })
+          .eq('id', exp.id);
+
+        if (!error) {
+          anyUpdated = true;
+          try {
+            await supabase.from('bottle_ledger').delete().eq('order_id', exp.id);
+          } catch (_) {}
+          try {
+            await supabase.from('order_status_log').insert({
+              order_id: exp.id,
+              status: 'cancelled',
+            });
+          } catch (_) {}
+        }
+      } catch (err) {
+        console.warn(`[expireUnacceptedOrders] Could not expire order ${exp.id}:`, err);
+      }
+    }
+
+    if (anyUpdated) {
+      invalidateDataCache();
+    }
+    return expiredOrders.map((o) => o.id);
+  } finally {
+    isExpiringOrders = false;
+  }
 }
 
 /**
@@ -835,6 +927,7 @@ export function renderStaffOrderHero(order) {
 }
 
 export async function getCustomerActiveOrders(customerId, { forceRefresh = false } = {}) {
+  expireUnacceptedOrders().catch(() => {});
   return cachedQuery(`orders:activeList:${customerId}`, async () => {
     const { data, error } = await executeOrderSelect((sel) =>
       supabase
@@ -846,10 +939,12 @@ export async function getCustomerActiveOrders(customerId, { forceRefresh = false
     );
 
     if (error) throw error;
-    return (data ?? []).map((o) => {
-      if (o?.address) enrichAddressCoordinates(o.address);
-      return o;
-    });
+    return (data ?? [])
+      .filter((o) => !(o.status === 'submitted' && isOrderExpired(o)))
+      .map((o) => {
+        if (o?.address) enrichAddressCoordinates(o.address);
+        return o;
+      });
   }, { forceRefresh });
 }
 
@@ -907,10 +1002,12 @@ export async function getAllOrdersForStaff({ limit = 200, forceRefresh = false }
     });
 
     if (error) throw error;
-    return (data ?? []).map((o) => {
+    const orders = (data ?? []).map((o) => {
       if (o?.address) enrichAddressCoordinates(o.address);
       return o;
     });
+    expireUnacceptedOrders(orders).catch(() => {});
+    return orders;
   }, { forceRefresh });
 }
 
@@ -931,6 +1028,7 @@ export async function getStaffOrderById(orderId) {
 }
 
 export async function getNextOrderForProcessing() {
+  await expireUnacceptedOrders().catch(() => {});
   return cachedQuery('orders:nextProcessing', async () => {
     const { data, error } = await executeOrderSelect((sel) =>
       supabase
@@ -943,9 +1041,13 @@ export async function getNextOrderForProcessing() {
 
     if (error) throw error;
     const actionable = (data || []).find(
-      (o) =>
-        ['submitted', 'confirmed', 'refilling', 'ready'].includes(o.status) ||
-        (o.status === 'delivered' && o.payment_status === 'unpaid')
+      (o) => {
+        if (o.status === 'submitted' && isOrderExpired(o)) return false;
+        return (
+          ['submitted', 'confirmed', 'refilling', 'ready'].includes(o.status) ||
+          (o.status === 'delivered' && o.payment_status === 'unpaid')
+        );
+      }
     );
     if (actionable) return actionable;
 
@@ -1142,6 +1244,20 @@ export async function staffReassignRider(orderId, newRiderId, note = null) {
 }
 
 export async function staffConfirmOrder(orderId, slotId = null, slotNote = null) {
+  const { data: order } = await supabase
+    .from('orders')
+    .select('id, order_number, status, delivery_date, scheduled_slot_id, preferred_slot_id')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (order && order.status === 'submitted') {
+    const fullOrder = await getStaffOrderById(orderId);
+    if (fullOrder && isOrderExpired(fullOrder)) {
+      await expireUnacceptedOrders([fullOrder]);
+      throw new Error(`Order #${order.order_number} has expired because its scheduled delivery window has already ended.`);
+    }
+  }
+
   const { error } = await supabase.rpc('confirm_order', {
     p_order_id: orderId,
     p_slot_id: slotId || null,
@@ -1194,6 +1310,20 @@ export async function staffAssignRider(orderId, riderId) {
  */
 export async function staffFastTrackAssignRider(orderId, riderId) {
   if (!riderId) throw new Error('Please select an available rider first.');
+
+  const { data: orderToCheck } = await supabase
+    .from('orders')
+    .select('id, order_number, status')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (orderToCheck && orderToCheck.status === 'submitted') {
+    const fullOrder = await getStaffOrderById(orderId);
+    if (fullOrder && isOrderExpired(fullOrder)) {
+      await expireUnacceptedOrders([fullOrder]);
+      throw new Error(`Order #${orderToCheck.order_number} has expired because its scheduled delivery window has already ended.`);
+    }
+  }
 
   // 1. Try atomic fast-track RPC if installed in Supabase
   const { error: rpcErr } = await supabase.rpc('staff_fast_track_order', {
