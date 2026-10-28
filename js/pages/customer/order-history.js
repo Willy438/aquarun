@@ -23,6 +23,14 @@ import {
 const CLOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>`;
 
 export async function mount(me) {
+  if (!document.querySelector('link[data-page-css="order-history"]') && !document.querySelector('link[href*="order-history.css"]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.dataset.pageCss = 'order-history';
+    link.href = '../css/pages/customer/order-history.css?v=20261028';
+    document.head.appendChild(link);
+  }
+
   const content = document.querySelector('#content');
   const params = new URLSearchParams(window.location.search);
   const initialViewId = params.get('viewOrder');
@@ -375,7 +383,7 @@ export async function mount(me) {
           </table>
         </div>
 
-        <div class="customer-order-cards">
+        <div class="customer-order-cards mobile-only-cards">
           ${mobileCardsHtml}
         </div>
 

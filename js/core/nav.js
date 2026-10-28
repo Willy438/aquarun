@@ -867,6 +867,22 @@ function triggerSmoothContentEnter() {
   content.classList.add('spa-view-enter');
 }
 
+function ensureRolePageStylesheet(role, pageKey) {
+  if (typeof document === 'undefined') return;
+  const linkId = `page-style-${role}-${pageKey}`;
+  if (document.getElementById(linkId)) return;
+  const existing = document.querySelector(`link[href*="css/pages/${role}/${pageKey}.css"]`);
+  if (existing) {
+    existing.id = linkId;
+    return;
+  }
+  const link = document.createElement('link');
+  link.id = linkId;
+  link.rel = 'stylesheet';
+  link.href = `../css/pages/${role}/${pageKey}.css?v=20261028`;
+  document.head.appendChild(link);
+}
+
 let currentNavToken = 0;
 
 export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
@@ -908,6 +924,7 @@ export async function navigateRoleSpa(role, targetUrl, { push = true } = {}) {
     `;
   }
   triggerSmoothContentEnter();
+  ensureRolePageStylesheet(role, pageKey);
 
   const moduleKey = `${role}/${pageKey}`;
   let mod = MODULE_CACHE.get(moduleKey);

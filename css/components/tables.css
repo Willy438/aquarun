@@ -321,7 +321,12 @@
 
 
 /* Responsive Desktop vs Mobile Table Views */
-.mobile-only-cards {
+.mobile-only-cards,
+.customer-order-cards,
+.bottle-cards-list,
+.route-mobile-cards,
+.rider-cash-cards,
+.rider-history-cards {
   display: none !important;
 }
 
@@ -330,7 +335,12 @@
     display: none !important;
   }
 
-  .mobile-only-cards {
+  .mobile-only-cards,
+  .customer-order-cards,
+  .bottle-cards-list,
+  .route-mobile-cards,
+  .rider-cash-cards,
+  .rider-history-cards {
     display: flex !important;
     flex-direction: column;
     gap: 12px;
@@ -417,7 +427,12 @@
     display: block !important;
   }
 
-  .mobile-only-cards {
+  .mobile-only-cards,
+  .customer-order-cards,
+  .bottle-cards-list,
+  .route-mobile-cards,
+  .rider-cash-cards,
+  .rider-history-cards {
     display: none !important;
   }
 }

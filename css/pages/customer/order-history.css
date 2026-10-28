@@ -1,7 +1,7 @@
 /* Customer Order History Styles (Mobile-first with mobile cards vs desktop table) */
 
 .customer-order-cards {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 767px) {
