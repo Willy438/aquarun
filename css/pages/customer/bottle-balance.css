@@ -11,7 +11,7 @@
 
 /* Responsive Bottle Ledger (Mobile Cards on < 768px, Desktop Table on >= 768px) */
 .bottle-cards-list {
-  display: none;
+  display: none !important;
 }
 
 @media (max-width: 767px) {
