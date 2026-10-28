@@ -999,6 +999,150 @@ export async function cancelOrder(orderId) {
   invalidateDataCache();
 }
 
+/**
+ * Staff-authorized cancellation of active orders with reason and ledger cleanup.
+ */
+export async function staffCancelOrder(orderId, reason = null) {
+  if (!orderId) throw new Error('Order ID is required.');
+  const cancelReason = (reason && reason.trim()) || 'Cancelled by station staff';
+
+  // 1. Try atomic staff_cancel_order RPC
+  const { error: rpcErr } = await supabase.rpc('staff_cancel_order', {
+    p_order_id: orderId,
+    p_reason: cancelReason,
+  });
+
+  if (!rpcErr) {
+    invalidateDataCache();
+    return;
+  }
+
+  // 2. Fallback to direct table mutation
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('id, status, notes')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (fetchErr) throw new Error(fetchErr.message || 'Could not fetch order.');
+  if (!order) throw new Error('Order not found.');
+  if (['completed', 'cancelled'].includes(order.status)) {
+    throw new Error(`Order is already ${order.status} and cannot be cancelled.`);
+  }
+
+  const existingNotes = (order.notes || '').trim();
+  const updatedNotes = existingNotes ? `${existingNotes}\n${cancelReason}` : cancelReason;
+
+  const { error: updateErr } = await supabase
+    .from('orders')
+    .update({
+      status: 'cancelled',
+      notes: updatedNotes,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (updateErr) throw new Error(updateErr.message || 'Could not cancel order.');
+
+  // Clean up bottle ledger entry if present
+  try {
+    await supabase.from('bottle_ledger').delete().eq('order_id', orderId);
+  } catch (_) {}
+
+  // Log status change
+  try {
+    await supabase.from('order_status_log').insert({
+      order_id: orderId,
+      status: 'cancelled',
+    });
+  } catch (_) {}
+
+  invalidateDataCache();
+}
+
+/**
+ * Staff-authorized rider re-assignment or initial assignment for active orders.
+ */
+export async function staffReassignRider(orderId, newRiderId, note = null) {
+  if (!orderId) throw new Error('Order ID is required.');
+  if (!newRiderId) throw new Error('Please select a rider.');
+
+  // 1. Try atomic staff_reassign_rider RPC
+  const { error: rpcErr } = await supabase.rpc('staff_reassign_rider', {
+    p_order_id: orderId,
+    p_rider_id: newRiderId,
+    p_note: note || null,
+  });
+
+  if (!rpcErr) {
+    invalidateDataCache();
+    return;
+  }
+
+  // 2. Fallback to direct table mutation
+  const { data: order, error: fetchErr } = await supabase
+    .from('orders')
+    .select('id, status, rider_id, slot_note, customer_id')
+    .eq('id', orderId)
+    .maybeSingle();
+
+  if (fetchErr) throw new Error(fetchErr.message || 'Could not fetch order.');
+  if (!order) throw new Error('Order not found.');
+  if (['completed', 'cancelled', 'delivered'].includes(order.status)) {
+    throw new Error(`Cannot re-assign rider for ${order.status} orders.`);
+  }
+
+  // If order was in prep stages, ensure bottle ledger placeholder
+  if (['submitted', 'confirmed', 'refilling'].includes(order.status)) {
+    try {
+      const { data: items } = await supabase
+        .from('order_items')
+        .select('quantity')
+        .eq('order_id', orderId);
+      const totalQty = (items || []).reduce((sum, it) => sum + Number(it.quantity || 0), 0);
+      if (totalQty > 0) {
+        await supabase
+          .from('bottle_ledger')
+          .upsert(
+            {
+              customer_id: order.customer_id,
+              order_id: orderId,
+              bottles_refilled: totalQty,
+            },
+            { onConflict: 'order_id' }
+          );
+      }
+    } catch (_) {}
+  }
+
+  const trimmedNote = note ? note.trim() : '';
+  let updatedSlotNote = order.slot_note || null;
+  if (trimmedNote) {
+    updatedSlotNote = updatedSlotNote ? `${updatedSlotNote}\n${trimmedNote}` : trimmedNote;
+  }
+
+  const { error: updateErr } = await supabase
+    .from('orders')
+    .update({
+      rider_id: newRiderId,
+      status: 'rider_assigned',
+      slot_note: updatedSlotNote,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', orderId);
+
+  if (updateErr) throw new Error(updateErr.message || 'Could not re-assign rider.');
+
+  try {
+    await supabase.from('order_status_log').insert({
+      order_id: orderId,
+      status: 'rider_assigned',
+    });
+  } catch (_) {}
+
+  invalidateDataCache();
+}
+
 export async function staffConfirmOrder(orderId, slotId = null, slotNote = null) {
   const { error } = await supabase.rpc('confirm_order', {
     p_order_id: orderId,

@@ -26,6 +26,8 @@ import {
   isOrderItemNewContainer,
   staffAcceptRiderRemittance,
   staffAssignBatchToRider,
+  staffCancelOrder,
+  staffReassignRider,
   summarizeOrderItems,
 } from '../../services/ordersService.js';
 import { getAllActiveRiders } from '../../services/usersService.js';
@@ -356,13 +358,27 @@ export async function mount() {
             </div>
           </div>
 
-          <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:8px;">
-            ${
-              isActive
-                ? `<button type="button" class="btn btn-primary btn-sm" id="btn-modal-open-processing">Go to Order Processing</button>`
-                : ''
-            }
-            <button type="button" class="btn btn-secondary btn-sm" data-close>Close</button>
+          <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center; gap:8px;">
+            <div>
+              ${
+                isActive
+                  ? `<button type="button" class="btn btn-outline-danger btn-sm" id="btn-modal-cancel-order">Cancel Order</button>`
+                  : ''
+              }
+            </div>
+            <div style="display:flex; gap:8px;">
+              ${
+                ['ready', 'rider_assigned'].includes(status)
+                  ? `<button type="button" class="btn btn-outline-secondary btn-sm" id="btn-modal-reassign-rider">${order.rider_id ? 'Change Rider' : 'Assign Rider'}</button>`
+                  : ''
+              }
+              ${
+                isActive
+                  ? `<button type="button" class="btn btn-primary btn-sm" id="btn-modal-open-processing">Go to Order Processing</button>`
+                  : ''
+              }
+              <button type="button" class="btn btn-secondary btn-sm" data-close>Close</button>
+            </div>
           </div>
         </div>
       `;
@@ -372,6 +388,94 @@ export async function mount() {
       backdrop.querySelectorAll('[data-close]').forEach((btn) => btn.addEventListener('click', close));
       backdrop.addEventListener('click', (e) => {
         if (e.target === backdrop) close();
+      });
+
+      backdrop.querySelector('#btn-modal-cancel-order')?.addEventListener('click', async (e) => {
+        const confirmed = await confirmModal({
+          title: `Cancel Order #${order.order_number}?`,
+          message: `Are you sure you want to cancel this order from ${customerName}? This will mark the order as Cancelled.`,
+          confirmText: 'Yes, cancel order',
+          cancelText: 'Keep order',
+          danger: true,
+        });
+        if (!confirmed) return;
+
+        const btn = e.currentTarget;
+        setBusy(btn, true, 'Cancelling...');
+        try {
+          await staffCancelOrder(order.id, 'Cancelled by station staff');
+          showToast(`Order #${order.order_number} has been cancelled.`, 'success');
+          close();
+          await loadData();
+        } catch (err) {
+          showToast(err.message || 'Could not cancel order.', 'error');
+          setBusy(btn, false);
+        }
+      });
+
+      backdrop.querySelector('#btn-modal-reassign-rider')?.addEventListener('click', async () => {
+        try {
+          const riders = activeRiders && activeRiders.length ? activeRiders : await getAllActiveRiders();
+          if (!riders || riders.length === 0) {
+            showToast('No active riders found in system.', 'warning');
+            return;
+          }
+
+          const pickerBackdrop = document.createElement('div');
+          pickerBackdrop.className = 'modal-backdrop';
+          pickerBackdrop.style.cssText = 'position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; background:rgba(15,23,42,0.65) !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:16px !important; z-index:1000001 !important; backdrop-filter:blur(3px) !important;';
+
+          pickerBackdrop.innerHTML = `
+            <div class="modal" role="dialog" aria-modal="true" style="max-width: 420px; width: 100%; border-radius: 14px; background: #ffffff !important; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25) !important; position: relative !important;">
+              <div class="modal-header" style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; display:flex; justify-content:space-between; align-items:center;">
+                <h3 class="modal-title" style="margin:0; font-size:16px; font-weight:700; color:#0f172a;">${order.rider_id ? 'Change Assigned Rider' : 'Assign Rider'}</h3>
+                <button type="button" class="modal-close" data-close-picker aria-label="Close" style="background:none; border:none; font-size:22px; cursor:pointer; color:#64748b; line-height:1;">×</button>
+              </div>
+              <div class="modal-body" style="padding: 18px 20px;">
+                <p style="font-size:13px; color:#475569; margin:0 0 12px;">Select rider for Order <strong>#${escapeHtml(order.order_number)}</strong>:</p>
+                <div class="field">
+                  <label class="field-label" for="picker-rider-select">Rider</label>
+                  <select class="select" id="picker-rider-select">
+                    ${riders.map((r) => `<option value="${escapeHtml(r.id)}"${r.id === order.rider_id ? ' selected' : ''}>${escapeHtml(r.full_name)}${r.is_available ? ' (Available)' : ' (Busy)'}</option>`).join('')}
+                  </select>
+                </div>
+              </div>
+              <div class="modal-footer" style="padding: 14px 20px; border-top: 1px solid #e2e8f0; display:flex; justify-content:flex-end; gap:8px;">
+                <button type="button" class="btn btn-secondary btn-sm" data-close-picker>Cancel</button>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-save-reassign">Assign Rider</button>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(pickerBackdrop);
+          const closePicker = () => pickerBackdrop.remove();
+          pickerBackdrop.querySelectorAll('[data-close-picker]').forEach((b) => b.addEventListener('click', closePicker));
+          pickerBackdrop.addEventListener('click', (e) => {
+            if (e.target === pickerBackdrop) closePicker();
+          });
+
+          pickerBackdrop.querySelector('#btn-save-reassign')?.addEventListener('click', async (e) => {
+            const selectedRiderId = pickerBackdrop.querySelector('#picker-rider-select')?.value;
+            if (!selectedRiderId) return;
+            const riderSelect = pickerBackdrop.querySelector('#picker-rider-select');
+            const riderText = riderSelect?.options[riderSelect.selectedIndex]?.text?.replace(/\s*\([^)]*\)/, '') || 'Rider';
+
+            const saveBtn = e.currentTarget;
+            setBusy(saveBtn, true, 'Assigning...');
+            try {
+              await staffReassignRider(order.id, selectedRiderId, 'Rider assigned by station staff.');
+              showToast(`Order #${order.order_number} assigned to ${riderText}.`, 'success');
+              closePicker();
+              close();
+              await loadData();
+            } catch (err) {
+              showToast(err.message || 'Could not assign rider.', 'error');
+              setBusy(saveBtn, false);
+            }
+          });
+        } catch (err) {
+          showToast(err.message || 'Could not load riders list.', 'error');
+        }
       });
 
       backdrop.querySelector('#btn-modal-open-processing')?.addEventListener('click', () => {

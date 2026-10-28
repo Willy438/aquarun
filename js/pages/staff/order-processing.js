@@ -10,14 +10,16 @@ import {
   renderStaffOrderHero,
   staffAdjustDeliverySlot,
   staffAssignRider,
+  staffCancelOrder,
   staffConfirmOrder,
   staffConfirmPayment,
   staffFastTrackAssignRider,
   staffMarkReady,
+  staffReassignRider,
   staffStartRefill,
 } from '../../services/ordersService.js';
 import { getSlotAvailability } from '../../services/slotsService.js';
-import { getAvailableRiders } from '../../services/usersService.js';
+import { getAllActiveRiders, getAvailableRiders } from '../../services/usersService.js';
 
 const ICONS = {
   cart: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M3 4h2l2.4 11.2a2 2 0 0 0 2 1.6h8.8a2 2 0 0 0 2-1.6L21 7H6"/></svg>`,
@@ -190,9 +192,10 @@ export async function mount(me) {
         return;
       }
 
-      const [slots, availableRiders] = await Promise.all([
+      const [slots, availableRiders, allActiveRiders] = await Promise.all([
         getSlotAvailability(order.delivery_date),
         getAvailableRiders(),
+        getAllActiveRiders(),
       ]);
 
       const effectiveSlot = getEffectiveSlot(order);
@@ -255,7 +258,34 @@ export async function mount(me) {
             </div>
           `;
         }
-      } else if (['rider_assigned', 'out_for_delivery', 'delivered', 'completed'].includes(order.status)) {
+      } else if (order.status === 'rider_assigned') {
+        const currentRiderName = order.rider?.full_name || 'Assigned rider';
+        riderControlHtml = `
+          <div class="proc-locked-box" style="margin-top: 8px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <span style="font-size:12px; color:#64748b; display:block;">Assigned rider</span>
+                <strong style="color:#0f172a; font-size:14px;">${escapeHtml(currentRiderName)}</strong>
+              </div>
+              <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-toggle-reassign" style="padding: 4px 10px; font-size:12px;">Change rider</button>
+            </div>
+            <div id="reassign-rider-panel" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1;">
+              <label class="field-label" for="reassign-rider-select" style="font-size:12px;">Select replacement rider</label>
+              <div style="display:flex; gap:8px; margin-top:4px;">
+                <select class="select" id="reassign-rider-select" style="flex:1; padding:6px 10px; font-size:13px;">
+                  ${allActiveRiders
+                    .map(
+                      (r) =>
+                        `<option value="${escapeHtml(r.id)}"${r.id === order.rider_id ? ' selected' : ''}>${escapeHtml(r.full_name)}${r.is_available ? ' (Available)' : ' (Busy)'}</option>`
+                    )
+                    .join('')}
+                </select>
+                <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-reassign">Re-assign</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (['out_for_delivery', 'delivered', 'completed'].includes(order.status)) {
         riderControlHtml = `
           <div class="proc-locked-box" style="margin-top: 8px;">
             Assigned rider: <strong>${escapeHtml(order.rider?.full_name || 'Assigned')}</strong>
@@ -327,6 +357,18 @@ export async function mount(me) {
               }
 
               ${riderControlHtml}
+
+              ${
+                ['submitted', 'confirmed', 'refilling', 'ready', 'rider_assigned'].includes(order.status)
+                  ? `
+                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+                      <button type="button" class="btn btn-outline-danger btn-block" id="btn-cancel-order" style="font-size: 13px;">
+                        Cancel order
+                      </button>
+                    </div>
+                  `
+                  : ''
+              }
             </div>
           </div>
         </div>
@@ -349,6 +391,64 @@ export async function mount(me) {
         } catch (err) {
           showToast(err.message || 'Could not adjust delivery window.', 'error');
           await renderPage();
+        }
+      });
+
+      document.querySelector('#btn-toggle-reassign')?.addEventListener('click', () => {
+        const panel = document.querySelector('#reassign-rider-panel');
+        if (panel) {
+          panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+        }
+      });
+
+      document.querySelector('#btn-confirm-reassign')?.addEventListener('click', async (e) => {
+        const newRiderId = document.querySelector('#reassign-rider-select')?.value;
+        if (!newRiderId) return;
+        const riderSelect = document.querySelector('#reassign-rider-select');
+        const riderName = riderSelect?.options[riderSelect.selectedIndex]?.text?.replace(/\s*\([^)]*\)/, '') || 'Rider';
+
+        const confirmed = await confirmModal({
+          title: `Re-assign Order #${order.order_number}?`,
+          message: `Are you sure you want to re-assign this order to ${riderName}?`,
+          confirmText: 'Re-assign rider',
+          cancelText: 'Keep current',
+        });
+        if (!confirmed) return;
+
+        const btn = e.currentTarget;
+        setBusy(btn, true, 'Re-assigning...');
+        try {
+          await staffReassignRider(order.id, newRiderId, 'Rider re-assigned by station staff.');
+          showToast(`Order #${order.order_number} re-assigned to ${riderName}.`, 'success');
+          await renderNav(me, 'order-processing');
+          await renderPage();
+        } catch (err) {
+          showToast(err.message || 'Could not re-assign rider.', 'error');
+          setBusy(btn, false);
+        }
+      });
+
+      document.querySelector('#btn-cancel-order')?.addEventListener('click', async (e) => {
+        const confirmed = await confirmModal({
+          title: `Cancel Order #${order.order_number}?`,
+          message: `Are you sure you want to cancel this order from ${order.customer?.full_name || 'Customer'}? This will stop processing and mark the order as Cancelled.`,
+          confirmText: 'Yes, cancel order',
+          cancelText: 'Keep order',
+          danger: true,
+        });
+        if (!confirmed) return;
+
+        const btn = e.currentTarget;
+        setBusy(btn, true, 'Cancelling...');
+        try {
+          await staffCancelOrder(order.id, 'Cancelled by station staff');
+          showToast(`Order #${order.order_number} has been cancelled.`, 'success');
+          await renderNav(me, 'order-processing');
+          currentOrderId = null;
+          await renderPage();
+        } catch (err) {
+          showToast(err.message || 'Could not cancel order.', 'error');
+          setBusy(btn, false);
         }
       });
 
