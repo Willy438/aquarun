@@ -1038,7 +1038,6 @@ export async function staffCancelOrder(orderId, reason = null) {
     .update({
       status: 'cancelled',
       notes: updatedNotes,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', orderId);
 
@@ -1127,7 +1126,6 @@ export async function staffReassignRider(orderId, newRiderId, note = null) {
       rider_id: newRiderId,
       status: 'rider_assigned',
       slot_note: updatedSlotNote,
-      updated_at: new Date().toISOString(),
     })
     .eq('id', orderId);
 

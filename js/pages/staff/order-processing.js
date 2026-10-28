@@ -261,18 +261,21 @@ export async function mount(me) {
       } else if (order.status === 'rider_assigned') {
         const currentRiderName = order.rider?.full_name || 'Assigned rider';
         riderControlHtml = `
-          <div class="proc-locked-box" style="margin-top: 8px;">
-            <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="border: 1.5px solid #cbd5e1; border-radius: 11px; padding: 14px 16px; background: #ffffff;">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
               <div>
-                <span style="font-size:12px; color:#64748b; display:block;">Assigned rider</span>
-                <strong style="color:#0f172a; font-size:14px;">${escapeHtml(currentRiderName)}</strong>
+                <span style="display: block; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b;">Assigned Rider</span>
+                <strong style="font-size: 15px; color: #0f172a;">${escapeHtml(currentRiderName)}</strong>
+                ${order.rider?.phone ? `<span style="display: block; font-size: 12px; color: #64748b; margin-top: 1px;">${escapeHtml(order.rider.phone)}</span>` : ''}
               </div>
-              <button type="button" class="btn btn-outline-secondary btn-sm" id="btn-toggle-reassign" style="padding: 4px 10px; font-size:12px;">Change rider</button>
+              <span class="pill pill-blue" style="font-weight: 700; font-size: 11px;">Assigned</span>
             </div>
-            <div id="reassign-rider-panel" style="display:none; margin-top:10px; padding-top:10px; border-top:1px dashed #cbd5e1;">
-              <label class="field-label" for="reassign-rider-select" style="font-size:12px;">Select replacement rider</label>
-              <div style="display:flex; gap:8px; margin-top:4px;">
-                <select class="select" id="reassign-rider-select" style="flex:1; padding:6px 10px; font-size:13px;">
+            <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #e2e8f0;">
+              <label class="field-label" for="reassign-rider-select" style="font-size: 12px; font-weight: 600; color: #334155; margin-bottom: 6px;">
+                Re-assign to another rider
+              </label>
+              <div style="display: flex; gap: 8px;">
+                <select class="select" id="reassign-rider-select" style="flex: 1; font-size: 13px;">
                   ${allActiveRiders
                     .map(
                       (r) =>
@@ -280,7 +283,9 @@ export async function mount(me) {
                     )
                     .join('')}
                 </select>
-                <button type="button" class="btn btn-primary btn-sm" id="btn-confirm-reassign">Re-assign</button>
+                <button type="button" class="btn btn-secondary" id="btn-confirm-reassign" style="font-weight: 600; border: 1.5px solid #0f172a; color: #0f172a; background: #f8fafc; padding: 0 14px; white-space: nowrap;">
+                  Re-assign
+                </button>
               </div>
             </div>
           </div>
@@ -290,6 +295,101 @@ export async function mount(me) {
           <div class="proc-locked-box" style="margin-top: 8px;">
             Assigned rider: <strong>${escapeHtml(order.rider?.full_name || 'Assigned')}</strong>
           </div>
+        `;
+      }
+
+      let actionStackHtml = '';
+      if (['submitted', 'confirmed', 'refilling', 'ready'].includes(order.status)) {
+        actionStackHtml = `
+          ${
+            canAdjustSlot
+              ? `
+                <div class="field">
+                  <label class="field-label" for="adjust-slot-select">Adjust delivery window</label>
+                  <select class="select" id="adjust-slot-select">
+                    ${slotOptionsHtml}
+                  </select>
+                </div>
+              `
+              : ''
+          }
+
+          ${riderControlHtml}
+
+          <div style="margin-top: 6px;">
+            <button
+              type="button"
+              class="btn btn-primary btn-block"
+              id="primary-step-btn"
+              ${!actionMeta.enabled || (order.status === 'ready' && availableRiders.length === 0) ? 'disabled' : ''}
+            >
+              ${escapeHtml(actionMeta.label)}
+            </button>
+            <p class="proc-action-hint" style="margin-top: 6px; text-align: center;">${escapeHtml(actionMeta.hint)}</p>
+          </div>
+
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+            <button type="button" class="btn btn-outline-danger btn-block" id="btn-cancel-order" style="font-size: 13px;">
+              Cancel order
+            </button>
+          </div>
+        `;
+      } else if (order.status === 'rider_assigned') {
+        actionStackHtml = `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
+              <strong style="font-size: 13.5px; color: #0f172a;">Waiting for rider to start delivery</strong>
+            </div>
+            <p style="margin: 4px 0 0 16px; font-size: 12px; color: #64748b;">The assigned rider will start the delivery when leaving the station.</p>
+          </div>
+
+          ${riderControlHtml}
+
+          ${
+            canAdjustSlot
+              ? `
+                <div class="field">
+                  <label class="field-label" for="adjust-slot-select">Adjust delivery window</label>
+                  <select class="select" id="adjust-slot-select">
+                    ${slotOptionsHtml}
+                  </select>
+                </div>
+              `
+              : ''
+          }
+
+          <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
+            <button type="button" class="btn btn-outline-danger btn-block" id="btn-cancel-order" style="font-size: 13px;">
+              Cancel order
+            </button>
+          </div>
+        `;
+      } else if (order.status === 'delivered' && order.payment_status === 'unpaid') {
+        actionStackHtml = `
+          <div class="proc-locked-box">
+            Assigned rider: <strong>${escapeHtml(order.rider?.full_name || 'Assigned')}</strong>
+          </div>
+
+          <div style="margin-top: 6px;">
+            <button
+              type="button"
+              class="btn btn-primary btn-block"
+              id="primary-step-btn"
+            >
+              ${escapeHtml(actionMeta.label)}
+            </button>
+            <p class="proc-action-hint" style="margin-top: 6px; text-align: center;">${escapeHtml(actionMeta.hint)}</p>
+          </div>
+        `;
+      } else {
+        actionStackHtml = `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px;">
+            <p style="margin: 0; font-size: 13px; font-weight: 600; color: #0f172a;">${escapeHtml(actionMeta.label)}</p>
+            <p style="margin: 4px 0 0; font-size: 12px; color: #64748b;">${escapeHtml(actionMeta.hint)}</p>
+          </div>
+
+          ${riderControlHtml}
         `;
       }
 
@@ -333,42 +433,7 @@ export async function mount(me) {
             </div>
 
             <div class="proc-action-stack">
-              <button
-                type="button"
-                class="btn btn-primary btn-block"
-                id="primary-step-btn"
-                ${!actionMeta.enabled || (order.status === 'ready' && availableRiders.length === 0) ? 'disabled' : ''}
-              >
-                ${escapeHtml(actionMeta.label)}
-              </button>
-              <p class="proc-action-hint">${escapeHtml(actionMeta.hint)}</p>
-
-              ${
-                canAdjustSlot
-                  ? `
-                    <div class="field">
-                      <label class="field-label" for="adjust-slot-select">Adjust delivery window</label>
-                      <select class="select" id="adjust-slot-select">
-                        ${slotOptionsHtml}
-                      </select>
-                    </div>
-                  `
-                  : ''
-              }
-
-              ${riderControlHtml}
-
-              ${
-                ['submitted', 'confirmed', 'refilling', 'ready', 'rider_assigned'].includes(order.status)
-                  ? `
-                    <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed #e2e8f0;">
-                      <button type="button" class="btn btn-outline-danger btn-block" id="btn-cancel-order" style="font-size: 13px;">
-                        Cancel order
-                      </button>
-                    </div>
-                  `
-                  : ''
-              }
+              ${actionStackHtml}
             </div>
           </div>
         </div>
@@ -391,13 +456,6 @@ export async function mount(me) {
         } catch (err) {
           showToast(err.message || 'Could not adjust delivery window.', 'error');
           await renderPage();
-        }
-      });
-
-      document.querySelector('#btn-toggle-reassign')?.addEventListener('click', () => {
-        const panel = document.querySelector('#reassign-rider-panel');
-        if (panel) {
-          panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
         }
       });
 
