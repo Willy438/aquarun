@@ -128,8 +128,63 @@ function getStationCity(settings) {
   return 'Caloocan';
 }
 
+// Caloocan North Official Numbered Barangays (with bounding boxes & centroids)
+const CALOOCAN_NORTH_BARANGAYS = [
+  { num: 171, name: 'Barangay 171', lat: 14.75256, lon: 121.01756, bb: [14.74201, 14.77141, 121.00087, 121.03471] }, // Bagumbong
+  { num: 172, name: 'Barangay 172', lat: 14.74898, lon: 121.04119, bb: [14.73805, 14.75606, 121.03477, 121.04643] }, // Urduja
+  { num: 173, name: 'Barangay 173', lat: 14.74842, lon: 121.03637, bb: [14.74437, 14.76135, 121.02894, 121.04003] }, // Congress
+  { num: 174, name: 'Barangay 174', lat: 14.76149, lon: 121.04951, bb: [14.75606, 14.76744, 121.04367, 121.05365] }, // Camarin East / St Benedict / La Forteza II
+  { num: 175, name: 'Barangay 175', lat: 14.76567, lon: 121.04495, bb: [14.75386, 14.77326, 121.02676, 121.04838] }, // Camarin West / La Forteza I / Palmera Springs
+  { num: 176, name: 'Barangay 176', lat: 14.77524, lon: 121.04492, bb: [14.76548, 14.78533, 121.02347, 121.06426] }, // Bagong Silang
+  { num: 177, name: 'Barangay 177', lat: 14.74869, lon: 121.04951, bb: [14.74215, 14.75688, 121.04367, 121.05920] }, // Cielito Homes / Camarin South
+  { num: 178, name: 'Barangay 178', lat: 14.75593, lon: 121.05958, bb: [14.74200, 14.76555, 121.05334, 121.07793] }, // Camarin Kiko
+  { num: 179, name: 'Barangay 179', lat: 14.76000, lon: 121.06200, bb: [14.75300, 14.76800, 121.05600, 121.06800] }, // Amparo
+  { num: 180, name: 'Barangay 180', lat: 14.76329, lon: 121.07886, bb: [14.75329, 14.77329, 121.06886, 121.08886] }, // Tala
+  { num: 181, name: 'Barangay 181', lat: 14.76800, lon: 121.07200, bb: [14.76000, 14.77500, 121.06500, 121.07800] }, // Pangarap
+  { num: 182, name: 'Barangay 182', lat: 14.77200, lon: 121.07500, bb: [14.76500, 14.78000, 121.07000, 121.08200] }, // Pangarap
+  { num: 183, name: 'Barangay 183', lat: 14.76500, lon: 121.08200, bb: [14.75800, 14.77200, 121.07500, 121.08900] }, // Tala
+  { num: 184, name: 'Barangay 184', lat: 14.77000, lon: 121.08500, bb: [14.76200, 14.77800, 121.07800, 121.09200] }, // Tala
+  { num: 185, name: 'Barangay 185', lat: 14.77500, lon: 121.09000, bb: [14.76800, 14.78200, 121.08200, 121.09600] }, // Malaria
+  { num: 186, name: 'Barangay 186', lat: 14.76782, lon: 121.07032, bb: [14.76200, 14.77400, 121.06400, 121.07500] }, // Barracks
+  { num: 167, name: 'Barangay 167', lat: 14.72931, lon: 121.01267, bb: [14.72437, 14.73678, 121.00304, 121.02805] }, // Llano
+  { num: 168, name: 'Barangay 168', lat: 14.73969, lon: 121.01916, bb: [14.73070, 14.74669, 121.00462, 121.03477] }, // Deparo
+  { num: 169, name: 'Barangay 169', lat: 14.73213, lon: 121.02371, bb: [14.72887, 14.73637, 121.01881, 121.03084] }, // BF Homes
+  { num: 170, name: 'Barangay 170', lat: 14.73765, lon: 121.03217, bb: [14.73268, 14.74437, 121.02705, 121.03625] }, // Deparo
+];
+
+function resolveCaloocanBarangay(lat, lon) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return '';
+  if (lat < 14.71 || lat > 14.80 || lon < 120.99 || lon > 121.11) return '';
+  const matches = CALOOCAN_NORTH_BARANGAYS.filter((b) => {
+    return lat >= b.bb[0] && lat <= b.bb[1] && lon >= b.bb[2] && lon <= b.bb[3];
+  });
+  if (matches.length === 1) return matches[0].name;
+  if (matches.length > 1) {
+    let best = matches[0];
+    let minD = Infinity;
+    for (const m of matches) {
+      const d = Math.hypot(lat - m.lat, lon - m.lon);
+      if (d < minD) {
+        minD = d;
+        best = m;
+      }
+    }
+    return best.name;
+  }
+  let closest = CALOOCAN_NORTH_BARANGAYS[0];
+  let minD = Infinity;
+  for (const b of CALOOCAN_NORTH_BARANGAYS) {
+    const d = Math.hypot(lat - b.lat, lon - b.lon);
+    if (d < minD) {
+      minD = d;
+      closest = b;
+    }
+  }
+  return closest.name;
+}
+
 // Multi-provider Reverse Geocoding API: Coordinates -> Address Fields
-// Prioritizes authoritative Philippine Barangay LGU boundaries via Nominatim, with BigDataCloud and Photon fallbacks
+// Accurately extracts House / Street, official numbered Barangay (e.g. 171, 172, 174, etc.), and City
 async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
   let street = '';
   let barangay = '';
@@ -137,234 +192,110 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
   let detectedLandmark = '';
   let full = '';
 
+  const numLat = Number(lat);
+  const numLon = Number(lon);
   const stationCity = stationSettings?.city || (stationSettings?.address ? getStationCity(stationSettings) : 'Caloocan');
 
-  // 1. High-accuracy Nominatim reverse geocoder (authoritative for Philippine LGU Barangays)
+  // Query Photon and Nominatim in parallel for maximum speed and data completeness
+  const photonUrl = `https://photon.komoot.io/reverse?lat=${numLat}&lon=${numLon}`;
+  const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${numLat}&lon=${numLon}&zoom=18&addressdetails=1&email=aquarun.ph@gmail.com`;
+
+  let pData = null;
+  let nData = null;
+
   try {
-    const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1&email=aquarun.ph@gmail.com`;
-    const nResp = await fetchWithTimeout(
-      nomUrl,
-      {
-        headers: {
-          'Accept-Language': 'en',
-          'User-Agent': 'AquaRunApp/1.0 (aquarun.ph@gmail.com)',
-        },
-      },
-      3500
-    );
-    if (nResp.ok) {
-      const nData = await nResp.json();
-      const a = nData.address || {};
-      if (a.amenity || a.shop || a.building || a.tourism) {
-        const rawPoi = (a.amenity || a.shop || a.building || a.tourism || '').trim();
-        if (rawPoi && !/^(yes|no|residential|house|building|apartments)$/i.test(rawPoi)) {
-          detectedLandmark = rawPoi;
-        }
-      }
-      let subdivision = '';
-      const rawSub = (a.residential || a.subdivision || '').trim();
-      if (rawSub && !/^(zone\s*\d+|district\s*\d+|northern\s*manila|caloocan)/i.test(rawSub)) {
-        subdivision = rawSub;
-      }
-      const houseNumber = a.house_number ? `${a.house_number} ` : '';
-      const road = a.road || a.pedestrian || a.street || '';
-      if (road) {
-        street = `${houseNumber}${road}`.trim();
-        if (subdivision && !street.toLowerCase().includes(subdivision.toLowerCase())) {
-          street = `${street}, ${subdivision}`;
-        }
-      } else if (subdivision) {
-        street = `${houseNumber}${subdivision}`.trim();
-      } else if (nData.display_name && !a.residential) {
-        street = nData.display_name.split(',')[0].trim();
-      }
+    const [pResp, nResp] = await Promise.all([
+      fetchWithTimeout(photonUrl, {}, 3200).catch(() => null),
+      fetchWithTimeout(nomUrl, { headers: { 'Accept-Language': 'en' } }, 3200).catch(() => null),
+    ]);
 
-      // In OSM Philippines, address.quarter is specifically mapped to the Barangay
-      const qClean = cleanBarangayCandidate(a.quarter);
-      if (qClean) {
-        barangay = qClean.startsWith('Barangay') ? qClean : `Barangay ${qClean}`;
-      }
-
-      // Check display_name for "Barangay <name/number>"
-      if (!barangay) {
-        const fromDisplay = extractBarangayFromDisplayName(nData.display_name);
-        if (fromDisplay) {
-          barangay = fromDisplay;
-        }
-      }
-
-      // Check borough, suburb, or village
-      if (!barangay) {
-        const candidates = [a.quarter, a.borough, a.suburb, a.village, a.neighbourhood];
-        for (const c of candidates) {
-          const clean = cleanBarangayCandidate(c);
-          if (clean && /barangay|\bbrgy\b/i.test(clean)) {
-            barangay = clean;
-            break;
-          }
-        }
-        if (!barangay) {
-          for (const c of candidates) {
-            const clean = cleanBarangayCandidate(c);
-            if (clean && /^(Camarin|Bagong Silang|Tala|Deparo|Caybiga|Bagumbong|Llano|Amparo|Calatagan|Poblacion|San Jose|Commonwealth|Muzon|Graceville|Tungkong Mangga)$/i.test(clean)) {
-              barangay = clean.startsWith('Barangay') ? clean : `Barangay ${clean}`;
-              break;
-            }
-          }
-        }
-      }
-
-      const nomCity = cleanCityName(a.city || a.town || a.municipality || a.city_district);
-      if (nomCity) {
-        resolvedCity = nomCity;
-      }
-      if (nData.display_name) {
-        full = nData.display_name;
-      }
+    if (pResp && pResp.ok) {
+      pData = await pResp.json().catch(() => null);
     }
-  } catch (err) {
-    console.warn('Nominatim reverse error:', err.message);
+    if (nResp && nResp.ok) {
+      nData = await nResp.json().catch(() => null);
+    }
+  } catch {}
+
+  const p = pData?.features?.[0]?.properties || {};
+  const a = nData?.address || {};
+
+  // 1. Street and house number detection
+  const houseNumber = (a.house_number || p.housenumber || p.house_number || '').trim();
+  const housePrefix = houseNumber ? `${houseNumber} ` : '';
+  const road = (a.road || a.pedestrian || a.street || p.street || (p.type === 'street' ? p.name : '') || '').trim();
+
+  // 2. Subdivision / village / phase detection
+  let subdivision = '';
+  const rawSubd = (p.locality || a.residential || a.subdivision || '').trim();
+  if (rawSubd && !/^(zone\s*\d+|district\s*\d+|northern\s*manila|metro\s*manila|caloocan|barangay\s*\d*|brgy\s*\d*)/i.test(rawSubd)) {
+    subdivision = rawSubd;
   }
 
-  // 2. BigDataCloud reverse geocoder fallback
-  if (!street || !barangay) {
-    try {
-      const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
-      const bResp = await fetchWithTimeout(bdcUrl, {}, 3500);
-      if (bResp.ok) {
-        const bData = await bResp.json();
-        const admins = bData.localityInfo?.administrative || [];
+  if (road) {
+    street = `${housePrefix}${road}`.trim();
+    if (subdivision && !street.toLowerCase().includes(subdivision.toLowerCase())) {
+      street = `${street}, ${subdivision}`;
+    }
+  } else if (subdivision) {
+    street = `${housePrefix}${subdivision}`.trim();
+  } else if (p.name && !/(city|metro|philippines|barangay|brgy)/i.test(p.name)) {
+    street = `${housePrefix}${p.name}`.trim();
+  } else if (nData?.display_name) {
+    const rawFirst = nData.display_name.split(',')[0].trim();
+    if (!/^(barangay|brgy\.?)\b/i.test(rawFirst)) {
+      street = rawFirst;
+    }
+  }
+  if (street && /^(barangay|brgy\.?)\b/i.test(street.trim())) {
+    street = '';
+  }
 
-        if (!barangay) {
-          // adminLevel 8 in Philippines is universally the official Barangay
-          const level8 = admins.find((a) => a.adminLevel === 8);
-          if (level8) {
-            const clean = cleanBarangayCandidate(level8.name);
-            if (clean) {
-              barangay = clean.startsWith('Barangay') ? clean : `Barangay ${clean}`;
-            }
-          }
-          if (!barangay) {
-            for (const a of admins) {
-              const clean = cleanBarangayCandidate(a.name);
-              if (clean && /barangay|\bbrgy\b/i.test(clean)) {
-                barangay = clean;
-                break;
-              }
-            }
-          }
-          if (!barangay) {
-            for (const a of admins) {
-              const clean = cleanBarangayCandidate(a.name);
-              if (clean && /^(Camarin|Bagong Silang|Tala|Deparo|Caybiga|Bagumbong|Llano|Amparo|Calatagan|Poblacion|San Jose|Commonwealth)$/i.test(clean)) {
-                barangay = clean.startsWith('Barangay') ? clean : `Barangay ${clean}`;
-                break;
-              }
-            }
-          }
-        }
+  // 3. Landmark / POI detection
+  const poi = (a.amenity || a.shop || a.building || a.tourism || (p.type === 'house' && p.name !== road ? p.name : '') || '').trim();
+  if (poi && !/^(yes|no|residential|house|building|apartments)$/i.test(poi) && !street.toLowerCase().includes(poi.toLowerCase())) {
+    detectedLandmark = poi;
+  }
 
-        if (!street && bData.locality) {
-          street = bData.locality;
-        }
+  // 4. Exact Barangay resolution (Strictly official numbered Barangay: e.g. Barangay 171, 172, 174, etc.)
+  const qClean = cleanBarangayCandidate(a.quarter);
+  if (qClean && /\d+/.test(qClean)) {
+    barangay = qClean.startsWith('Barangay') ? qClean : `Barangay ${qClean}`;
+  }
 
-        if (!resolvedCity && bData.locality) {
-          resolvedCity = bData.locality.replace(/^City of\s+/i, '').trim();
-        }
-
-        if (!full && bData.locality) {
-          full = [bData.locality, barangay, resolvedCity].filter(Boolean).join(', ');
-        }
-      }
-    } catch (err) {
-      console.warn('BDC reverse error:', err.message);
+  if (!barangay && nData?.display_name) {
+    const fromDisplay = extractBarangayFromDisplayName(nData.display_name);
+    if (fromDisplay && /\d+/.test(fromDisplay)) {
+      barangay = fromDisplay;
     }
   }
 
-  // 3. Photon reverse geocoder fallback
-  if (!street || !barangay) {
-    try {
-      const pUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`;
-      const pResp = await fetchWithTimeout(pUrl, {}, 3500);
-      if (pResp.ok) {
-        const pData = await pResp.json();
-        const feat = pData.features?.[0];
-        if (feat && feat.properties) {
-          const p = feat.properties;
-
-          const houseNum = p.housenumber ? `${p.housenumber} ` : '';
-          const pSubd = (p.locality || '').trim();
-          let cleanSubd = '';
-          if (pSubd && !/^(zone\s*\d+|district\s*\d+|northern\s*manila|caloocan)/i.test(pSubd)) {
-            cleanSubd = pSubd;
-          }
-          if (!detectedLandmark && p.name && p.name !== p.street && !/(street|road|avenue|blvd)/i.test(p.name)) {
-            detectedLandmark = p.name;
-          }
-          if (!street) {
-            if (p.street) {
-              street = `${houseNum}${p.street}`.trim();
-              if (cleanSubd && !street.toLowerCase().includes(cleanSubd.toLowerCase())) {
-                street = `${street}, ${cleanSubd}`;
-              }
-            } else if (p.name && /(street|st|road|rd|avenue|ave|lane|ln|drive|dr|way|boulevard|blvd|highway|hwy)/i.test(p.name)) {
-              street = `${houseNum}${p.name}`.trim();
-              if (cleanSubd && !street.toLowerCase().includes(cleanSubd.toLowerCase())) {
-                street = `${street}, ${cleanSubd}`;
-              }
-            } else if (cleanSubd) {
-              street = `${houseNum}${cleanSubd}`.trim();
-            }
-          }
-
-          if (!barangay) {
-            const brgyCandidates = [p.district, p.name, p.suburb, p.locality];
-            for (const c of brgyCandidates) {
-              const clean = cleanBarangayCandidate(c);
-              if (clean && /barangay|\bbrgy\b/i.test(clean)) {
-                barangay = clean;
-                break;
-              }
-            }
-            if (!barangay) {
-              for (const c of brgyCandidates) {
-                const clean = cleanBarangayCandidate(c);
-                if (clean && /^(Camarin|Bagong Silang|Tala|Deparo|Caybiga|Bagumbong|Llano|Amparo|Calatagan)$/i.test(clean)) {
-                  barangay = clean.startsWith('Barangay') ? clean : `Barangay ${clean}`;
-                  break;
-                }
-              }
-            }
-          }
-
-          if (!resolvedCity && p.city) resolvedCity = p.city.trim();
-          if (!full) full = [p.name, p.street, p.locality, p.district, p.city].filter(Boolean).join(', ');
-        }
-      }
-    } catch (err) {
-      console.warn('Photon reverse error:', err.message);
+  if (!barangay) {
+    const geoBrgy = resolveCaloocanBarangay(numLat, numLon);
+    if (geoBrgy) {
+      barangay = geoBrgy;
     }
   }
 
-  // Final check: Strictly reject subdivisions or zones that leaked into barangay
-  if (barangay) {
-    if (/\b(heights|subdivision|subd|village|homes|compound|estate|residences|villas|gardens|park|townhomes|condo|condominium|terrace|springs|zone|district)\b/i.test(barangay)) {
-      barangay = '';
-    }
+  if (barangay && /^\d+$/.test(barangay.trim())) {
+    barangay = `Barangay ${barangay.trim()}`;
   }
 
-  // Determine city: Strictly use the geocoding API identified city (e.g. Caloocan, Quezon City, San Jose del Monte)
-  let city = cleanCityName(resolvedCity) || stationCity || 'Caloocan';
+  // 5. City resolution
+  const nomCity = cleanCityName(a.city || a.town || a.municipality || p.city);
+  let city = nomCity || stationCity || 'Caloocan';
   if (/university/i.test(city)) {
     city = 'Caloocan';
   }
+
+  full = [street, barangay, city].filter(Boolean).join(', ');
 
   return {
     street: street || '',
     barangay: barangay || '',
     city: city || 'Caloocan',
     landmark: detectedLandmark || '',
-    full: full || [street, barangay, city].filter(Boolean).join(', '),
+    full,
   };
 }
 
@@ -384,7 +315,18 @@ async function searchAddressCoordinates(street, barangay, city = 'Caloocan', sta
       const pResp = await fetchWithTimeout(photonUrl, {}, 3500);
       if (pResp.ok) {
         const pData = await pResp.json();
-        const feat = pData.features?.[0];
+        let feat = pData.features?.[0];
+        if (!feat && street && barangay) {
+          try {
+            const altQuery = [street, city, 'Philippines'].filter(Boolean).join(', ');
+            const altUrl = `https://photon.komoot.io/api/?q=${encodeURIComponent(altQuery)}&lat=${stationLat}&lon=${stationLng}&limit=3`;
+            const altResp = await fetchWithTimeout(altUrl, {}, 3500);
+            if (altResp.ok) {
+              const altData = await altResp.json();
+              feat = altData.features?.[0];
+            }
+          } catch {}
+        }
         if (feat && feat.geometry && Array.isArray(feat.geometry.coordinates)) {
           const [lon, lat] = feat.geometry.coordinates;
           return {
@@ -1057,7 +999,14 @@ export async function mount(me) {
                 landmarkInput.value = addrData.landmark;
               }
 
-              showToast(`Address detected: ${addrData.street || addrData.barangay}`, 'info');
+              const statusBox = document.querySelector('#zone-status-box');
+              if (statusBox) {
+                const dist = calculateDistanceKm(stationSettings.lat || 14.7565, stationSettings.lng || 121.0437, chosenLat, chosenLng).toFixed(2);
+                statusBox.className = 'zone-status-box is-inside';
+                statusBox.innerHTML = `${ICONS.check} <div><strong>${escapeHtml(addrData.street || 'Location pinned')}</strong><br><span style="font-size: 11.5px; color: #166534;">${escapeHtml(addrData.barangay)}, ${escapeHtml(addrData.city)} (${dist} km from station)</span></div>`;
+              }
+
+              showToast(`Detected: ${addrData.street ? addrData.street + ', ' : ''}${addrData.barangay}`, 'info');
             }
             updateZoneUI(chosenLat, chosenLng, false);
           }
@@ -1355,7 +1304,7 @@ export async function mount(me) {
             const res = await searchAddressCoordinates(streetVal, brgyVal, cityVal, stationSettings.lat, stationSettings.lng);
             if (res) {
               miniMap.setView([res.lat, res.lng], 16);
-              await onLocationSelected(res.lat, res.lng, false);
+              await onLocationSelected(res.lat, res.lng, !brgyVal);
             }
           }, 850);
         }
