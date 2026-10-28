@@ -17,6 +17,7 @@ import {
   getCustomerActiveOrders,
   getCustomerOrderById,
   getCustomerOrders,
+  getAddressMapUrl,
   getEffectiveSlot,
   getOrderItemPricingTag,
   isOrderItemNewContainer,
@@ -333,7 +334,16 @@ export async function mount(me) {
               ${itemsBreakdownHtml}
               <div class="kv-row">
                 <span class="kv-label">Delivery address</span>
-                <span class="kv-value">${escapeHtml(formatAddressLine(order.address))}</span>
+                <span class="kv-value">
+                  ${escapeHtml(formatAddressLine(order.address))}
+                  ${order.address ? `
+                    <div style="margin-top: 4px;">
+                      <a href="${getAddressMapUrl(order.address, { navigate: false })}" target="_blank" rel="noopener noreferrer" style="display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: var(--primary); text-decoration: none; font-weight: 600;">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                        Open in Google Maps
+                      </a>
+                    </div>` : ''}
+                </span>
               </div>
               <div class="kv-row">
                 <span class="kv-label">Payment</span>

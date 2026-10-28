@@ -134,6 +134,7 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
   let street = '';
   let barangay = '';
   let resolvedCity = '';
+  let detectedLandmark = '';
   let full = '';
 
   const stationCity = stationSettings?.city || (stationSettings?.address ? getStationCity(stationSettings) : 'Caloocan');
@@ -154,10 +155,26 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
     if (nResp.ok) {
       const nData = await nResp.json();
       const a = nData.address || {};
+      if (a.amenity || a.shop || a.building || a.tourism) {
+        const rawPoi = (a.amenity || a.shop || a.building || a.tourism || '').trim();
+        if (rawPoi && !/^(yes|no|residential|house|building|apartments)$/i.test(rawPoi)) {
+          detectedLandmark = rawPoi;
+        }
+      }
+      let subdivision = '';
+      const rawSub = (a.residential || a.subdivision || '').trim();
+      if (rawSub && !/^(zone\s*\d+|district\s*\d+|northern\s*manila|caloocan)/i.test(rawSub)) {
+        subdivision = rawSub;
+      }
       const houseNumber = a.house_number ? `${a.house_number} ` : '';
       const road = a.road || a.pedestrian || a.street || '';
       if (road) {
         street = `${houseNumber}${road}`.trim();
+        if (subdivision && !street.toLowerCase().includes(subdivision.toLowerCase())) {
+          street = `${street}, ${subdivision}`;
+        }
+      } else if (subdivision) {
+        street = `${houseNumber}${subdivision}`.trim();
       } else if (nData.display_name && !a.residential) {
         street = nData.display_name.split(',')[0].trim();
       }
@@ -276,11 +293,27 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
           const p = feat.properties;
 
           const houseNum = p.housenumber ? `${p.housenumber} ` : '';
+          const pSubd = (p.locality || '').trim();
+          let cleanSubd = '';
+          if (pSubd && !/^(zone\s*\d+|district\s*\d+|northern\s*manila|caloocan)/i.test(pSubd)) {
+            cleanSubd = pSubd;
+          }
+          if (!detectedLandmark && p.name && p.name !== p.street && !/(street|road|avenue|blvd)/i.test(p.name)) {
+            detectedLandmark = p.name;
+          }
           if (!street) {
             if (p.street) {
               street = `${houseNum}${p.street}`.trim();
+              if (cleanSubd && !street.toLowerCase().includes(cleanSubd.toLowerCase())) {
+                street = `${street}, ${cleanSubd}`;
+              }
             } else if (p.name && /(street|st|road|rd|avenue|ave|lane|ln|drive|dr|way|boulevard|blvd|highway|hwy)/i.test(p.name)) {
               street = `${houseNum}${p.name}`.trim();
+              if (cleanSubd && !street.toLowerCase().includes(cleanSubd.toLowerCase())) {
+                street = `${street}, ${cleanSubd}`;
+              }
+            } else if (cleanSubd) {
+              street = `${houseNum}${cleanSubd}`.trim();
             }
           }
 
@@ -330,6 +363,7 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
     street: street || '',
     barangay: barangay || '',
     city: city || 'Caloocan',
+    landmark: detectedLandmark || '',
     full: full || [street, barangay, city].filter(Boolean).join(', '),
   };
 }
@@ -1017,6 +1051,10 @@ export async function mount(me) {
               if (cityInput && addrData.city) {
                 cityInput.value = addrData.city;
                 clearInputError(cityInput);
+              }
+              const landmarkInput = document.querySelector('#addr-landmark');
+              if (landmarkInput && !landmarkInput.value.trim() && addrData.landmark) {
+                landmarkInput.value = addrData.landmark;
               }
 
               showToast(`Address detected: ${addrData.street || addrData.barangay}`, 'info');

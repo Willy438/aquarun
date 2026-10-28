@@ -41,7 +41,7 @@ const ORDER_SELECT = `
   created_at,
   delivered_at,
   customer:profiles!customer_id(id, full_name, phone),
-  address:addresses!address_id(id, label, street, barangay, city, landmark),
+  address:addresses!address_id(id, label, street, barangay, city, landmark, latitude, longitude),
   preferred_slot:time_slots!preferred_slot_id(id, label, start_time, end_time),
   scheduled_slot:time_slots!scheduled_slot_id(id, label, start_time, end_time),
   rider:profiles!rider_id(id, full_name, phone),
@@ -171,7 +171,7 @@ export function formatAddressLine(addr) {
   if (!addr) return 'Saved address';
   const brgy =
     addr.barangay && addr.barangay !== 'N/A'
-      ? `Brgy. ${addr.barangay.replace(/^Brgy\.?\s*/i, '')}`
+      ? `Barangay ${addr.barangay.replace(/^(Barangay|Brgy\.?)\s*/i, '')}`
       : null;
   const loc = [addr.street, brgy, addr.city].filter(Boolean).join(', ');
   if (addr.label && loc) {
@@ -184,19 +184,19 @@ export function formatAddressFull(addr) {
   if (!addr) return 'Saved address';
   const brgy =
     addr.barangay && addr.barangay !== 'N/A'
-      ? `Brgy. ${addr.barangay.replace(/^Brgy\.?\s*/i, '')}`
+      ? `Barangay ${addr.barangay.replace(/^(Barangay|Brgy\.?)\s*/i, '')}`
       : null;
   return [addr.street, brgy, addr.city].filter(Boolean).join(', ');
 }
 
 export function formatAddressForNavigation(addr) {
-  if (!addr) return 'Caloocan, Philippines';
+  if (!addr) return 'Caloocan, Metro Manila, Philippines';
   const brgy =
     addr.barangay && addr.barangay !== 'N/A'
-      ? `Brgy. ${addr.barangay.replace(/^Brgy\.?\s*/i, '')}`
+      ? `Barangay ${addr.barangay.replace(/^(Barangay|Brgy\.?)\s*/i, '')}`
       : null;
   // Exclude address label ("Work", "Home") so external map services never treat it as a business query
-  return [addr.street, addr.landmark, brgy, addr.city, 'Philippines']
+  return [addr.street, addr.landmark, brgy, addr.city, 'Metro Manila', 'Philippines']
     .filter(Boolean)
     .join(', ');
 }
@@ -205,12 +205,13 @@ export function getAddressMapUrl(addr, { navigate = true } = {}) {
   const enriched = enrichAddressCoordinates(addr);
   const lat = enriched?.latitude != null ? Number(enriched.latitude) : null;
   const lng = enriched?.longitude != null ? Number(enriched.longitude) : null;
+  const fullAddress = formatAddressForNavigation(enriched);
   if (Number.isFinite(lat) && Number.isFinite(lng) && lat !== 0 && lng !== 0) {
     return navigate
       ? `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`
-      : `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`;
+      : `https://www.google.com/maps?q=${lat},${lng}+(${encodeURIComponent(fullAddress)})`;
   }
-  const cleanQuery = formatAddressForNavigation(enriched);
+  const cleanQuery = fullAddress;
   return navigate
     ? `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(cleanQuery)}`
     : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(cleanQuery)}`;
