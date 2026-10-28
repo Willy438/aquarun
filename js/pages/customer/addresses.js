@@ -42,6 +42,27 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
   });
 }
 
+// Helper to clean and format city names (rejects university, campus, road names)
+function cleanCityName(raw) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  s = s.replace(/^(City of|Municipality of)\s+/i, '');
+  s = s.replace(/\s+City$/i, '');
+  if (/university|campus|school|college|street|road|avenue|lane/i.test(s)) {
+    return '';
+  }
+  return s.trim();
+}
+
+// Helper to sanitize barangay display for existing or legacy addresses (cleans out 'Zone 15' or subdivision names)
+function sanitizeDisplayBarangay(raw) {
+  if (!raw || raw === 'N/A') return '';
+  const s = String(raw).trim();
+  if (/^(Zone\s+\d+|Zone\b|District\s+\d+|District\b)/i.test(s)) return '';
+  if (/\b(subdivision|subd|village|homes|compound|estate|residences|villas|villa|heights|park)\b/i.test(s) && !/barangay|brgy/i.test(s)) return '';
+  return s;
+}
+
 // Helper to clean and format barangay names (strictly rejects Zones, Districts, Subdivisions, Villages, Heights, etc.)
 function cleanBarangayCandidate(raw) {
   if (!raw) return '';
@@ -52,8 +73,8 @@ function cleanBarangayCandidate(raw) {
     return '';
   }
 
-  // Reject housing subdivisions, residential developments, compounds, estates, heights, hills, homes, park, terraces, springs
-  if (/\b(heights|subdivision|subd|village|homes|compound|estate|residences|villas|gardens|park|townhomes|condo|condominium|terrace|springs)\b/i.test(s)) {
+  // Reject housing subdivisions, residential developments, compounds, estates, heights, hills, homes, park, terraces, springs, villas
+  if (/\b(heights|subdivision|subd|village|homes|compound|estate|residences|villas|villa|gardens|park|townhomes|condo|condominium|terrace|springs)\b/i.test(s)) {
     return '';
   }
 
@@ -87,24 +108,23 @@ function extractBarangayFromDisplayName(displayName) {
 }
 
 function getStationCity(settings) {
-  if (settings?.city) return settings.city;
+  if (settings?.city) {
+    const cleaned = cleanCityName(settings.city);
+    if (cleaned) return cleaned;
+  }
   const addr = settings?.address || '';
   const m = addr.match(/(?:City of\s+([A-Za-z\s]+?)|([A-Za-z\s]+?)\s+City)(?:,|$)/i);
   if (m) {
-    const raw = (m[1] || m[2] || '').trim();
-    if (raw && !/metro manila|philippines|street|road|campus/i.test(raw)) {
+    const raw = cleanCityName(m[1] || m[2] || '');
+    if (raw && !/metro manila|philippines|street|road|campus|university/i.test(raw)) {
       return raw;
     }
   }
-  const parts = addr.split(',').map((p) => p.trim()).filter(Boolean);
-  for (const part of parts.reverse()) {
-    if (/city\b/i.test(part) && !/university/i.test(part)) {
-      return part.replace(/\s*City\s*/i, '').trim();
-    }
-    if (/caloocan|manila|quezon|valenzuela|malabon|navotas|marikina|pasig|taguig|makati|mandaluyong|san juan|pasay|paranaque|las pinas|muntinlupa/i.test(part)) {
-      return part;
-    }
-  }
+  if (/caloocan/i.test(addr)) return 'Caloocan';
+  if (/quezon/i.test(addr)) return 'Quezon City';
+  if (/manila/i.test(addr)) return 'Manila';
+  if (/san jose del monte/i.test(addr)) return 'San Jose del Monte';
+  if (/valenzuela/i.test(addr)) return 'Valenzuela';
   return 'Caloocan';
 }
 
@@ -177,8 +197,9 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
         }
       }
 
-      if (a.city || a.town || a.municipality) {
-        resolvedCity = (a.city || a.town || a.municipality).replace(/^City of\s+/i, '').trim();
+      const nomCity = cleanCityName(a.city || a.town || a.municipality || a.city_district);
+      if (nomCity) {
+        resolvedCity = nomCity;
       }
       if (nData.display_name) {
         full = nData.display_name;
@@ -299,23 +320,16 @@ async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
     }
   }
 
-  // Determine city: If inside station radius, set city to where the radius is located
-  let city = '';
-  if (stationSettings && Number.isFinite(Number(lat)) && Number.isFinite(Number(lon))) {
-    const dist = calculateDistanceKm(stationSettings.lat, stationSettings.lng, lat, lon);
-    if (dist !== null && dist <= stationSettings.radiusKm) {
-      city = stationCity;
-    } else {
-      city = resolvedCity || stationCity;
-    }
-  } else {
-    city = resolvedCity || stationCity;
+  // Determine city: Strictly use the geocoding API identified city (e.g. Caloocan, Quezon City, San Jose del Monte)
+  let city = cleanCityName(resolvedCity) || stationCity || 'Caloocan';
+  if (/university/i.test(city)) {
+    city = 'Caloocan';
   }
 
   return {
     street: street || '',
     barangay: barangay || '',
-    city: city || stationCity,
+    city: city || 'Caloocan',
     full: full || [street, barangay, city].filter(Boolean).join(', '),
   };
 }
@@ -457,16 +471,31 @@ export async function mount(me) {
       chosenLng = null;
     }
 
-    // Calculate filter counts
+    // Calculate filter counts & distinct saved address labels
     const homeCount = addresses.filter((a) => /home|house|residence/i.test(a.label || '')).length;
     const workCount = addresses.filter((a) => /work|office|branch|store|shop|warehouse/i.test(a.label || '')).length;
     const defaultCount = addresses.filter((a) => a.is_default).length;
 
+    const labelCounts = new Map();
+    addresses.forEach((a) => {
+      const lbl = (a.label || '').trim();
+      if (lbl) {
+        labelCounts.set(lbl, (labelCounts.get(lbl) || 0) + 1);
+      }
+    });
+    const uniqueLabels = Array.from(labelCounts.entries()).map(([label, count]) => ({ label, count }));
+
     // Filter addresses based on category and search
     const filtered = addresses.filter((addr) => {
       if (activeTypeFilter === 'default' && !addr.is_default) return false;
-      if (activeTypeFilter === 'home' && !/home|house|residence/i.test(addr.label || '')) return false;
-      if (activeTypeFilter === 'work' && !/work|office|branch|store|shop|warehouse/i.test(addr.label || '')) return false;
+      if (activeTypeFilter.startsWith('label:')) {
+        const targetLabel = activeTypeFilter.substring(6).toLowerCase();
+        if ((addr.label || '').trim().toLowerCase() !== targetLabel) return false;
+      } else if (activeTypeFilter === 'home' && !/home|house|residence/i.test(addr.label || '')) {
+        return false;
+      } else if (activeTypeFilter === 'work' && !/work|office|branch|store|shop|warehouse/i.test(addr.label || '')) {
+        return false;
+      }
 
       if (searchKeyword.trim()) {
         const q = searchKeyword.trim().toLowerCase();
@@ -521,19 +550,16 @@ export async function mount(me) {
             <input type="text" id="addr-search-input" class="input addr-search-box" placeholder="Search by label, street, barangay..." value="${escapeHtml(searchKeyword)}">
             ${searchKeyword ? `<button type="button" class="addr-search-clear" id="addr-search-clear" aria-label="Clear search">×</button>` : ''}
           </div>
-          <div class="addr-filter-tabs" role="tablist">
-            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'all' ? 'is-active' : ''}" data-addr-filter="all">
-              All <span class="addr-tab-num">${addresses.length}</span>
-            </button>
-            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'home' ? 'is-active' : ''}" data-addr-filter="home">
-              Home <span class="addr-tab-num">${homeCount}</span>
-            </button>
-            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'work' ? 'is-active' : ''}" data-addr-filter="work">
-              Work <span class="addr-tab-num">${workCount}</span>
-            </button>
-            <button type="button" class="addr-filter-tab ${activeTypeFilter === 'default' ? 'is-active' : ''}" data-addr-filter="default">
-              Default <span class="addr-tab-num">${defaultCount}</span>
-            </button>
+          <div class="addr-filter-group">
+            <select id="addr-filter-select" class="addr-filter-select" aria-label="Filter saved addresses">
+              <option value="all" ${activeTypeFilter === 'all' ? 'selected' : ''}>All addresses (${addresses.length})</option>
+              ${defaultCount > 0 ? `<option value="default" ${activeTypeFilter === 'default' ? 'selected' : ''}>Default (${defaultCount})</option>` : ''}
+              ${uniqueLabels.map(({ label, count }) => `
+                <option value="label:${escapeHtml(label)}" ${activeTypeFilter === `label:${label}` ? 'selected' : ''}>
+                  ${escapeHtml(label)} (${count})
+                </option>
+              `).join('')}
+            </select>
           </div>
         </div>
       `;
@@ -713,12 +739,12 @@ export async function mount(me) {
                 <div class="addr-form-grid-2">
                   <div class="field">
                     <label class="field-label" for="addr-barangay">Barangay <span style="color:#ef4444;">*</span></label>
-                    <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(editingAddr?.barangay && editingAddr.barangay !== 'N/A' ? editingAddr.barangay : '')}" required>
+                    <input class="input" id="addr-barangay" name="barangay" type="text" placeholder="Barangay" value="${escapeHtml(sanitizeDisplayBarangay(editingAddr?.barangay))}" required>
                     <div class="field-error-msg" id="addr-barangay-error"></div>
                   </div>
                   <div class="field">
                     <label class="field-label" for="addr-city">City <span style="color:#ef4444;">*</span></label>
-                    <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(editingAddr?.city || '')}" required>
+                    <input class="input" id="addr-city" name="city" type="text" placeholder="Caloocan" value="${escapeHtml(cleanCityName(editingAddr?.city) || 'Caloocan')}" required>
                     <div class="field-error-msg" id="addr-city-error"></div>
                   </div>
                 </div>
@@ -1331,11 +1357,9 @@ export async function mount(me) {
 
     // Event Listeners: Open Modal
     // Address Toolbar Event Listeners
-    content.querySelectorAll('[data-addr-filter]').forEach((tab) => {
-      tab.addEventListener('click', () => {
-        activeTypeFilter = tab.dataset.addrFilter || 'all';
-        renderPage();
-      });
+    content.querySelector('#addr-filter-select')?.addEventListener('change', (e) => {
+      activeTypeFilter = e.target.value || 'all';
+      renderPage();
     });
 
     const searchInput = content.querySelector('#addr-search-input');
@@ -1494,7 +1518,14 @@ export async function mount(me) {
       const labelVal = form.label?.value.trim() || '';
       const streetVal = form.street?.value.trim() || '';
       const brgyVal = form.barangay?.value.trim() || '';
-      const cityVal = form.city?.value.trim() || 'Caloocan';
+      const cityVal = cleanCityName(form.city?.value.trim()) || 'Caloocan';
+
+      if (/^(Zone\s+\d+|Zone\b|District\s+\d+|District\b)/i.test(brgyVal)) {
+        markInputError(form.barangay, 'Please enter a valid barangay name or number (e.g. Barangay 177), not a zone.');
+        showToast('Please enter a valid barangay (not a zone).', 'error');
+        form.barangay?.focus();
+        return;
+      }
 
       if (!labelVal) {
         markInputError(form.label, 'Please enter an address label (e.g. Home, Work).');
