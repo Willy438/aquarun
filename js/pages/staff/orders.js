@@ -403,16 +403,13 @@ export async function mount() {
         });
         if (!confirmed) return;
 
-        const btn = e.currentTarget;
-        setBusy(btn, true, 'Cancelling...');
+        close();
         try {
           await staffCancelOrder(order.id, 'Cancelled by station staff');
           showToast(`Order #${order.order_number} has been cancelled.`, 'success');
-          close();
           await loadData();
         } catch (err) {
           showToast(err.message || 'Could not cancel order.', 'error');
-          setBusy(btn, false);
         }
       });
 

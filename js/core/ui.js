@@ -220,12 +220,14 @@ export function confirmModal({
   confirmText = 'Confirm',
   cancelText = 'Keep it',
   danger = false,
+  zIndex = 10000005,
 } = {}) {
   return new Promise((resolve) => {
     const backdrop = document.createElement('div');
     backdrop.className = 'modal-backdrop';
+    backdrop.style.cssText = `position:fixed !important; inset:0 !important; width:100vw !important; height:100vh !important; background:rgba(15,23,42,0.65) !important; display:flex !important; align-items:center !important; justify-content:center !important; padding:16px !important; z-index:${zIndex} !important; backdrop-filter:blur(3px) !important;`;
     backdrop.innerHTML = `
-      <div class="modal-card" role="dialog" aria-modal="true">
+      <div class="modal-card" role="dialog" aria-modal="true" style="position:relative !important; z-index:${zIndex + 1} !important; background:#ffffff !important; box-shadow:0 25px 50px -12px rgba(0,0,0,0.3) !important;">
         <h3 class="modal-title">${escapeHtml(title)}</h3>
         <p class="modal-body">${escapeHtml(message)}</p>
         <div class="modal-actions">
