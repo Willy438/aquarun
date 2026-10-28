@@ -907,3 +907,50 @@
   gap: 8px;
   white-space: nowrap;
 }
+
+/* Address Filter Dropdown */
+.addr-filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.addr-filter-select {
+  height: 42px;
+  min-width: 175px;
+  padding: 0 34px 0 14px;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-app, #e2e8f0);
+  background: #ffffff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") no-repeat calc(100% - 12px) center;
+  color: var(--ink-navy, #0f172a);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
+  transition: all 0.15s ease;
+}
+
+.addr-filter-select:hover,
+.addr-filter-select:focus {
+  border-color: var(--blue-app, #1d5bd6);
+  outline: none;
+}
+
+@media (max-width: 767px) {
+  .addr-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .addr-search-field {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .addr-filter-group {
+    width: 100%;
+  }
+  .addr-filter-select {
+    width: 100%;
+  }
+}

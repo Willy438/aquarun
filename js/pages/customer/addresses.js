@@ -42,15 +42,64 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 4000) {
   });
 }
 
+// Helper to clean and format barangay names (rejects Zones, Districts, etc.)
+function cleanBarangayCandidate(raw) {
+  if (!raw) return '';
+  let s = String(raw).trim();
+  if (/^(Zone\s+\d+|Zone\b|District\s+\d+|District\b|Metro\s+Manila|Northern\s+Manila|NCR)/i.test(s)) {
+    return '';
+  }
+  if (/^\d+$/.test(s)) return `Barangay ${s}`;
+  s = s.replace(/^Brgy\.?\s*/i, 'Barangay ');
+  return s;
+}
+
+function extractBarangayFromDisplayName(displayName) {
+  if (!displayName) return '';
+  const m = displayName.match(/\b(?:Barangay|Brgy\.?)\s+([0-9A-Za-z]+(?:\s+[0-9A-Za-z]+)*)/i);
+  if (m) {
+    let val = m[1].trim();
+    val = val.replace(/\s+(Zone|District|City|Caloocan|Metro|Manila)\b.*/i, '').trim();
+    if (val && !/^(Zone|District)/i.test(val)) {
+      return val.toLowerCase().startsWith('barangay') ? val : `Barangay ${val}`;
+    }
+  }
+  return '';
+}
+
+function getStationCity(settings) {
+  if (settings?.city) return settings.city;
+  const addr = settings?.address || '';
+  const m = addr.match(/(?:City of\s+([A-Za-z\s]+?)|([A-Za-z\s]+?)\s+City)(?:,|$)/i);
+  if (m) {
+    const raw = (m[1] || m[2] || '').trim();
+    if (raw && !/metro manila|philippines|street|road|campus/i.test(raw)) {
+      return raw;
+    }
+  }
+  const parts = addr.split(',').map((p) => p.trim()).filter(Boolean);
+  for (const part of parts.reverse()) {
+    if (/city\b/i.test(part) && !/university/i.test(part)) {
+      return part.replace(/\s*City\s*/i, '').trim();
+    }
+    if (/caloocan|manila|quezon|valenzuela|malabon|navotas|marikina|pasig|taguig|makati|mandaluyong|san juan|pasay|paranaque|las pinas|muntinlupa/i.test(part)) {
+      return part;
+    }
+  }
+  return 'Caloocan';
+}
+
 // Multi-provider Reverse Geocoding API: Coordinates -> Address Fields
 // Combines Photon (Komoot OSM) + BigDataCloud Client API + Nominatim (with user-agent)
-async function fetchAddressFromCoords(lat, lon) {
+async function fetchAddressFromCoords(lat, lon, stationSettings = null) {
   let street = '';
   let barangay = '';
-  let city = 'Caloocan';
+  let resolvedCity = '';
   let full = '';
 
-  // 1. High-speed Photon reverse geocoder (unmetered, no CORS or cellular hotspot rate-limit)
+  const stationCity = stationSettings?.city || (stationSettings?.address ? getStationCity(stationSettings) : 'Caloocan');
+
+  // 1. High-speed Photon reverse geocoder
   try {
     const pUrl = `https://photon.komoot.io/reverse?lat=${lat}&lon=${lon}`;
     const pResp = await fetchWithTimeout(pUrl, {}, 3500);
@@ -65,25 +114,26 @@ async function fetchAddressFromCoords(lat, lon) {
           street = `${houseNum}${p.street}`.trim();
         } else if (p.name && /(street|st|road|rd|avenue|ave|lane|ln|drive|dr|way|boulevard|blvd|highway|hwy|subdivision|subd|village|compound)/i.test(p.name)) {
           street = `${houseNum}${p.name}`.trim();
-        } else if (p.name && !/barangay|brgy|caloocan|metro manila|philippines/i.test(p.name)) {
+        } else if (p.name && !/barangay|brgy|caloocan|metro manila|philippines|zone/i.test(p.name)) {
           street = `${houseNum}${p.name}`.trim();
         }
 
         const brgyCandidates = [p.locality, p.district, p.name, p.suburb];
         for (const c of brgyCandidates) {
-          if (c && /barangay|\bbrgy\b/i.test(c)) {
-            barangay = c.trim();
+          const clean = cleanBarangayCandidate(c);
+          if (clean && /barangay|\bbrgy\b/i.test(clean)) {
+            barangay = clean;
             break;
           }
         }
-        if (!barangay && p.locality && (!street || !street.toLowerCase().includes(p.locality.toLowerCase()))) {
-          barangay = p.locality.trim();
+        if (!barangay && p.locality) {
+          const clean = cleanBarangayCandidate(p.locality);
+          if (clean && (!street || !street.toLowerCase().includes(clean.toLowerCase()))) {
+            barangay = clean;
+          }
         }
 
-        if (p.city) {
-          city = p.city.trim();
-        }
-
+        if (p.city) resolvedCity = p.city.trim();
         full = [p.name, p.street, p.locality, p.district, p.city].filter(Boolean).join(', ');
       }
     }
@@ -91,7 +141,7 @@ async function fetchAddressFromCoords(lat, lon) {
     console.warn('Photon reverse error:', err.message);
   }
 
-  // 2. BigDataCloud reverse geocoding (fast, client-focused, unmetered, accurate administrative levels)
+  // 2. BigDataCloud reverse geocoding
   if (!street || !barangay) {
     try {
       const bdcUrl = `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`;
@@ -102,24 +152,29 @@ async function fetchAddressFromCoords(lat, lon) {
 
         if (!barangay) {
           for (const a of admins) {
-            if (/barangay|\bbrgy\b/i.test(a.name || '')) {
-              barangay = a.name.trim();
+            const clean = cleanBarangayCandidate(a.name);
+            if (clean && /barangay|\bbrgy\b/i.test(clean)) {
+              barangay = clean;
               break;
             }
           }
           if (!barangay) {
-            const area = admins.find((a) => /camarin|bagong silang|deparo|tala|bagumbong|amparo|zone/i.test(a.name || ''));
-            if (area) barangay = area.name.trim();
+            for (const a of admins) {
+              const clean = cleanBarangayCandidate(a.name);
+              if (clean && /camarin|bagong silang|deparo|tala|bagumbong|amparo|caybiga|llano|calatagan/i.test(clean)) {
+                barangay = clean.startsWith('Barangay') ? clean : `Barangay ${clean}`;
+                break;
+              }
+            }
           }
         }
 
-        if ((!city || city === 'Caloocan') && bData.locality) {
-          const cleanLocality = bData.locality.replace(/^City of\s+/i, '').trim();
-          if (cleanLocality) city = cleanLocality;
+        if (!resolvedCity && bData.locality) {
+          resolvedCity = bData.locality.replace(/^City of\s+/i, '').trim();
         }
 
         if (!full && bData.locality) {
-          full = [bData.locality, barangay, city].filter(Boolean).join(', ');
+          full = [bData.locality, barangay, resolvedCity].filter(Boolean).join(', ');
         }
       }
     } catch (err) {
@@ -127,7 +182,7 @@ async function fetchAddressFromCoords(lat, lon) {
     }
   }
 
-  // 3. Nominatim reverse fallback (with User-Agent and email to prevent 403 Forbidden)
+  // 3. Nominatim reverse fallback
   if (!street || !barangay) {
     try {
       const nomUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&addressdetails=1&email=aquarun.ph@gmail.com`;
@@ -146,27 +201,40 @@ async function fetchAddressFromCoords(lat, lon) {
         const a = nData.address || {};
         if (!street) {
           const houseNumber = a.house_number ? `${a.house_number} ` : '';
-          const road = a.road || a.pedestrian || a.street || a.residential || a.suburb || '';
+          const road = a.road || a.pedestrian || a.street || a.residential || '';
           if (road) street = `${houseNumber}${road}`.trim();
           else if (nData.display_name) street = nData.display_name.split(',')[0].trim();
         }
+
         if (!barangay) {
-          const candidates = [a.village, a.quarter, a.suburb, a.neighbourhood, a.city_district];
-          for (const c of candidates) {
-            if (c && /barangay|\bbrgy\b/i.test(c)) {
-              barangay = c.trim();
-              break;
+          const fromDisplay = extractBarangayFromDisplayName(nData.display_name);
+          if (fromDisplay) {
+            barangay = fromDisplay;
+          } else {
+            const candidates = [a.quarter, a.borough, a.village, a.suburb, a.neighbourhood];
+            for (const c of candidates) {
+              const clean = cleanBarangayCandidate(c);
+              if (clean && /barangay|\bbrgy\b/i.test(clean)) {
+                barangay = clean;
+                break;
+              }
+            }
+            if (!barangay) {
+              for (const c of candidates) {
+                const clean = cleanBarangayCandidate(c);
+                if (clean) {
+                  barangay = clean.startsWith('Barangay') ? clean : `Barangay ${clean}`;
+                  break;
+                }
+              }
             }
           }
-          if (!barangay) {
-            const match = (nData.display_name || '').match(/Barangay\s+[0-9A-Za-z\s-]+/i) || (nData.display_name || '').match(/Brgy\.?\s+[0-9A-Za-z\s-]+/i);
-            if (match) barangay = match[0].split(',')[0].trim();
-            else barangay = a.village || a.suburb || a.neighbourhood || '';
-          }
         }
-        if (!city && (a.city || a.town || a.municipality)) {
-          city = a.city || a.town || a.municipality;
+
+        if (!resolvedCity && (a.city || a.town || a.municipality)) {
+          resolvedCity = (a.city || a.town || a.municipality).replace(/^City of\s+/i, '').trim();
         }
+
         if (!full && nData.display_name) {
           full = nData.display_name;
         }
@@ -176,15 +244,28 @@ async function fetchAddressFromCoords(lat, lon) {
     }
   }
 
-  // Format barangay standard
-  if (barangay && !/^Barangay\b|^Brgy\.?\b/i.test(barangay) && /^\d+$/.test(barangay.trim())) {
-    barangay = `Barangay ${barangay.trim()}`;
+  // Final check: Never return any 'Zone' string as barangay
+  if (/^Zone\b/i.test(barangay)) {
+    barangay = '';
+  }
+
+  // Determine city: If inside station radius, set city to where the radius is located
+  let city = '';
+  if (stationSettings && Number.isFinite(Number(lat)) && Number.isFinite(Number(lon))) {
+    const dist = calculateDistanceKm(stationSettings.lat, stationSettings.lng, lat, lon);
+    if (dist !== null && dist <= stationSettings.radiusKm) {
+      city = stationCity;
+    } else {
+      city = resolvedCity || stationCity;
+    }
+  } else {
+    city = resolvedCity || stationCity;
   }
 
   return {
     street: street || '',
-    barangay: barangay || 'Barangay 171',
-    city: city || 'Caloocan',
+    barangay: barangay || '',
+    city: city || stationCity,
     full: full || [street, barangay, city].filter(Boolean).join(', '),
   };
 }
@@ -296,7 +377,12 @@ export async function mount(me) {
 
   try {
     const loaded = await getStationLocationSettings();
-    if (loaded) stationSettings = loaded;
+    if (loaded) {
+      stationSettings = {
+        ...loaded,
+        city: getStationCity(loaded),
+      };
+    }
   } catch {}
 
   function cleanupMap() {
@@ -838,7 +924,7 @@ export async function mount(me) {
               statusBox.innerHTML = `${ICONS.info} <div><strong>Looking up street address...</strong></div>`;
             }
 
-            const addrData = await fetchAddressFromCoords(chosenLat, chosenLng);
+            const addrData = await fetchAddressFromCoords(chosenLat, chosenLng, stationSettings);
             if (addrData) {
               const streetInput = document.querySelector('#addr-street');
               const brgyInput = document.querySelector('#addr-barangay');
